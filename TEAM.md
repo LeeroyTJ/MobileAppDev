@@ -9,5 +9,6 @@ Emmanuel Njunga - 202301847
 Emmanuel sikubeka-202308118
 Andrew Kalengo - 202406795
 Neo Maseba - 202407198
+Nathan Kamfwa - 202408447
 Joyce Gondwe - 202410082
-Thabo Jumbe -202406168
+Thabo Jumbe - 202406168
