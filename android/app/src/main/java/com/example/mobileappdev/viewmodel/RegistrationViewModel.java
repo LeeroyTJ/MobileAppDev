@@ -1,21 +1,26 @@
 package com.example.mobileappdev.viewmodel;
 
-public class RegistrationViewModel {
-    private String studentName = "";
-    private String studentEmail = "";
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.ViewModel;
 
-    public void setStudentName(String studentName) {
-        this.studentName = studentName;}
+public class RegistrationViewModel extends ViewModel {
 
-    public void setStudentEmail(String studentEmail) {
-        this.studentEmail = studentEmail;
-    }
+    private final MutableLiveData<String> studentName = new MutableLiveData<>("");
+    private final MutableLiveData<String> studentNumber = new MutableLiveData<>("");
+    private final MutableLiveData<String> programmeCode = new MutableLiveData<>("");
+    private final MutableLiveData<String> labGroupCode = new MutableLiveData<>("");
+    private final MutableLiveData<Boolean> isSaving = new MutableLiveData<>(false);
 
-    public String getStudentName() {
-        return studentName;
-    }
+    public void setStudentName(String value) { studentName.setValue(value); }
+    public void setStudentNumber(String value) { studentNumber.setValue(value); }
+    public void setProgrammeCode(String value) { programmeCode.setValue(value); }
+    public void setLabGroupCode(String value) { labGroupCode.setValue(value); }
+    public void setSaving(boolean saving) { isSaving.setValue(saving); }
 
-    public String getStudentEmail() {
-        return studentEmail;
-    }
+    public LiveData<String> getStudentName() { return studentName; }
+    public LiveData<String> getStudentNumber() { return studentNumber; }
+    public LiveData<String> getProgrammeCode() { return programmeCode; }
+    public LiveData<String> getLabGroupCode() { return labGroupCode; }
+    public LiveData<Boolean> getIsSaving() { return isSaving; }
 }
