@@ -24,4 +24,6 @@ dependencyResolutionManagement {
 
 rootProject.name = "MobileAppDev"
 include(":app")
+project(":app").projectDir = file("android/app")
+
  
