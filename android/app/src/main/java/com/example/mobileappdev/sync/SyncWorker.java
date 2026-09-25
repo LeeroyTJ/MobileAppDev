@@ -46,9 +46,7 @@ public class SyncWorker extends Worker {
 
     /**
      * Builds a one-time WorkRequest for this Worker, with:
-     * - a network constraint (only runs when
-
-     connected)
+     * - a network constraint (only runs when connected)
      * - exponential backoff (if the job fails and retries)
      *
      * Other classes (e.g. a repository or a "Sync" button handler)
