@@ -105,29 +105,6 @@ router.get('/', authenticateToken, async (req, res) => {
 
 // GET /api/v1/students/me/profile
 router.get('/me/profile', authenticateToken, async (req, res) => {
-    const { programme, group, search } = req.query;
-
-    if (programme && !['CS', 'IT', 'DS'].includes(programme)) {
-        return res.status(400).json({
-            success: false,
-            error: { code: 'INVALID_PROGRAMME', message: 'programme must be CS, IT, or DS' }
-        });
-    }
-
-    if (group && group !== 'UNASSIGNED' && !isPositiveInt(group)) {
-        return res.status(400).json({
-            success: false,
-            error: { code: 'INVALID_GROUP', message: 'group must be UNASSIGNED or a valid group id' }
-        });
-    }
-
-    if (search && !isValidSearch(search)) {
-        return res.status(400).json({
-            success: false,
-            error: { code: 'INVALID_SEARCH', message: 'search must be 100 characters or fewer' }
-        });
-    }
-
     try {
         const [rows] = await pool.query(
             `SELECT s.*, p.code as programme_code, p.name as programme_name, g.group_code, g.name as group_name
@@ -184,30 +161,72 @@ router.put('/:id', authenticateToken, async (req, res) => {
         });
     }
 
+
+    if (baseVersion === undefined) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'VALIDATION_ERROR', message: 'baseVersion is required' }
+        });
+    }
+
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
 
-        const [result] = await connection.query(
-            `UPDATE students
-             SET student_name = COALESCE(?, student_name),
-                 version = version + 1
-             WHERE student_id = ? AND deleted_at IS NULL`,
-            [studentName, studentId]
+        // Fetch current state first, so we can tell "not found" apart
+        // from "found but version mismatch"
+        const [rows] = await connection.query(
+            'SELECT * FROM students WHERE student_id = ? AND deleted_at IS NULL',
+            [studentId]
         );
-
-        if (result.affectedRows === 0) {
+        if (rows.length === 0) {
             await connection.rollback();
             return res.status(404).json({
                 success: false,
                 error: { code: 'STUDENT_NOT_FOUND', message: 'Student not found' }
             });
         }
+        const student = rows[0];
+
+        if (req.user.role !== 'LECTURER' && student.account_id !== req.user.id) {
+            await connection.rollback();
+            return res.status(403).json({
+                success: false,
+                error: { code: 'FORBIDDEN', message: 'Access denied' }
+            });
+        }
+
+        if (student.version !== Number(baseVersion)) {
+            await connection.rollback();
+            return res.status(409).json({
+                success: false,
+                error: { code: 'VERSION_CONFLICT', message: 'Record was modified on the server' },
+                data: { currentVersion: student.version, current: student }
+            });
+        }
+
+        const [result] = await connection.query(
+            `UPDATE students
+             SET student_name = COALESCE(?, student_name),
+                 version = version + 1
+             WHERE student_id = ? AND version = ? AND deleted_at IS NULL`,
+            [studentName, studentId, baseVersion]
+        );
+
+        // Safety net: if two requests race between the SELECT above and this
+        // UPDATE, affectedRows will be 0 even though our SELECT said it matched.
+        if (result.affectedRows === 0) {
+            await connection.rollback();
+            return res.status(409).json({
+                success: false,
+                error: { code: 'VERSION_CONFLICT', message: 'Record was modified on the server' }
+            });
+        }
 
         await connection.commit();
         return res.status(200).json({
             success: true,
-            data: { updated: true, version: (baseVersion || 0) + 1 }
+            data: { updated: true, version: Number(baseVersion) + 1 }
         });
 
     } catch (error) {
@@ -248,7 +267,7 @@ router.delete('/:id', authenticateToken, requireLecturer, async (req, res) => {
         return res.status(200).json({ success: true, data: { deleted: true } });
 
     } catch (error) {
-
+        await connection.rollback();
         console.error('Delete error:', error);
         return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error during deletion' } });
     } finally {
