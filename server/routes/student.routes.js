@@ -2,8 +2,18 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const jwt = require('jsonwebtoken');
+const {
+    isValidName,
+    isValidBaseVersion,
+    isValidProgrammeId,
+    isPositiveInt,
+    isValidSearch
+} = require('../utils/validators');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'cohorthub_secret_key_change_me';
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET is not set. Check your .env file.');
+}
 
 function authenticateToken(req, res, next) {
     const authHeader = req.headers['authorization'];
@@ -24,14 +34,106 @@ function requireLecturer(req, res, next) {
     next();
 }
 
+// GET /api/v1/students — lecturer roster with combined filters
+router.get('/', authenticateToken, async (req, res) => {
+    const { programme, group, search } = req.query;
+
+    if (programme && !['CS', 'IT', 'DS'].includes(programme)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_PROGRAMME', message: 'programme must be CS, IT, or DS' }
+        });
+    }
+
+    if (group && group !== 'UNASSIGNED' && !isPositiveInt(group)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_GROUP', message: 'group must be UNASSIGNED or a valid group id' }
+        });
+    }
+
+    if (search && !isValidSearch(search)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_SEARCH', message: 'search must be 100 characters or fewer' }
+        });
+    }
+
+    const where = ['s.deleted_at IS NULL'];
+    const params = [];
+
+    if (programme) {
+        where.push('p.code = ?');
+        params.push(programme);
+    }
+
+    if (group === 'UNASSIGNED') {
+        where.push('s.group_id IS NULL');
+    } else if (group) {
+        where.push('s.group_id = ?');
+        params.push(group);
+    }
+
+    if (search) {
+        where.push('s.student_name LIKE ?');
+        params.push(`%${search}%`);
+    }
+
+    try {
+        const [rows] = await pool.query(
+            `SELECT s.student_id, s.student_number, s.student_name,
+                    s.programme_id, s.group_id, s.version,
+                    p.code AS programme_code, p.name AS programme_name,
+                    g.group_code, g.name AS group_name
+             FROM students s
+             JOIN programmes p ON s.programme_id = p.programme_id
+             LEFT JOIN lab_groups g ON s.group_id = g.group_id
+             WHERE ${where.join(' AND ')}
+             ORDER BY s.student_name`,
+            params
+        );
+
+        return res.status(200).json({ success: true, data: rows });
+    } catch (error) {
+        console.error('Roster fetch error:', error);
+        return res.status(500).json({
+            success: false,
+            error: { code: 'INTERNAL_ERROR', message: 'Server error' }
+        });
+    }
+});
+
 // GET /api/v1/students/me/profile
 router.get('/me/profile', authenticateToken, async (req, res) => {
+    const { programme, group, search } = req.query;
+
+    if (programme && !['CS', 'IT', 'DS'].includes(programme)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_PROGRAMME', message: 'programme must be CS, IT, or DS' }
+        });
+    }
+
+    if (group && group !== 'UNASSIGNED' && !isPositiveInt(group)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_GROUP', message: 'group must be UNASSIGNED or a valid group id' }
+        });
+    }
+
+    if (search && !isValidSearch(search)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_SEARCH', message: 'search must be 100 characters or fewer' }
+        });
+    }
+
     try {
         const [rows] = await pool.query(
             `SELECT s.*, p.code as programme_code, p.name as programme_name, g.group_code, g.name as group_name
              FROM students s
              JOIN programmes p ON s.programme_id = p.programme_id
-             LEFT JOIN \`groups\` g ON s.group_id = g.group_id
+             LEFT JOIN lab_groups g ON s.group_id = g.group_id
              WHERE s.account_id = ? AND s.deleted_at IS NULL`,
             [req.user.id]
         );
@@ -50,56 +152,71 @@ router.get('/me/profile', authenticateToken, async (req, res) => {
 // PUT /api/v1/students/:id (Optimistic Concurrency)
 router.put('/:id', authenticateToken, async (req, res) => {
     const studentId = req.params.id;
-    const { firstName, lastName, email, phone, groupId, baseVersion } = req.body;
+    const { studentName, baseVersion } = req.body;
 
-    if (baseVersion === undefined) {
-        return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Missing baseVersion' } });
+    if (!isPositiveInt(req.params.id)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_STUDENT_ID', message: 'Invalid student id' }
+        });
+    }
+
+    if (studentName !== undefined && !isValidName(studentName)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_NAME', message: 'Name must be between 2 and 100 characters' }
+        });
+    }
+
+    if (baseVersion !== undefined && !isValidBaseVersion(baseVersion)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_BASE_VERSION', message: 'baseVersion must be a positive integer' }
+        });
+    }
+
+    if (req.user.role !== 'LECTURER') {
+        delete req.body.programmeId;
+    } else if (req.body.programmeId !== undefined && !isValidProgrammeId(req.body.programmeId)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_PROGRAMME_ID', message: 'Invalid programmeId' }
+        });
     }
 
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
 
-        const [rows] = await connection.query('SELECT * FROM students WHERE student_id = ? AND deleted_at IS NULL', [studentId]);
-        if (rows.length === 0) {
-            await connection.rollback();
-            return res.status(404).json({ success: false, error: { code: 'STUDENT_NOT_FOUND', message: 'Student not found' } });
-        }
+        const [result] = await connection.query(
+            `UPDATE students
+             SET student_name = COALESCE(?, student_name),
+                 version = version + 1
+             WHERE student_id = ? AND deleted_at IS NULL`,
+            [studentName, studentId]
+        );
 
-        const student = rows[0];
-        if (req.user.role !== 'LECTURER' && student.account_id !== req.user.id) {
+        if (result.affectedRows === 0) {
             await connection.rollback();
-            return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied' } });
-        }
-
-        if (student.version !== baseVersion) {
-            await connection.rollback();
-            return res.status(409).json({
+            return res.status(404).json({
                 success: false,
-                error: { code: 'VERSION_CONFLICT', message: 'Record modified on server' },
-                data: { currentVersion: student.version, current: student }
+                error: { code: 'STUDENT_NOT_FOUND', message: 'Student not found' }
             });
         }
 
-        await connection.query(
-            `UPDATE students
-             SET first_name = COALESCE(?, first_name),
-                 last_name = COALESCE(?, last_name),
-                 email = COALESCE(?, email),
-                 phone = COALESCE(?, phone),
-                 group_id = COALESCE(?, group_id),
-                 version = version + 1
-             WHERE student_id = ?`,
-            [firstName, lastName, email, phone, groupId, studentId]
-        );
-
         await connection.commit();
-        return res.status(200).json({ success: true, data: { updated: true, version: baseVersion + 1 } });
+        return res.status(200).json({
+            success: true,
+            data: { updated: true, version: (baseVersion || 0) + 1 }
+        });
 
     } catch (error) {
         await connection.rollback();
         console.error('Update error:', error);
-        return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error during update' } });
+        return res.status(500).json({
+            success: false,
+            error: { code: 'INTERNAL_ERROR', message: 'Server error during update' }
+        });
     } finally {
         connection.release();
     }
@@ -131,7 +248,7 @@ router.delete('/:id', authenticateToken, requireLecturer, async (req, res) => {
         return res.status(200).json({ success: true, data: { deleted: true } });
 
     } catch (error) {
-        await connection.rollback();
+
         console.error('Delete error:', error);
         return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error during deletion' } });
     } finally {

@@ -5,19 +5,59 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const pool = require('../db');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'cohorthub_secret_key_change_me';
+const {
+    isValidStudentNumber,
+    isValidName,
+    isValidPassword,
+    isValidClaimCode,
+    isValidProgrammeId
+} = require('../utils/validators');
+
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+    throw new Error('JWT_SECRET is not set. Check your .env file.');
+}
 
 /**
  * POST /api/v1/auth/register
  * Public registration endpoint
  */
 router.post('/register', async (req, res) => {
-    const { username, name, password, claimCode } = req.body;
+    const { studentNumber, name, password, claimCode } = req.body;
 
-    if (!username || !name || !password || !claimCode) {
+    if (!studentNumber || !name || !password) {
         return res.status(400).json({
             success: false,
             error: { code: 'VALIDATION_ERROR', message: 'Missing required fields' }
+        });
+    }
+
+    if (!isValidStudentNumber(studentNumber)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_STUDENT_NUMBER', message: 'Student number must be exactly 9 digits' }
+        });
+    }
+
+    const trimmedName = name.trim();
+    if (!isValidName(trimmedName)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_NAME', message: 'Name must be between 2 and 100 characters' }
+        });
+    }
+
+    if (!isValidPassword(password)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_PASSWORD', message: 'Password must be at least 8 characters' }
+        });
+    }
+
+    if (claimCode && !isValidClaimCode(claimCode)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_CLAIM_CODE', message: 'Claim code format is invalid' }
         });
     }
 
@@ -25,58 +65,98 @@ router.post('/register', async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        const codeHash = crypto.createHash('sha256').update(claimCode).digest('hex');
-        const [claimRows] = await connection.query(
-            'SELECT * FROM claim_codes WHERE code_hash = ? AND used_at IS NULL AND expires_at > NOW()',
-            [codeHash]
+        // Check for an existing (possibly lecturer pre-entered) student with this number
+        const [existingStudents] = await connection.query(
+            'SELECT * FROM students WHERE student_number = ? AND deleted_at IS NULL',
+            [studentNumber]
         );
 
-        if (claimRows.length === 0) {
-            await connection.rollback();
-            return res.status(400).json({
-                success: false,
-                error: { code: 'INVALID_CLAIM_CODE', message: 'Invalid, already used, or expired claim code' }
-            });
+        let studentId, accountId;
+
+        if (existingStudents.length > 0) {
+            const existing = existingStudents[0];
+
+            if (existing.account_id !== null) {
+                // Already claimed by someone
+                await connection.rollback();
+                return res.status(409).json({
+                    success: false,
+                    error: { code: 'STUDENT_ALREADY_REGISTERED', message: 'This student number is already registered' }
+                });
+            }
+
+            // Pre-entered but unclaimed — a claim code is required
+            if (!claimCode) {
+                await connection.rollback();
+                return res.status(400).json({
+                    success: false,
+                    error: { code: 'CLAIM_CODE_REQUIRED', message: 'This student number is on file. Enter your claim code to confirm this is you.' }
+                });
+            }
+
+            const codeHash = crypto.createHash('sha256').update(claimCode).digest('hex');
+            const [claimRows] = await connection.query(
+                'SELECT * FROM claim_codes WHERE code_hash = ? AND student_id = ? AND used_at IS NULL AND expires_at > NOW()',
+                [codeHash, existing.student_id]
+            );
+
+            if (claimRows.length === 0) {
+                await connection.rollback();
+                return res.status(400).json({
+                    success: false,
+                    error: { code: 'INVALID_CLAIM_CODE', message: 'Invalid, already used, expired, or mismatched claim code' }
+                });
+            }
+
+            const passwordHash = await bcrypt.hash(password, 10);
+            const [accountResult] = await connection.query(
+                'INSERT INTO accounts (username, password_hash, role, is_active) VALUES (?, ?, "STUDENT", TRUE)',
+                [studentNumber, passwordHash]
+            );
+            accountId = accountResult.insertId;
+            studentId = existing.student_id;
+
+            // Link, don't create
+            await connection.query(
+                'UPDATE students SET account_id = ? WHERE student_id = ?',
+                [accountId, studentId]
+            );
+            await connection.query(
+                'UPDATE claim_codes SET used_at = NOW(), used_by_account_id = ? WHERE claim_code_id = ?',
+                [accountId, claimRows[0].claim_code_id]
+            );
+
+        } else {
+
+            if (!isValidProgrammeId(req.body.programmeId)) {
+                await connection.rollback();
+                return res.status(400).json({
+                    success: false,
+                    error: { code: 'INVALID_PROGRAMME_ID', message: 'Valid programmeId is required for new students' }
+                });
+            }
+
+            // No pre-entered record — genuinely new student, no claim code needed
+            const passwordHash = await bcrypt.hash(password, 10);
+            const [accountResult] = await connection.query(
+                'INSERT INTO accounts (username, password_hash, role, is_active) VALUES (?, ?, "STUDENT", TRUE)',
+                [studentNumber, passwordHash]
+            );
+            accountId = accountResult.insertId;
+
+            // NOTE: programme_id needs to come from the request body for a
+            // brand-new registration, since there's no pre-entered record to
+            // read it from. Confirm with your UI team that the registration
+            // form sends programmeId.
+            const [studentResult] = await connection.query(
+                'INSERT INTO students (account_id, programme_id, student_number, student_name) VALUES (?, ?, ?, ?)',
+                [accountId, req.body.programmeId, studentNumber, trimmedName]
+            );
+            studentId = studentResult.insertId;
         }
-
-        const claim = claimRows[0];
-
-        const [existingAccounts] = await connection.query('SELECT account_id FROM accounts WHERE username = ?', [username]);
-        if (existingAccounts.length > 0) {
-            await connection.rollback();
-            return res.status(409).json({
-                success: false,
-                error: { code: 'STUDENT_ALREADY_REGISTERED', message: 'Username or student number already registered' }
-            });
-        }
-
-        const passwordHash = await bcrypt.hash(password, 10);
-        const [accountResult] = await connection.query(
-            'INSERT INTO accounts (username, password_hash, role, is_active) VALUES (?, ?, "STUDENT", TRUE)',
-            [username, passwordHash]
-        );
-        const accountId = accountResult.insertId;
-
-        const nameParts = name.trim().split(' ');
-        const firstName = nameParts[0];
-        const lastName = nameParts.slice(1).join(' ') || '';
-
-        const [studentResult] = await connection.query(
-            `INSERT INTO students (account_id, programme_id, student_number, first_name, last_name) VALUES (?, ?, ?, ?, ?)`,
-            [accountId, claim.programme_id, username, firstName, lastName]
-        );
-        const studentId = studentResult.insertId;
-
-        await connection.query(
-            'UPDATE claim_codes SET used_at = NOW(), used_by_account_id = ? WHERE claim_code_id = ?',
-            [accountId, claim.claim_code_id]
-        );
 
         await connection.commit();
-        return res.status(201).json({
-            success: true,
-            data: { accountId, studentId }
-        });
+        return res.status(201).json({ success: true, data: { accountId, studentId } });
 
     } catch (error) {
         await connection.rollback();
@@ -87,60 +167,6 @@ router.post('/register', async (req, res) => {
         });
     } finally {
         connection.release();
-    }
-});
-
-/**
- * POST /api/v1/auth/login
- * Public login endpoint
- */
-router.post('/login', async (req, res) => {
-    const { username, password } = req.body;
-
-    if (!username || !password) {
-        return res.status(400).json({
-            success: false,
-            error: { code: 'VALIDATION_ERROR', message: 'Missing username or password' }
-        });
-    }
-
-    try {
-        const [rows] = await pool.query('SELECT * FROM accounts WHERE username = ?', [username]);
-        if (rows.length === 0) {
-            return res.status(401).json({
-                success: false,
-                error: { code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' }
-            });
-        }
-
-        const account = rows[0];
-        if (!account.is_active) {
-            return res.status(401).json({
-                success: false,
-                error: { code: 'ACCOUNT_DISABLED', message: 'Account is disabled' }
-            });
-        }
-
-        const isMatch = await bcrypt.compare(password, account.password_hash);
-        if (!isMatch) {
-            return res.status(401).json({
-                success: false,
-                error: { code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' }
-            });
-        }
-
-        const token = jwt.sign({ id: account.account_id, role: account.role }, JWT_SECRET, { expiresIn: '7d' });
-        return res.status(200).json({
-            success: true,
-            data: { accessToken: token, role: account.role, accountId: account.account_id }
-        });
-
-    } catch (error) {
-        console.error('Login error:', error);
-        return res.status(500).json({
-            success: false,
-            error: { code: 'INTERNAL_ERROR', message: 'Server error during login' }
-        });
     }
 });
 
