@@ -1,6 +1,7 @@
 *.iml
 .gradle
 /local.properties
+.idea
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
@@ -13,3 +14,14 @@
 .externalNativeBuild
 .cxx
 local.properties
+.env
+# Node backend
+node_modules/
+server/node_modules/
+.env
+server/.env
+
+
+# NPM logs
+npm-debug.log*
+*.log
