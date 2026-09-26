@@ -1,31 +1,52 @@
 package com.example.mobileappdev.viewmodel;
 
-public class ProfileViewModel {
-    private String studentName = "";
-    private String studentEmail = "";
-    private String studentId = "";
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
+import androidx.lifecycle.ViewModel;
 
-    public void setStudentName(String studentName) {
-        this.studentName = studentName;
+public class ProfileViewModel extends ViewModel {
+
+    private final MutableLiveData<String> studentName =
+            new MutableLiveData<>("");
+
+    private final MutableLiveData<String> studentNumber =
+            new MutableLiveData<>("");
+
+    private final MutableLiveData<String> programmeCode =
+            new MutableLiveData<>("");
+
+    private final MutableLiveData<String> labGroupCode =
+            new MutableLiveData<>("");
+
+    public void setStudentName(String value) {
+        studentName.setValue(value);
     }
 
-    public void setStudentEmail(String studentEmail) {
-        this.studentEmail = studentEmail;
+    public void setStudentNumber(String value) {
+        studentNumber.setValue(value);
     }
 
-    public void setStudentId(String studentId) {
-        this.studentId = studentId;
+    public void setProgrammeCode(String value) {
+        programmeCode.setValue(value);
     }
 
-    public String getStudentName() {
+    public void setLabGroupCode(String value) {
+        labGroupCode.setValue(value);
+    }
+
+    public LiveData<String> getStudentName() {
         return studentName;
     }
 
-    public String getStudentEmail() {
-        return studentEmail;
+    public LiveData<String> getStudentNumber() {
+        return studentNumber;
     }
 
-    public String getStudentId() {
-        return studentId;
+    public LiveData<String> getProgrammeCode() {
+        return programmeCode;
+    }
+
+    public LiveData<String> getLabGroupCode() {
+        return labGroupCode;
     }
 }
