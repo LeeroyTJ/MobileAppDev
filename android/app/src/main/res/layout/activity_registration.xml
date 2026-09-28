@@ -38,8 +38,8 @@
             <!-- Logo row: icon + app name -->
             <ImageView
                 android:id="@+id/ivLogo"
-                android:layout_width="28dp"
-                android:layout_height="28dp"
+                android:layout_width="35dp"
+                android:layout_height="35dp"
                 android:layout_marginTop="20dp"
                 android:contentDescription="@string/cd_app_logo"
                 android:src="@drawable/logo_circle"
@@ -127,7 +127,6 @@
                     android:id="@+id/etStudentNumber"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/hint_student_number"
                     android:inputType="number"
                     android:maxLength="9"
                     android:maxLines="1"
@@ -152,7 +151,6 @@
                     android:id="@+id/actProgramme"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/hint_programme"
                     android:inputType="none"
                     android:textColor="@color/text_primary"
                     android:textSize="15sp" />
@@ -175,7 +173,6 @@
                     android:id="@+id/actLabGroup"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/hint_lab_group"
                     android:inputType="none"
                     android:textColor="@color/text_primary"
                     android:textSize="14sp" />
