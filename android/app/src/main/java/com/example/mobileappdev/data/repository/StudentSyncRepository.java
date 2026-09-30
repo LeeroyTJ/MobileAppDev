@@ -1,10 +1,10 @@
-package data.repository;
+package com.example.mobileappdev.data.repository;
 
-import data.local.AppDatabase;
-import data.local.dao.PendingOperationDao;
-import data.local.dao.StudentDao;
-import data.local.entity.PendingOperationEntity;
-import data.local.entity.StudentEntity;
+import com.example.mobileappdev.data.local.AppDatabase;
+import com.example.mobileappdev.data.local.dao.PendingOperationDao;
+import com.example.mobileappdev.data.local.dao.StudentDao;
+import com.example.mobileappdev.data.local.entity.PendingOperationEntity;
+import com.example.mobileappdev.data.local.entity.StudentEntity;
 
 import java.util.List;
 import java.util.UUID;

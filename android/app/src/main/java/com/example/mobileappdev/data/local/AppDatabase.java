@@ -1,14 +1,14 @@
-package data.local;
+package com.example.mobileappdev.data.local;
 import android.content.Context;
 
 import androidx.room.Database;
 import androidx.room.Room;
 import androidx.room.RoomDatabase;
 
-import data.local.dao.PendingOperationDao;
-import data.local.dao.StudentDao;
-import data.local.entity.PendingOperationEntity;
-import data.local.entity.StudentEntity;
+import com.example.mobileappdev.data.local.dao.PendingOperationDao;
+import com.example.mobileappdev.data.local.dao.StudentDao;
+import com.example.mobileappdev.data.local.entity.PendingOperationEntity;
+import com.example.mobileappdev.data.local.entity.StudentEntity;
 
 @Database(
                 entities = {StudentEntity.class, PendingOperationEntity.class},

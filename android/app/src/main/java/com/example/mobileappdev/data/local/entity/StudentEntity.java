@@ -1,4 +1,4 @@
-package data.local.entity;
+package com.example.mobileappdev.data.local.entity;
 
 import androidx.annotation.NonNull;
 import androidx.room.Entity;

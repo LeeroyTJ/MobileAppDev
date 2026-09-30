@@ -1,4 +1,4 @@
-package data.local.dao;
+package com.example.mobileappdev.data.local.dao;
 
 import androidx.lifecycle.LiveData;
 import androidx.room.Dao;
@@ -8,7 +8,7 @@ import androidx.room.OnConflictStrategy;
 import androidx.room.Query;
 import androidx.room.Update;
 
-import data.local.entity.StudentEntity;
+import com.example.mobileappdev.data.local.entity.StudentEntity;
 
 import java.util.List;
 

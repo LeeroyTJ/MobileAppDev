@@ -8,8 +8,8 @@ import android.content.Context;
 import androidx.room.Room;
 import androidx.test.core.app.ApplicationProvider;
 
-import data.local.AppDatabase;
-import data.local.entity.StudentEntity;
+import com.example.mobileappdev.data.local.AppDatabase;
+import com.example.mobileappdev.data.local.entity.StudentEntity;
 
 import org.junit.After;
 import org.junit.Before;
