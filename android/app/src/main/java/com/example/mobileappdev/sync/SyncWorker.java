@@ -25,18 +25,18 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 /**
- *  * Background worker responsible for syncing locally pending changes
- *   * (offline creates/edits/deletes) with the remote server.
- *    *
- *     * Merged from two independent drafts:
- *      *  - package name and buildRequest()-style API kept from one draft
- *       *  - queue-reading / DTO-mapping / conflict-handling logic kept from the other,
- *        *    since it's the more complete implementation
- *         *
- *          * Still blocked on two pieces before doWork() can run for real:
- *           *  - SessionManager (who owns session/auth?)  needed to get the current accountId
- *            *  - ApiClient (who owns Retrofit/network setup?)  needed to actually call the API
- *             */
+ * Background worker responsible for syncing locally pending changes
+ * (offline creates/edits/deletes) with the remote server.
+ *
+ * Merged from two independent drafts:
+ *  - package name and buildRequest()-style API kept from one draft
+ *  - queue-reading / DTO-mapping / conflict-handling logic kept from the other,
+ *    since it's the more complete implementation
+ *
+ * Still blocked on two pieces before doWork() can run for real:
+ *  - SessionManager (who owns session/auth?) — needed to get the current accountId
+ *  - ApiClient (who owns Retrofit/network setup?) — needed to actually call the API
+ */
 public class SyncWorker extends Worker {
 
     public static final String UNIQUE_PERIODIC_NAME = "cohorthub_periodic_sync";
@@ -88,29 +88,29 @@ public class SyncWorker extends Worker {
         // TODO: needs ApiClient - not built yet, ask group who owns Retrofit/network setup
         return Result.retry();
 
-                                                            /*
-                                                                    SyncApiService api = ApiClient.getSyncService(getApplicationContext());
-                                                                            try {
-                                                                                        Response<SyncResponseEnvelope> response = api.pushOperations(new SyncRequest(operations)).execute();
-                                                                                                    if (!response.isSuccessful() || response.body() == null) {
-                                                                                                                    markAllFailed(db, queue);
-                                                                                                                                    return Result.retry();
-                                                                                                                                                }
-                                                                                                                                                            for (SyncResult result : response.body().data.results) {
-                                                                                                                                                                            String resultJson = gson.toJson(result);
-                                                                                                                                                                                            repository.applySyncResult(
-                                                                                                                                                                                                                    result.operationId,
-                                                                                                                                                                                                                                            result.status,
-                                                                                                                                                                                                                                                                    resultJson,
-                                                                                                                                                                                                                                                                                            result.entityId,
-                                                                                                                                                                                                                                                                                                                    result.version);
-                                                                                                                                                                                                                                                                                                                                }
-                                                                                                                                                                                                                                                                                                                                            return Result.success();
-                                                                                                                                                                                                                                                                                                                                                    } catch (Exception e) {
-                                                                                                                                                                                                                                                                                                                                                                markAllFailed(db, queue);
-                                                                                                                                                                                                                                                                                                                                                                            return Result.retry();
-                                                                                                                                                                                                                                                                                                                                                                                    }
-                                                                                                                                                                                                                                                                                                                                                                                            */
+        /*
+        SyncApiService api = ApiClient.getSyncService(getApplicationContext());
+        try {
+            Response<SyncResponseEnvelope> response = api.pushOperations(new SyncRequest(operations)).execute();
+            if (!response.isSuccessful() || response.body() == null) {
+                markAllFailed(db, queue);
+                return Result.retry();
+            }
+            for (SyncResult result : response.body().data.results) {
+                String resultJson = gson.toJson(result);
+                repository.applySyncResult(
+                        result.operationId,
+                        result.status,
+                        resultJson,
+                        result.entityId,
+                        result.version);
+            }
+            return Result.success();
+        } catch (Exception e) {
+            markAllFailed(db, queue);
+            return Result.retry();
+        }
+        */
     }
 
     private void markAllFailed(AppDatabase db, List<PendingOperationEntity> queue) {
@@ -120,9 +120,8 @@ public class SyncWorker extends Worker {
     }
 
     /**
-     * * Schedules recurring background sync (every 15 min while online).
-     * * Uses KEEP so re-calling this doesn't reset an already-scheduled job.
-     *
+     * Schedules recurring background sync (every 15 min while online).
+     * Uses KEEP so re-calling this doesn't reset an already-scheduled job.
      */
     public static void schedulePeriodic(Context context) {
         Constraints constraints = new Constraints.Builder()
@@ -140,10 +139,9 @@ public class SyncWorker extends Worker {
     }
 
     /**
-     * * Triggers an immediate one-time sync, e.g. from a manual "Sync" button.
-     * * Uses KEEP so tapping the button repeatedly doesn't queue duplicate jobs
-     * * while one is already pending/running.
-     *
+     * Triggers an immediate one-time sync, e.g. from a manual "Sync" button.
+     * Uses KEEP so tapping the button repeatedly doesn't queue duplicate jobs
+     * while one is already pending/running.
      */
     public static void triggerManualSync(Context context) {
         Constraints constraints = new Constraints.Builder()
@@ -159,4 +157,3 @@ public class SyncWorker extends Worker {
                 UNIQUE_MANUAL_NAME, ExistingWorkPolicy.KEEP, request);
     }
 }
-
