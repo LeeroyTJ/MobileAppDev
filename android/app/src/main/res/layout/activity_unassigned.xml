@@ -1,0 +1,237 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    LabNexa
+    Unassigned Students (wireframe slide 11)
+
+    Lists students who have no lab group yet. Reuses item_student.xml, so rows
+    look identical to the Roster. Tapping a row opens the student editor, where
+    the lecturer assigns a group.
+
+    State views share their IDs with activity_roster.xml (offline_banner,
+    loading_indicator, empty_state, error_state, ...) so Architecture can reuse
+    the same state-handling code. List and count have their own IDs.
+
+    UI only: visibility is driven by the ViewModel. No FAB: adding a student
+    is done from the Roster.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/unassigned_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurface"
+    android:fitsSystemWindows="true"
+    tools:context=".UnassignedActivity">
+
+    <!-- Top bar: Back is always top-left -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="0dp"
+        android:layout_height="?attr/actionBarSize"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:navigationContentDescription="@string/action_back"
+        app:navigationIcon="@drawable/ic_arrow_back"
+        app:title="@string/unassigned_title"
+        app:titleTextAppearance="?attr/textAppearanceTitleLarge" />
+
+    <!-- Everything between the toolbar and the list -->
+    <LinearLayout
+        android:id="@+id/unassigned_header"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/toolbar">
+
+        <!-- Offline banner: cached results may be limited -->
+        <TextView
+            android:id="@+id/offline_banner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginBottom="8dp"
+            android:accessibilityLiveRegion="polite"
+            android:background="@drawable/bg_banner"
+            android:drawablePadding="12dp"
+            android:drawableStart="@drawable/ic_cloud_off"
+            android:drawableTint="?attr/colorOnSecondaryContainer"
+            android:gravity="center_vertical"
+            android:minHeight="48dp"
+            android:padding="12dp"
+            android:text="@string/roster_offline_banner"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textColor="?attr/colorOnSecondaryContainer"
+            android:visibility="gone" />
+
+        <!-- Count pill (wireframe: "5 students"). Live region: TalkBack announces changes -->
+        <TextView
+            android:id="@+id/unassigned_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:accessibilityLiveRegion="polite"
+            android:background="@drawable/bg_pill"
+            android:minHeight="40dp"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="16dp"
+            android:textAppearance="?attr/textAppearanceLabelLarge"
+            android:textColor="?attr/colorOnSecondaryContainer"
+            tools:text="5 students" />
+
+        <TextView
+            android:id="@+id/unassigned_subtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="16dp"
+            android:layout_marginBottom="8dp"
+            android:layout_marginTop="8dp"
+            android:text="@string/unassigned_subtitle"
+            android:textAppearance="?attr/textAppearanceBodyMedium"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+    </LinearLayout>
+
+    <!-- List + state views; sits between the header and the bottom bar -->
+    <FrameLayout
+        android:id="@+id/unassigned_content"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@id/bottom_navigation"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/unassigned_header">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/unassigned_list"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipToPadding="false"
+            android:paddingBottom="16dp"
+            android:paddingTop="4dp"
+            tools:itemCount="3"
+            tools:listitem="@layout/item_student" />
+
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/loading_indicator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center"
+            android:contentDescription="@string/roster_loading"
+            android:indeterminate="true"
+            android:visibility="gone" />
+
+        <!-- Empty state: a good thing here, so it is positive in tone -->
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/empty_state"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="32dp">
+
+                <ImageView
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_status_synced"
+                    app:tint="?attr/colorPrimary" />
+
+                <TextView
+                    android:id="@+id/empty_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center"
+                    android:text="@string/unassigned_empty_title"
+                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                <TextView
+                    android:id="@+id/empty_message"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center"
+                    android:maxWidth="320dp"
+                    android:text="@string/unassigned_empty_message"
+                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+
+        <!-- Error state: says what happened and offers Retry -->
+        <androidx.core.widget.NestedScrollView
+            android:id="@+id/error_state"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:orientation="vertical"
+                android:padding="32dp">
+
+                <ImageView
+                    android:layout_width="64dp"
+                    android:layout_height="64dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_status_action_required"
+                    app:tint="?attr/colorError" />
+
+                <TextView
+                    android:id="@+id/error_title"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:gravity="center"
+                    android:text="@string/roster_error_title"
+                    android:textAppearance="?attr/textAppearanceTitleMedium" />
+
+                <TextView
+                    android:id="@+id/error_message"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:gravity="center"
+                    android:maxWidth="320dp"
+                    android:text="@string/roster_error_message"
+                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/error_retry"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:minHeight="48dp"
+                    android:text="@string/action_retry" />
+            </LinearLayout>
+        </androidx.core.widget.NestedScrollView>
+    </FrameLayout>
+
+    <!-- Same bar as the Roster. Code selects the Unassigned tab:
+         bottomNav.setSelectedItemId(R.id.nav_unassigned) -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottom_navigation"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        app:labelVisibilityMode="labeled"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:menu="@menu/menu_bottom_nav" />
+</androidx.constraintlayout.widget.ConstraintLayout>
