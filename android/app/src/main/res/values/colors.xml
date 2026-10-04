@@ -1,5 +1,35 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="black">#FF000000</color>
-    <color name="white">#FFFFFFFF</color>
+    <!-- Brand colors -->
+    <color name="primary">#1E90FF</color>
+    <color name="primary_dark">#1565C0</color>
+    <color name="primary_light">#E3F2FD</color>
+
+    <color name="secondary">#1565C0</color>
+    <color name="secondary_light">#E3F2FD</color>
+
+    <!-- Legacy brand aliases -->
+    <color name="dodger_blue">#1E90FF</color>
+    <color name="dodger_blue_dark">#1565C0</color>
+    <color name="dodger_blue_light">#E3F2FD</color>
+
+    <!-- Text & background -->
+    <color name="text_primary">#111111</color>
+    <color name="text_secondary">#5F6368</color>
+    <color name="text_hint">#9E9E9E</color>
+    <color name="ink">#111111</color>
+    <color name="grey_text">#5F6368</color>
+    <color name="white">#FFFFFF</color>
+
+    <!-- Theme & UI Surface Colors -->
+    <color name="outline">#79747E</color>
+    <color name="surface">#FFFFFF</color>
+
+    <!-- Status & Error -->
+    <color name="error_red">#B3261E</color>
+
+    <color name="button_primary">#1E90FF</color>
+    <color name="button_text">#FFFFFF</color>
+
+    <color name="surface_alt">#F5F5F5</color>
 </resources>
