@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Unassigned screen strings (UI/UX-2).
+     The count pill reuses the plurals "roster_count"; offline/error text reuses roster_* strings. -->
+<resources>
+    <string name="unassigned_title">Unassigned</string>
+    <string name="unassigned_subtitle">These students don\'t have a lab group yet. Tap a student to assign one.</string>
+    <string name="unassigned_empty_title">Everyone has a lab group</string>
+    <string name="unassigned_empty_message">Students without a group will show up here.</string>
+</resources>
