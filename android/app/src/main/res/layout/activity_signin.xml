@@ -26,8 +26,8 @@
     <!-- Logo row -->
     <ImageView
         android:id="@+id/ivLogo"
-        android:layout_width="28dp"
-        android:layout_height="28dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:layout_marginTop="20dp"
         android:contentDescription="@string/cd_app_logo"
         android:src="@drawable/logo_circle"
@@ -42,8 +42,8 @@
         android:layout_marginStart="8dp"
         android:fontFamily="sans-serif-medium"
         android:text="@string/app_name"
-        android:textColor="@color/text_primary"
-        android:textSize="20sp"
+        android:textColor="@color/dodger_blue"
+        android:textSize="30sp"
         app:layout_constraintBottom_toBottomOf="@id/ivLogo"
         app:layout_constraintStart_toEndOf="@id/ivLogo"
         app:layout_constraintTop_toTopOf="@id/ivLogo" />
@@ -78,26 +78,28 @@
 
     <!-- Email / student number -->
     <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/tilEmail"
+        android:id="@+id/tilStudentNumber"
         style="@style/CohortHubTextInputLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="@dimen/section_spacing"
-        android:hint="@string/label_email"
-        app:startIconDrawable="@drawable/ic_mail"
+        android:hint="@string/label_student_number"
+        app:startIconDrawable="@drawable/ic_badge"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvSubtitle">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etEmail"
+            android:id="@+id/etStudentNumber"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="@string/hint_email"
-            android:inputType="textEmailAddress"
+            android:inputType="number"
+            android:maxLength="9"
             android:maxLines="1"
             android:textColor="@color/text_primary"
-            android:textSize="15sp" />
+            android:textSize="16sp"
+            android:paddingTop="20dp"
+            android:paddingBottom="14dp" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <!-- Password -->
@@ -112,7 +114,7 @@
         app:startIconDrawable="@drawable/ic_lock"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tilEmail">
+        app:layout_constraintTop_toBottomOf="@id/tilStudentNumber">
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etPassword"
@@ -121,8 +123,9 @@
             android:hint="@string/hint_password"
             android:inputType="textPassword"
             android:maxLines="1"
-            android:textColor="@color/text_primary"
-            android:textSize="15sp" />
+            android:textSize="16sp"
+            android:paddingTop="20dp"
+            android:paddingBottom="14dp" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <!-- Forgot password -->
@@ -144,7 +147,7 @@
         android:id="@+id/btnSignIn"
         style="@style/CohortHubPrimaryButton"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
+        android:layout_height="@dimen/button_height"
         android:layout_marginTop="@dimen/section_spacing"
         android:text="@string/btn_sign_in"
         app:layout_constraintEnd_toEndOf="parent"
