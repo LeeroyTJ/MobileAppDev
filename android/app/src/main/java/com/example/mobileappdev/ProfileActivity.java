@@ -104,4 +104,7 @@ public class ProfileActivity extends AppCompatActivity {
         }
         return sb.toString();
     }
+import android.app.Activity;
+
+public class ProfileActivity extends Activity {
 }

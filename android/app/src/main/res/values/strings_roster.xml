@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Roster / Search / Filter / Unassigned strings (UI/UX-2). No hard-coded text in layouts. -->
+<resources>
+    <!-- Shared actions -->
+    <string name="action_back">Back</string>
+    <string name="action_retry">Retry</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_students">Students</string>
+    <string name="nav_unassigned">Unassigned</string>
+    <string name="nav_more">More</string>
+
+    <!-- Roster -->
+    <string name="roster_title">Students</string>
+    <string name="roster_add_student">Add student</string>
+    <string name="roster_open_filters">Open filters</string>
+    <string name="roster_loading">Loading students</string>
+    <string name="roster_offline_banner">You\'re offline. Showing saved students only; the list may be incomplete or out of date.</string>
+    <string name="roster_error_title">Couldn\'t load students</string>
+    <string name="roster_error_message">Check your connection and try again. Your saved changes are safe.</string>
+    <string name="roster_empty_none_title">No students yet</string>
+    <string name="roster_empty_none_message">Add your first student to get started.</string>
+    <string name="roster_empty_filtered_title">No students match</string>
+    <string name="roster_empty_filtered_message">Try a different name or number, or clear the filters.</string>
+
+    <!-- Search -->
+    <string name="roster_search_hint">Search by name or student number</string>
+    <string name="roster_search_icon_description">Search</string>
+    <string name="roster_search_clear">Clear search</string>
+
+    <!-- Filters -->
+    <string name="filter_programme_group_description">Filter by programme</string>
+    <string name="filter_group_group_description">Filter by lab group</string>
+    <string name="filter_clear_all">Clear all filters</string>
+
+    <string name="programme_cs">CS</string>
+    <string name="programme_it">IT</string>
+    <string name="programme_ds">DS</string>
+    <string name="group_g01">G01</string>
+    <string name="group_g02">G02</string>
+    <string name="group_g03">G03</string>
+    <string name="group_g04">G04</string>
+    <string name="group_unassigned">Unassigned</string>
+
+    <plurals name="roster_count">
+        <item quantity="one">%d student</item>
+        <item quantity="other">%d students</item>
+    </plurals>
+    <plurals name="roster_count_found">
+        <item quantity="one">%d student found</item>
+        <item quantity="other">%d students found</item>
+    </plurals>
+    <plurals name="filters_active">
+        <item quantity="one">%d filter active</item>
+        <item quantity="other">%d filters active</item>
+    </plurals>
+
+    <!-- The five required sync states: use these exact labels app-wide -->
+    <string name="sync_saved_locally">Saved locally</string>
+    <string name="sync_pending">Pending</string>
+    <string name="sync_syncing">Syncing</string>
+    <string name="sync_synced">Synced</string>
+    <string name="sync_action_required">Action required</string>
+
+    <!-- Row text -->
+    <string name="student_meta_format">%1$s • %2$s</string>
+    <!-- TalkBack sentence for a row: name, number, programme, group, sync state -->
+    <string name="student_row_description">%1$s, student number %2$s, programme %3$s, lab group %4$s, %5$s</string>
+    <string name="student_row_description_unassigned">%1$s, student number %2$s, programme %3$s, not assigned to a lab group, %4$s</string>
+</resources>

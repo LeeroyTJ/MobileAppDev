@@ -1,6 +1,13 @@
 package com.example.mobileappdev;
 
+import android.content.Intent;
 import android.os.Bundle;
+import android.text.TextUtils;
+import android.widget.ArrayAdapter;
+import android.widget.AutoCompleteTextView;
+import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mobileappdev.data.remote.ApiClient;
@@ -27,11 +34,13 @@ public class RegistrationActivity extends AppCompatActivity {
     private TextView tvSignIn;
 
     // Programme code -> database id, matched against database schema
-    private final Map<String, Integer> programmeIds = new LinkedHashMap<String, Integer>() {{
-        put("Computer Science (CS)", 1);
-        put("Data Science (DS)", 2);
-        put("Information Technology (IT)", 3);
-    }};
+    private static final Map<String, Integer> PROGRAMME_IDS = new LinkedHashMap<>();
+
+    static {
+        PROGRAMME_IDS.put("Computer Science (CS)", 1);
+        PROGRAMME_IDS.put("Data Science (DS)", 2);
+        PROGRAMME_IDS.put("Information Technology (IT)", 3);
+    }
 
     private Integer selectedProgrammeId = null;
 
@@ -65,12 +74,16 @@ public class RegistrationActivity extends AppCompatActivity {
     }
 
     private void setupProgrammeDropdown() {
-        String[] items = programmeIds.keySet().toArray(new String[0]);
+        String[] items = PROGRAMME_IDS.keySet().toArray(new String[0]);
         ArrayAdapter<String> adapter = new ArrayAdapter<>(
                 this, android.R.layout.simple_list_item_1, items);
         actProgramme.setAdapter(adapter);
-        actProgramme.setOnItemClickListener((parent, view, position, id) ->
-                selectedProgrammeId = programmeIds.get((String) parent.getItemAtPosition(position)));
+        actProgramme.setOnItemClickListener((parent, view, position, id) -> {
+            Object selected = parent.getItemAtPosition(position);
+            if (selected != null) {
+                selectedProgrammeId = PROGRAMME_IDS.get(selected.toString());
+            }
+        });
 
         actLabGroup.setEnabled(false);
         actLabGroup.setHint("Assign after registering");
@@ -116,7 +129,8 @@ public class RegistrationActivity extends AppCompatActivity {
                     startActivity(new Intent(RegistrationActivity.this, SignInActivity.class));
                     finish();
                 } else {
-                    Toast.makeText(RegistrationActivity.this, extractErrorMessage(response), Toast.LENGTH_LONG).show();
+                    Toast.makeText(RegistrationActivity.this,
+                            extractErrorMessage(response), Toast.LENGTH_LONG).show();
                 }
             }
 

@@ -6,8 +6,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/white"
-    android:paddingStart="24dp"
-    android:paddingEnd="24dp"
+    android:paddingStart="@dimen/screen_padding_horizontal"
+    android:paddingEnd="@dimen/screen_padding_horizontal"
     tools:context=".SignInActivity">
 
     <!-- Back button -->
@@ -17,7 +17,9 @@
         android:layout_height="40dp"
         android:layout_marginTop="12dp"
         android:background="?attr/selectableItemBackgroundBorderless"
+        android:contentDescription="@string/cd_back"
         android:padding="8dp"
+        android:src="@drawable/ic_arrowback"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
@@ -27,6 +29,9 @@
         android:layout_width="48dp"
         android:layout_height="48dp"
         android:layout_marginTop="20dp"
+        android:contentDescription="@string/cd_app_logo"
+        android:src="@drawable/logo_circle"
+        app:tint="@color/dodger_blue"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/btnBack" />
 
@@ -36,8 +41,8 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:fontFamily="sans-serif-medium"
-        android:text="CohortHub"
-        android:textColor="@color/black"
+        android:text="@string/app_name"
+        android:textColor="@color/dodger_blue"
         android:textSize="30sp"
         app:layout_constraintBottom_toBottomOf="@id/ivLogo"
         app:layout_constraintStart_toEndOf="@id/ivLogo"
@@ -50,8 +55,8 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
         android:fontFamily="sans-serif-black"
-        android:text="Sign In"
-        android:textColor="@color/black"
+        android:text="@string/signin_title"
+        android:textColor="@color/text_primary"
         android:textSize="30sp"
         android:textStyle="bold"
         app:layout_constraintEnd_toEndOf="parent"
@@ -64,20 +69,22 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:text="Welcome back! Please enter your details."
-        android:textColor="@color/material_dynamic_neutral40"
+        android:text="@string/signin_subtitle"
+        android:textColor="@color/text_secondary"
         android:textSize="15sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvTitle" />
 
-    <!-- Student number -->
+    <!-- Email / student number -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/tilStudentNumber"
+        style="@style/CohortHubTextInputLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="24dp"
-        android:hint="Student Number"
+        android:layout_marginTop="@dimen/section_spacing"
+        android:hint="@string/label_student_number"
+        app:startIconDrawable="@drawable/ic_badge"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tvSubtitle">
@@ -89,17 +96,22 @@
             android:inputType="number"
             android:maxLength="9"
             android:maxLines="1"
-            android:textSize="16sp" />
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:paddingTop="20dp"
+            android:paddingBottom="14dp" />
     </com.google.android.material.textfield.TextInputLayout>
 
     <!-- Password -->
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/tilPassword"
+        style="@style/CohortHubTextInputLayout"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:hint="Password"
+        android:layout_marginTop="@dimen/field_spacing"
+        android:hint="@string/label_password"
         app:endIconMode="password_toggle"
+        app:startIconDrawable="@drawable/ic_lock"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/tilStudentNumber">
@@ -108,21 +120,39 @@
             android:id="@+id/etPassword"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:hint="@string/hint_password"
             android:inputType="textPassword"
             android:maxLines="1"
-            android:textSize="16sp" />
+            android:textSize="16sp"
+            android:paddingTop="20dp"
+            android:paddingBottom="14dp" />
     </com.google.android.material.textfield.TextInputLayout>
+
+    <!-- Forgot password -->
+    <TextView
+        android:id="@+id/tvForgotPassword"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:padding="4dp"
+        android:text="@string/forgot_password"
+        android:textColor="@color/dodger_blue"
+        android:textSize="14sp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/tilPassword" />
 
     <!-- Sign in button -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnSignIn"
+        style="@style/CohortHubPrimaryButton"
         android:layout_width="0dp"
-        android:layout_height="56dp"
-        android:layout_marginTop="24dp"
-        android:text="Sign In"
+        android:layout_height="@dimen/button_height"
+        android:layout_marginTop="@dimen/section_spacing"
+        android:text="@string/btn_sign_in"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tilPassword" />
+        app:layout_constraintTop_toBottomOf="@id/tvForgotPassword" />
 
     <!-- Register link -->
     <LinearLayout
@@ -138,19 +168,20 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Don't have an account? "
-            android:textColor="@color/material_dynamic_neutral40"
+            android:text="@string/no_account_prompt"
+            android:textColor="@color/text_secondary"
             android:textSize="14sp" />
 
         <TextView
             android:id="@+id/tvRegisterLink"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginStart="6dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:fontFamily="sans-serif-medium"
             android:padding="2dp"
-            android:text="Register"
-            android:textColor="@color/design_default_color_primary"
+            android:text="@string/register_link"
+            android:textColor="@color/dodger_blue"
             android:textSize="14sp" />
     </LinearLayout>
 

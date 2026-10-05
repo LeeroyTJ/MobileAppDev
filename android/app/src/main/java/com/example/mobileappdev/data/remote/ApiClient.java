@@ -15,7 +15,10 @@ public class ApiClient {
     // 10.0.2.2 is the Android emulator's alias for the host machine's
     // localhost. Change this if testing on a physical device or once
     // you have a real deployed server address.
-    private static final String BASE_URL = "http://192.168.1.219:3000/";
+    //
+    // Backend dev machine on the LAN (physical-device testing):
+    //   http://192.168.1.219:3000/
+    private static final String BASE_URL = "http://10.0.2.2:3000/";
 
     private static volatile Retrofit retrofit;
 

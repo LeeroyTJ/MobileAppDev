@@ -11,16 +11,20 @@
     <ScrollView
         android:id="@+id/scrollProfile"
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="0dp"
         android:clipToPadding="false"
         android:fillViewport="true"
-        android:paddingBottom="16dp">
+        android:paddingBottom="16dp"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent">
 
         <androidx.constraintlayout.widget.ConstraintLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:paddingStart="24dp"
-            android:paddingEnd="24dp">
+            android:paddingStart="@dimen/screen_padding_horizontal"
+            android:paddingEnd="@dimen/screen_padding_horizontal">
 
             <!-- Back button + title -->
             <ImageButton
@@ -29,7 +33,9 @@
                 android:layout_height="40dp"
                 android:layout_marginTop="12dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="@string/cd_back"
                 android:padding="8dp"
+                android:src="@drawable/ic_arrowback"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
@@ -39,8 +45,8 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
                 android:fontFamily="sans-serif-medium"
-                android:text="Profile"
-                android:textColor="@color/black"
+                android:text="@string/profile_title"
+                android:textColor="@color/text_primary"
                 android:textSize="20sp"
                 app:layout_constraintBottom_toBottomOf="@id/btnBack"
                 app:layout_constraintStart_toEndOf="@id/btnBack"
@@ -52,6 +58,7 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="18dp"
+                android:background="@drawable/bg_card_outline"
                 android:padding="16dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -62,6 +69,7 @@
                     android:id="@+id/frameAvatar"
                     android:layout_width="56dp"
                     android:layout_height="56dp"
+                    android:background="@drawable/bg_avatar_circle"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent">
 
@@ -71,7 +79,7 @@
                         android:layout_height="wrap_content"
                         android:layout_gravity="center"
                         android:fontFamily="sans-serif-medium"
-                        android:textColor="@color/design_default_color_primary"
+                        android:textColor="@color/dodger_blue"
                         android:textSize="18sp"
                         tools:text="EJ" />
                 </FrameLayout>
@@ -84,9 +92,9 @@
                     android:ellipsize="end"
                     android:fontFamily="sans-serif-medium"
                     android:maxLines="1"
-                    android:textColor="@color/black"
+                    android:textColor="@color/text_primary"
                     android:textSize="17sp"
-                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/btnEditProfile"
                     app:layout_constraintStart_toEndOf="@id/frameAvatar"
                     app:layout_constraintTop_toTopOf="@id/frameAvatar"
                     tools:text="Ezekiel Judge" />
@@ -98,9 +106,9 @@
                     android:layout_marginTop="2dp"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="@color/material_dynamic_neutral40"
+                    android:textColor="@color/text_secondary"
                     android:textSize="14sp"
-                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/btnEditProfile"
                     app:layout_constraintStart_toStartOf="@id/tvProfileName"
                     app:layout_constraintTop_toBottomOf="@id/tvProfileName"
                     tools:text="202412345" />
@@ -112,12 +120,23 @@
                     android:layout_marginTop="2dp"
                     android:ellipsize="end"
                     android:maxLines="1"
-                    android:textColor="@color/material_dynamic_neutral40"
+                    android:textColor="@color/text_secondary"
                     android:textSize="14sp"
-                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintEnd_toStartOf="@id/btnEditProfile"
                     app:layout_constraintStart_toStartOf="@id/tvProfileName"
                     app:layout_constraintTop_toBottomOf="@id/tvProfileStudentNumber"
                     tools:text="Computer Science" />
+
+                <ImageButton
+                    android:id="@+id/btnEditProfile"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/cd_edit_profile"
+                    android:padding="4dp"
+                    android:src="@drawable/ic_edit_outline"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -126,18 +145,20 @@
                 android:id="@+id/cardLabGroup"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
+                android:layout_marginTop="@dimen/field_spacing"
+                android:background="@drawable/bg_card_outline"
                 android:padding="14dp"
-                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/cardSyncStatus"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/cardProfileInfo">
+                app:layout_constraintTop_toBottomOf="@id/cardProfileInfo"
+                app:layout_constraintWidth_percent="0.47">
 
                 <TextView
                     android:id="@+id/tvLabGroupCardTitle"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="Lab Group"
-                    android:textColor="@color/material_dynamic_neutral40"
+                    android:text="@string/lab_group_card_title"
+                    android:textColor="@color/text_secondary"
                     android:textSize="13sp"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -148,15 +169,279 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
                     android:fontFamily="sans-serif-medium"
-                    android:textColor="@color/black"
+                    android:textColor="@color/text_primary"
                     android:textSize="22sp"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tvLabGroupCardTitle"
                     tools:text="G02" />
 
+                <TextView
+                    android:id="@+id/tvLabGroupCapacity"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvLabGroupValue"
+                    tools:text="11 / 15" />
+
+                <ProgressBar
+                    android:id="@+id/progressLabGroup"
+                    style="@android:style/Widget.ProgressBar.Horizontal"
+                    android:layout_width="0dp"
+                    android:layout_height="6dp"
+                    android:layout_marginTop="10dp"
+                    android:max="15"
+                    android:progress="11"
+                    android:progressBackgroundTint="@color/outline"
+                    android:progressTint="@color/dodger_blue"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvLabGroupCapacity" />
+
+                <TextView
+                    android:id="@+id/tvPlacesRemaining"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/progressLabGroup"
+                    tools:text="4 places remaining" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- Sync Status card -->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/cardSyncStatus"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:background="@drawable/bg_card_outline"
+                android:padding="14dp"
+                app:layout_constraintBottom_toBottomOf="@id/cardLabGroup"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toEndOf="@id/cardLabGroup"
+                app:layout_constraintTop_toTopOf="@id/cardLabGroup"
+                app:layout_constraintWidth_percent="0.47">
+
+                <TextView
+                    android:id="@+id/tvSyncStatusCardTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="@string/sync_status_card_title"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="13sp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <ImageView
+                    android:id="@+id/ivSyncCheck"
+                    android:layout_width="18dp"
+                    android:layout_height="18dp"
+                    android:layout_marginTop="8dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_check_circle"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvSyncStatusCardTitle" />
+
+                <TextView
+                    android:id="@+id/tvSyncedLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="@string/sync_status_synced"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    app:layout_constraintBottom_toBottomOf="@id/ivSyncCheck"
+                    app:layout_constraintStart_toEndOf="@id/ivSyncCheck"
+                    app:layout_constraintTop_toTopOf="@id/ivSyncCheck" />
+
+                <TextView
+                    android:id="@+id/tvLastUpdatedLabel"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="@string/last_updated_label"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/ivSyncCheck" />
+
+                <TextView
+                    android:id="@+id/tvLastUpdatedValue"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:textColor="@color/text_secondary"
+                    android:textSize="12sp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvLastUpdatedLabel"
+                    tools:text="Today, 09:24" />
+
+            </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- Quick Actions card -->
+            <androidx.constraintlayout.widget.ConstraintLayout
+                android:id="@+id/cardQuickActions"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:layout_marginBottom="16dp"
+                android:background="@drawable/bg_card_outline"
+                android:paddingStart="16dp"
+                android:paddingTop="14dp"
+                android:paddingEnd="16dp"
+                android:paddingBottom="4dp"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/cardLabGroup">
+
+                <TextView
+                    android:id="@+id/tvQuickActionsTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="6dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="@string/quick_actions_title"
+                    android:textColor="@color/text_primary"
+                    android:textSize="15sp"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toTopOf="parent" />
+
+                <!-- Edit my details -->
+                <LinearLayout
+                    android:id="@+id/rowEditDetails"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/tvQuickActionsTitle">
+
+                    <ImageView
+                        android:layout_width="@dimen/icon_size"
+                        android:layout_height="@dimen/icon_size"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_edit_outline" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:text="@string/action_edit_details"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
+                <View
+                    android:id="@+id/dividerOne"
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:background="@color/outline"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/rowEditDetails" />
+
+                <!-- Request group change -->
+                <LinearLayout
+                    android:id="@+id/rowRequestGroupChange"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/dividerOne">
+
+                    <ImageView
+                        android:layout_width="@dimen/icon_size"
+                        android:layout_height="@dimen/icon_size"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_refresh" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:text="@string/action_request_group_change"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
+                <View
+                    android:id="@+id/dividerTwo"
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:background="@color/outline"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/rowRequestGroupChange" />
+
+                <!-- Request student number correction -->
+                <LinearLayout
+                    android:id="@+id/rowRequestNumberCorrection"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingTop="12dp"
+                    android:paddingBottom="12dp"
+                    app:layout_constraintEnd_toEndOf="parent"
+                    app:layout_constraintStart_toStartOf="parent"
+                    app:layout_constraintTop_toBottomOf="@id/dividerTwo">
+
+                    <ImageView
+                        android:layout_width="@dimen/icon_size"
+                        android:layout_height="@dimen/icon_size"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_document" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:text="@string/action_request_student_number_correction"
+                        android:textColor="@color/text_primary"
+                        android:textSize="15sp" />
+                </LinearLayout>
+
             </androidx.constraintlayout.widget.ConstraintLayout>
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>
+
+    <!-- Bottom navigation -->
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNav"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@color/white"
+        app:itemIconTint="@color/dodger_blue"
+        app:itemTextColor="@color/dodger_blue"
+        app:labelVisibilityMode="labeled"
+        app:menu="@menu/bottom_nav_menu"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
