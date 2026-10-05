@@ -21,17 +21,18 @@ public class AuthInterceptor implements Interceptor {
     @NonNull
     @Override
     public Response intercept(@NonNull Chain chain) throws IOException {
-        Request original = chain.request();
+        Request originalRequest = chain.request();
 
         String token = sessionManager.getToken();
-        if (token == null) {
-            return chain.proceed(original);
+
+        if (token == null || token.trim().isEmpty()) {
+            return chain.proceed(originalRequest);
         }
 
-        Request authorized = original.newBuilder()
+        Request authenticatedRequest = originalRequest.newBuilder()
                 .header("Authorization", "Bearer " + token)
                 .build();
 
-        return chain.proceed(authorized);
+        return chain.proceed(authenticatedRequest);
     }
 }

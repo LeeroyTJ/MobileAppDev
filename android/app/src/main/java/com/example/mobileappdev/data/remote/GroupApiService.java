@@ -14,8 +14,8 @@ public interface GroupApiService {
     Call<Map<String, Object>> listGroups();
 
     @POST("api/v1/groups/{groupId}/assign")
-    Call<Map<String, Object>> assign(@Path("groupId") long groupId, @Body Map<String, Object> body);
+    Call<Map<String, Object>> assignStudent(@Path("groupId") long groupId, @Body Map<String, Object> body);
 
     @POST("api/v1/groups/{groupId}/transfer")
-    Call<Map<String, Object>> transfer(@Path("groupId") long groupId, @Body Map<String, Object> body);
+    Call<Map<String, Object>> transferStudent(@Path("groupId") long groupId, @Body Map<String, Object> body);
 }

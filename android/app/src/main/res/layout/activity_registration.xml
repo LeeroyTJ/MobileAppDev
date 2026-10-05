@@ -306,4 +306,4 @@
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>
 
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+</androidx.coordinatorlayout.widget.ConstraintLayout>
