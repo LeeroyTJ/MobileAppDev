@@ -26,3 +26,6 @@ server/.env
 # NPM logs
 npm-debug.log*
 *.log
+
+# Project Documentation
+DOCUMENTATION.md
