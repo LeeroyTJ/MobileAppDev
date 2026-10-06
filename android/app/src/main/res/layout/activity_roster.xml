@@ -9,7 +9,7 @@
     android:layout_height="match_parent"
     android:background="?attr/colorSurface"
     android:fitsSystemWindows="true"
-    tools:context=".ui.RosterActivity">
+    tools:context=".RosterActivity">
 
     <!-- ========================================================= -->
     <!-- MAIN CONTENT                                               -->
@@ -287,6 +287,89 @@
         <!-- ===================================================== -->
         <!-- RESULT COUNT                                           -->
         <!-- ===================================================== -->
+
+        <!-- ===================================================== -->
+        <!-- LAB GROUP CAPACITY CARD                                -->
+        <!-- ===================================================== -->
+
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_group_capacity"
+            style="?attr/materialCardViewFilledStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="16dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="4dp"
+            app:cardCornerRadius="16dp"
+            app:strokeWidth="1dp"
+            app:strokeColor="?attr/colorOutlineVariant"
+            app:cardBackgroundColor="@color/surface_alt">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tv_roster_group_title"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:fontFamily="sans-serif-medium"
+                        android:textAppearance="?attr/textAppearanceTitleMedium"
+                        android:textColor="?attr/colorOnSurface"
+                        tools:text="Lab Group Capacity" />
+
+                    <!-- Remaining places pill badge -->
+                    <TextView
+                        android:id="@+id/tv_roster_places_remaining_pill"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/bg_pill"
+                        android:fontFamily="sans-serif-medium"
+                        android:paddingStart="12dp"
+                        android:paddingTop="4dp"
+                        android:paddingEnd="12dp"
+                        android:paddingBottom="4dp"
+                        android:textAppearance="?attr/textAppearanceLabelMedium"
+                        android:textColor="@color/primary_dark"
+                        tools:text="3 places remaining" />
+
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tv_roster_group_capacity_ratio"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:textAppearance="?attr/textAppearanceBodyMedium"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    tools:text="12 / 15 filled" />
+
+                <!-- Horizontal Capacity ProgressBar -->
+                <ProgressBar
+                    android:id="@+id/progress_roster_group_capacity"
+                    style="@android:style/Widget.ProgressBar.Horizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="8dp"
+                    android:layout_marginTop="10dp"
+                    android:max="15"
+                    android:progress="12"
+                    android:progressBackgroundTint="@color/primary_light"
+                    android:progressTint="@color/primary"
+                    tools:progress="12" />
+
+            </LinearLayout>
+
+        </com.google.android.material.card.MaterialCardView>
 
         <LinearLayout
             android:id="@+id/result_header"
