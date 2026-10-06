@@ -1,7 +1,7 @@
 *.iml
 .gradle
 /local.properties
-.idea
+.idea/misc.xml
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
@@ -26,3 +26,6 @@ server/.env
 # NPM logs
 npm-debug.log*
 *.log
+
+# Project Documentation
+DOCUMENTATION.md
