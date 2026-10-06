@@ -145,6 +145,8 @@
 
         <!-- ACTIONS -->
 
+        <!-- ACTIONS -->
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -154,47 +156,119 @@
 
             <!-- CHANGE GROUP -->
 
-            <TextView
+            <LinearLayout
                 android:id="@+id/changeGroup"
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
+                android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:padding="16dp"
-                android:text="👥   Change group                         ›"
-                android:textColor="@color/black"
-                android:textSize="16sp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
                 android:clickable="true"
-                android:focusable="true"/>
+                android:focusable="true">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_group"
+                    android:contentDescription="Change group icon"
+                    android:tint="@color/dodger_blue"/>
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:text="@string/change_group"
+                    android:textColor="@color/black"
+                    android:textSize="16sp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="@color/dark_gray"
+                    android:textSize="28sp"/>
+
+            </LinearLayout>
 
 
-            <!-- CORRECT NUMBER -->
+            <!-- CORRECT STUDENT NUMBER -->
 
-            <TextView
+            <LinearLayout
                 android:id="@+id/correctStudentNumber"
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
+                android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:padding="16dp"
-                android:text="✎   Correct student number          ›"
-                android:textColor="@color/black"
-                android:textSize="16sp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
                 android:clickable="true"
-                android:focusable="true"/>
+                android:focusable="true">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_edit"
+                    android:contentDescription="Correct student number icon"
+                    android:tint="@color/dodger_blue"/>
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:text="@string/correct_student_number"
+                    android:textColor="@color/black"
+                    android:textSize="16sp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="@color/dark_gray"
+                    android:textSize="28sp"/>
+
+            </LinearLayout>
 
 
             <!-- EDIT DETAILS -->
 
-            <TextView
+            <LinearLayout
                 android:id="@+id/editDetails"
                 android:layout_width="match_parent"
                 android:layout_height="60dp"
+                android:orientation="horizontal"
                 android:gravity="center_vertical"
-                android:padding="16dp"
-                android:text="✎   Edit details                            ›"
-                android:textColor="@color/black"
-                android:textSize="16sp"
+                android:paddingStart="16dp"
+                android:paddingEnd="16dp"
                 android:clickable="true"
-                android:focusable="true"/>
+                android:focusable="true">
+
+                <ImageView
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_edit"
+                    android:contentDescription="Edit details icon"
+                    android:tint="@color/dodger_blue"/>
+
+                <TextView
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="16dp"
+                    android:text="@string/edit_details"
+                    android:textColor="@color/black"
+                    android:textSize="16sp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="›"
+                    android:textColor="@color/dark_gray"
+                    android:textSize="28sp"/>
+
+            </LinearLayout>
 
         </LinearLayout>
 
@@ -209,6 +283,7 @@
             android:text="@string/delete_student"
             android:textColor="@color/white"
             android:textSize="16sp"
+            android:textStyle="bold"
             android:backgroundTint="@color/dodger_blue"/>
 
     </LinearLayout>

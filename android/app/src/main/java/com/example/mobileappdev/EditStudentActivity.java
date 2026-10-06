@@ -4,7 +4,7 @@ import android.os.Bundle;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.Spinner;
-import android.widget.TextView;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -14,9 +14,9 @@ public class EditStudentActivity extends AppCompatActivity {
     Spinner spinnerLabGroup;
     Spinner spinnerProgramme;
 
-    TextView changeGroup;
-    TextView correctStudentNumber;
-    TextView editDetails;
+    LinearLayout changeGroup;
+    LinearLayout correctStudentNumber;
+    LinearLayout editDetails;
 
     Button deleteStudent;
 
