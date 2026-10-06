@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Filter & Search sheet strings (UI/UX-2) -->
+<resources>
+    <string name="filter_sheet_title">Filters</string>
+    <string name="filter_sheet_clear">Clear all</string>
+    <string name="filter_all">All</string>
+    <string name="filter_apply">Apply filters</string>
+
+    <string name="filter_label_programme">Programme</string>
+    <string name="filter_label_group">Lab group</string>
+    <string name="filter_label_status">Sync status</string>
+    <string name="filter_status_helper">Based on the data saved on this phone</string>
+
+    <!-- Result summary card -->
+    <string name="filter_result_title">Matching students</string>
+    <plurals name="filter_result_count">
+        <item quantity="one">%d student matches your filters</item>
+        <item quantity="other">%d students match your filters</item>
+    </plurals>
+
+    <!-- IMPORTANT for code: map selections by POSITION, never by label text.
+         Position 0 = All (no filter). Keeps filtering correct if labels are ever translated. -->
+    <string-array name="filter_programme_options">
+        <item>@string/filter_all</item>
+        <item>@string/programme_cs</item>
+        <item>@string/programme_it</item>
+        <item>@string/programme_ds</item>
+    </string-array>
+
+    <string-array name="filter_group_options">
+        <item>@string/filter_all</item>
+        <item>@string/group_g01</item>
+        <item>@string/group_g02</item>
+        <item>@string/group_g03</item>
+        <item>@string/group_g04</item>
+        <item>@string/group_unassigned</item>
+    </string-array>
+
+    <string-array name="filter_status_options">
+        <item>@string/filter_all</item>
+        <item>@string/sync_saved_locally</item>
+        <item>@string/sync_pending</item>
+        <item>@string/sync_syncing</item>
+        <item>@string/sync_synced</item>
+        <item>@string/sync_action_required</item>
+    </string-array>
+</resources>

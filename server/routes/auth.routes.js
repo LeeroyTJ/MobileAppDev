@@ -170,4 +170,65 @@ router.post('/register', async (req, res) => {
     }
 });
 
+/**
+ * POST /api/v1/auth/login
+ * Public login endpoint
+ */
+router.post('/login', async (req, res) => {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'VALIDATION_ERROR', message: 'Missing username or password' }
+        });
+    }
+
+    try {
+        const [rows] = await pool.query('SELECT * FROM accounts WHERE username = ?', [username]);
+
+        if (rows.length === 0) {
+            return res.status(401).json({
+                success: false,
+                error: { code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' }
+            });
+        }
+
+        const account = rows[0];
+
+        if (!account.is_active) {
+            return res.status(401).json({
+                success: false,
+                error: { code: 'ACCOUNT_DISABLED', message: 'Account is disabled' }
+            });
+        }
+
+        const isMatch = await bcrypt.compare(password, account.password_hash);
+        if (!isMatch) {
+            return res.status(401).json({
+                success: false,
+                error: { code: 'INVALID_CREDENTIALS', message: 'Invalid credentials' }
+            });
+        }
+
+        const token = jwt.sign(
+            { id: account.account_id, role: account.role },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        return res.status(200).json({
+            success: true,
+            data: { accessToken: token, role: account.role, accountId: account.account_id }
+        });
+
+    } catch (error) {
+        console.error('Login error:', error);
+        return res.status(500).json({
+            success: false,
+            error: { code: 'INTERNAL_ERROR', message: 'Server error during login' }
+        });
+    }
+});
+
 module.exports = router;

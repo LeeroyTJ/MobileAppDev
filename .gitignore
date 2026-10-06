@@ -9,6 +9,7 @@
 /.idea/navEditor.xml
 .idea/markdown.xml
 /.idea/assetWizardSettings.xml
+/.idea/markdown.xmlpu
 .DS_Store
 /build
 /captures
@@ -26,3 +27,6 @@ server/.env
 # NPM logs
 npm-debug.log*
 *.log
+
+# Project Documentation
+DOCUMENTATION.md
