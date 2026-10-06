@@ -3,6 +3,7 @@ package com.example.mobileappdev.data.remote;
 import android.content.Context;
 
 import com.example.mobileappdev.session.SessionManager;
+import com.example.mobileappdev.sync.SyncApiService;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -55,5 +56,9 @@ public class ApiClient {
 
     public static GroupApiService getGroupService(Context context) {
         return getInstance(context).create(GroupApiService.class);
+    }
+
+    public static SyncApiService getSyncService(Context context) {
+        return getInstance(context).create(SyncApiService.class);
     }
 }
