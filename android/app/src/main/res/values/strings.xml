@@ -1,78 +1,67 @@
-<?xml version="1.0" encoding="utf-8"?>
 <resources>
 
-    <string name="app_name">CohortHub</string>
+    <string name="app_name">Student Manager</string>
 
-    <!-- Common -->
+    <string name="students">Students</string>
+    <string name="edit_student">Edit Student</string>
+
+    <string name="student_name">Thabo Jumbe</string>
+    <string name="student_number">202312345</string>
+    <string name="programme_short">CS</string>
+
+    <string name="lab_group">Lab Group</string>
+    <string name="lab_group_value">GO2 (11/15)</string>
+
+    <string name="programme">Programme</string>
+    <string name="programme_value">Computer Science</string>
+
+    <string name="change_group">Change group</string>
+    <string name="correct_student_number">Correct student number</string>
+    <string name="edit_details">Edit details</string>
+    <string name="delete_student">Delete student</string>
+
+    <!-- Content Descriptions -->
     <string name="cd_back">Back</string>
-    <string name="cd_app_logo">CohortHub logo</string>
-    <string name="cd_profile_avatar">Profile picture</string>
+    <string name="cd_app_logo">App Logo</string>
+    <string name="cd_edit_profile">Edit Profile</string>
 
-    <!-- Registration screen -->
-    <string name="registration_title">Join your\nlab group</string>
-    <string name="registration_subtitle">Create your student profile to get started.</string>
-    <string name="label_full_name">Full name</string>
-    <string name="hint_full_name">e.g. Ezekiel Judge</string>
-    <string name="label_student_number">Student number</string>
-    <string name="hint_student_number">9 digits (e.g. 202412345)</string>
-    <string name="label_programme">Programme of study</string>
-    <string name="hint_programme">Select programme</string>
-    <string name="label_lab_group">Lab group</string>
-    <string name="hint_lab_group">Select group (G01 \u2013 G04)</string>
-    <string name="draft_notice">Saved as draft \u2014 verify to complete when online.</string>
-    <string name="btn_save_registration">Save registration</string>
-    <string name="error_required">This field is required</string>
-    <string name="error_student_number">Enter a valid 9-digit student number</string>
-    <string name="already_have_account">Already have an account? </string>
-    <string name="terms_privacy_notice">By continuing, you agree to our Terms of Service and Privacy Policy.</string>
-    <string name="sign_in">Sign In</string>
-
-    <!-- Sign-in screen -->
-    <string name="signin_title">Welcome Back</string>
-    <string name="signin_subtitle">Sign in to continue to your lab group.</string>
-    <string name="label_email">Email or student number</string>
-    <string name="hint_email">e.g. you@students.mu.ac.zm</string>
-    <string name="label_password">Password</string>
-    <string name="hint_password">Enter your password</string>
-    <string name="forgot_password">Forgot password?</string>
-    <string name="btn_sign_in">Sign in</string>
-    <string name="no_account_prompt">Don\'t have an account?</string>
-    <string name="register_link">Register</string>
-
-    <!-- Profile screen -->
-    <string name="profile_title">My Profile</string>
-    <string name="cd_edit_profile">Edit profile</string>
+    <!-- Profile Screen -->
+    <string name="profile_title">Profile</string>
     <string name="lab_group_card_title">Lab Group</string>
-    <string name="places_remaining_format">%1$d places remaining</string>
     <string name="sync_status_card_title">Sync Status</string>
     <string name="sync_status_synced">Synced</string>
     <string name="last_updated_label">Last updated</string>
     <string name="quick_actions_title">Quick Actions</string>
-    <string name="action_edit_details">Edit my details</string>
+    <string name="action_edit_details">Edit details</string>
     <string name="action_request_group_change">Request group change</string>
     <string name="action_request_student_number_correction">Request student number correction</string>
 
-    <!-- Bottom navigation -->
+    <!-- Registration Screen -->
+    <string name="registration_title">Create Account</string>
+    <string name="registration_subtitle">Sign up to access CohortHub</string>
+    <string name="label_full_name">Full Name</string>
+    <string name="label_student_number">Student Number</string>
+    <string name="label_password">Password</string>
+    <string name="label_programme">Programme</string>
+    <string name="label_lab_group">Lab Group</string>
+    <string name="draft_notice">Draft saved</string>
+    <string name="btn_save_registration">Register</string>
+    <string name="already_have_account">Already have an account?</string>
+    <string name="sign_in">Sign In</string>
+    <string name="terms_privacy_notice">By signing up, you agree to our Terms and Privacy Policy.</string>
+
+    <!-- Sign In Screen -->
+    <string name="signin_title">Welcome Back</string>
+    <string name="signin_subtitle">Sign in to continue</string>
+    <string name="hint_password">Enter your password</string>
+    <string name="forgot_password">Forgot Password?</string>
+    <string name="btn_sign_in">Sign In</string>
+    <string name="no_account_prompt">Don\'t have an account?</string>
+    <string name="register_link">Register</string>
+
+    <!-- Navigation -->
     <string name="nav_home">Home</string>
     <string name="nav_group">Group</string>
     <string name="nav_profile">Profile</string>
-
-
-    <!-- Dropdown data -->
-    <string-array name="programme_options">
-        <item>BSc Computer Science</item>
-        <item>BSc Information Technology</item>
-        <item>BSc Software Engineering</item>
-        <item>BEng Computer Engineering</item>
-        <item>Other</item>
-    </string-array>
-
-    <string-array name="lab_group_options">
-        <item>G01</item>
-        <item>G02</item>
-        <item>G03</item>
-        <item>G04</item>
-    </string-array>
-    <string name="cd_logo">CohortHub logo</string>
 
 </resources>
