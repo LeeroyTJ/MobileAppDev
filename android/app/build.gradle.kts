@@ -41,6 +41,7 @@ dependencies {
         implementation("androidx.constraintlayout:constraintlayout:2.2.1")
 
         implementation("androidx.room:room-runtime:2.6.1")
+        implementation("androidx.sqlite:sqlite:2.4.0")
         annotationProcessor("androidx.room:room-compiler:2.6.1")
         implementation("androidx.lifecycle:lifecycle-livedata:2.7.0")
         implementation("androidx.work:work-runtime:2.9.0")
