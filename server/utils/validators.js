@@ -1,5 +1,7 @@
 function isValidStudentNumber(value) {
-    return typeof value === 'string' && /^\d{9}$/.test(value);
+    if (typeof value !== 'string') return false;
+    const trimmed = value.trim();
+    return /^\d{9}$/.test(trimmed);
 }
 
 function isValidName(value) {
