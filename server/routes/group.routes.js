@@ -1,24 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const jwt = require('jsonwebtoken');
+const { authenticateToken } = require('../middleware/auth');
 const { isPositiveInt } = require('../utils/validators');
-
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET is not set. Check your .env file.');
-}
-
-function authenticateToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if (!token) return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Token missing' } });
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Invalid token' } });
-        req.user = user;
-        next();
-    });
-}
 
 // POST /api/v1/groups/:groupId/assign
 // Body: { studentId }
@@ -98,7 +82,6 @@ router.post('/:groupId/assign', authenticateToken, async (req, res) => {
 // POST /api/v1/groups/:groupId/transfer
 // Body: { studentId }
 // Moves a student from their current group into :groupId.
-// On failure, the student must retain their previous group (brief requirement).
 router.post('/:groupId/transfer', authenticateToken, async (req, res) => {
     const { groupId } = req.params;
     const { studentId } = req.body;
@@ -146,7 +129,6 @@ router.post('/:groupId/transfer', authenticateToken, async (req, res) => {
         );
 
         if (count >= group.capacity) {
-            // Failed transfer — student keeps their previous group, nothing is written.
             await connection.rollback();
             return res.status(409).json({
                 success: false,
