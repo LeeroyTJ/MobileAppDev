@@ -28,8 +28,8 @@ public interface PendingOperationDao {
     PendingOperationEntity findById(String operationId);
 
     @Query("SELECT * FROM pending_operations WHERE studentLocalId = :studentLocalId " +
-            "ORDER BY createdAt ASC")
-    List<PendingOperationEntity> findForStudent(Long studentLocalId);
+            "AND accountId = :accountId ORDER BY createdAt ASC")
+    List<PendingOperationEntity> findForStudent(Long studentLocalId, long accountId);
 
     @Query("SELECT * FROM pending_operations WHERE accountId = :accountId ORDER BY createdAt ASC")
     LiveData<List<PendingOperationEntity>> observeQueueForAccount(long accountId);
@@ -43,4 +43,3 @@ public interface PendingOperationDao {
     @Query("DELETE FROM pending_operations WHERE operationId = :operationId")
     void deleteById(String operationId);
 }
-
