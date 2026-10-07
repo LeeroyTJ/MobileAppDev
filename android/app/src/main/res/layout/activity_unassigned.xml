@@ -76,7 +76,7 @@
             android:layout_marginHorizontal="16dp"
             android:accessibilityLiveRegion="polite"
             android:background="@drawable/bg_pill"
-            android:minHeight="40dp"
+            android:minHeight="48dp"
             android:gravity="center_vertical"
             android:paddingHorizontal="16dp"
             android:textAppearance="?attr/textAppearanceLabelLarge"

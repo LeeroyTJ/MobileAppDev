@@ -29,12 +29,12 @@
             <!-- Back button + title -->
             <ImageButton
                 android:id="@+id/btnBack"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_marginTop="12dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="@string/cd_back"
-                android:padding="8dp"
+                android:padding="12dp"
                 android:src="@drawable/ic_arrowback"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
@@ -129,11 +129,11 @@
 
                 <ImageButton
                     android:id="@+id/btnEditProfile"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/cd_edit_profile"
-                    android:padding="4dp"
+                    android:padding="12dp"
                     android:src="@drawable/ic_edit_outline"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -213,14 +213,13 @@
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <!-- Sync Status card -->
+            <!-- Sync Status card (Wrap content height for 200% font scale) -->
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/cardSyncStatus"
                 android:layout_width="0dp"
-                android:layout_height="0dp"
+                android:layout_height="wrap_content"
                 android:background="@drawable/bg_card_outline"
                 android:padding="14dp"
-                app:layout_constraintBottom_toBottomOf="@id/cardLabGroup"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="@id/cardLabGroup"
                 app:layout_constraintTop_toTopOf="@id/cardLabGroup"
