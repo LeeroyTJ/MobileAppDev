@@ -25,4 +25,11 @@
     <color name="button_primary">#1E90FF</color>
     <color name="button_text">#FFFFFF</color>
 
+    <!-- Additional Button & Background colours -->
+    <color name="button_blue">#1E90FF</color>
+    <color name="border_gray">#E0E0E0</color>
+    <color name="card_background">#FFFFFF</color>
+    <color name="avatar_background">#555555</color>
+    <color name="button_cancel_bg">#F7F7F7</color>
+
 </resources>

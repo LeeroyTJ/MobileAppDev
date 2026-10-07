@@ -1,5 +1,6 @@
 package com.example.mobileappdev;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
@@ -129,13 +130,11 @@ public class EditStudentActivity extends AppCompatActivity {
         // DELETE STUDENT
 
         deleteStudent.setOnClickListener(v -> {
-
-            Toast.makeText(
-                    EditStudentActivity.this,
-                    "Student deleted",
-                    Toast.LENGTH_SHORT
-            ).show();
-
+            Intent intent = new Intent(EditStudentActivity.this, DeleteStudentActivity.class);
+            intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_NAME, "Thabo Jumbe");
+            intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_NUMBER, "202312345");
+            intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_PROGRAMME, "CS");
+            startActivity(intent);
         });
     }
 }
