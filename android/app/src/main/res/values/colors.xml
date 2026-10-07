@@ -37,4 +37,8 @@
     <color name="primary_light">#60A5FA</color>
     <color name="primary_dark">#1870D5</color>
 
+    <!-- Error Circle & Icon Colors -->
+    <color name="error_bg_light">#FFEBEE</color>
+    <color name="error_icon_red">#E53935</color>
+
 </resources>

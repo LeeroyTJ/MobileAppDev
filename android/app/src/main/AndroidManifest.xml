@@ -17,16 +17,20 @@
         android:theme="@style/Theme.CohortHub"
         android:networkSecurityConfig="@xml/network_security_config">
 
-        <!-- 1. Launcher Screen (Currently RegistrationActivity) -->
+        <!-- 1. Launcher Screen (Set to ConnectionErrorActivity for previewing) -->
         <activity
-            android:name=".RegistrationActivity"
-            android:exported="true"
-            android:windowSoftInputMode="adjustResize">
+            android:name=".ConnectionErrorActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".RegistrationActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
 
         <!-- 2. Existing App Screens -->
         <activity
@@ -46,7 +50,7 @@
             android:name=".MainActivity"
             android:exported="false" />
 
-        <!-- 3. New Screen Created For Delete Action Screen -->
+        <!-- 3. New Screens -->
         <activity
             android:name=".DeleteStudentActivity"
             android:exported="false" />
