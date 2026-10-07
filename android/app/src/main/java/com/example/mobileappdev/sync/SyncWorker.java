@@ -16,26 +16,24 @@ import androidx.work.WorkerParameters;
 
 import com.example.mobileappdev.data.local.AppDatabase;
 import com.example.mobileappdev.data.local.entity.PendingOperationEntity;
+import com.example.mobileappdev.data.remote.ApiClient;
 import com.example.mobileappdev.data.remote.SyncApiModels.SyncOperation;
+import com.example.mobileappdev.data.remote.SyncApiModels.SyncRequest;
+import com.example.mobileappdev.data.remote.SyncApiModels.SyncResponseEnvelope;
+import com.example.mobileappdev.data.remote.SyncApiModels.SyncResult;
 import com.example.mobileappdev.data.repository.StudentSyncRepository;
+import com.example.mobileappdev.session.SessionManager;
 import com.google.gson.Gson;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
+import retrofit2.Response;
+
 /**
  * Background worker responsible for syncing locally pending changes
  * (offline creates/edits/deletes) with the remote server.
- *
- * Merged from two independent drafts:
- *  - package name and buildRequest()-style API kept from one draft
- *  - queue-reading / DTO-mapping / conflict-handling logic kept from the other,
- *    since it's the more complete implementation
- *
- * Still blocked on two pieces before doWork() can run for real:
- *  - SessionManager (who owns session/auth?) — needed to get the current accountId
- *  - ApiClient (who owns Retrofit/network setup?) — needed to actually call the API
  */
 public class SyncWorker extends Worker {
 
@@ -44,20 +42,14 @@ public class SyncWorker extends Worker {
 
     private final Gson gson = new Gson();
 
-    // Required constructor signature for any Worker subclass.
-    // WorkManager calls this automatically when it schedules the job;
-    // we never construct SyncWorker ourselves.
     public SyncWorker(@NonNull Context context, @NonNull WorkerParameters params) {
         super(context, params);
     }
 
-    // The actual background task, run by WorkManager on a background thread
-    // once constraints (e.g. network) are satisfied.
     @NonNull
     @Override
     public Result doWork() {
-        // TODO: needs SessionManager - not built yet, ask group who owns session/auth
-        long accountId = 0; // SessionManager.getCurrentAccountId(getApplicationContext());
+        long accountId = SessionManager.getInstance(getApplicationContext()).getAccountId();
         if (accountId <= 0) {
             return Result.success();
         }
@@ -85,14 +77,10 @@ public class SyncWorker extends Worker {
             operations.add(dto);
         }
 
-        // TODO: needs ApiClient - not built yet, ask group who owns Retrofit/network setup
-        return Result.retry();
-
-        /*
         SyncApiService api = ApiClient.getSyncService(getApplicationContext());
         try {
             Response<SyncResponseEnvelope> response = api.pushOperations(new SyncRequest(operations)).execute();
-            if (!response.isSuccessful() || response.body() == null) {
+            if (!response.isSuccessful() || response.body() == null || response.body().data == null) {
                 markAllFailed(db, queue);
                 return Result.retry();
             }
@@ -110,7 +98,6 @@ public class SyncWorker extends Worker {
             markAllFailed(db, queue);
             return Result.retry();
         }
-        */
     }
 
     private void markAllFailed(AppDatabase db, List<PendingOperationEntity> queue) {
@@ -119,10 +106,6 @@ public class SyncWorker extends Worker {
         }
     }
 
-    /**
-     * Schedules recurring background sync (every 15 min while online).
-     * Uses KEEP so re-calling this doesn't reset an already-scheduled job.
-     */
     public static void schedulePeriodic(Context context) {
         Constraints constraints = new Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -138,11 +121,6 @@ public class SyncWorker extends Worker {
                 UNIQUE_PERIODIC_NAME, ExistingPeriodicWorkPolicy.KEEP, request);
     }
 
-    /**
-     * Triggers an immediate one-time sync, e.g. from a manual "Sync" button.
-     * Uses KEEP so tapping the button repeatedly doesn't queue duplicate jobs
-     * while one is already pending/running.
-     */
     public static void triggerManualSync(Context context) {
         Constraints constraints = new Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)

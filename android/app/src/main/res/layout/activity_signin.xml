@@ -13,12 +13,12 @@
     <!-- Back button -->
     <ImageButton
         android:id="@+id/btnBack"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:layout_marginTop="12dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:contentDescription="@string/cd_back"
-        android:padding="8dp"
+        android:padding="12dp"
         android:src="@drawable/ic_arrowback"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -54,6 +54,8 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="32dp"
+        android:accessibilityHeading="true"
+        tools:targetApi="28"
         android:fontFamily="sans-serif-black"
         android:text="@string/signin_title"
         android:textColor="@color/text_primary"
