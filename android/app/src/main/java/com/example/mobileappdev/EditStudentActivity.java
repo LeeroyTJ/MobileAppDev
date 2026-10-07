@@ -66,7 +66,6 @@ public class EditStudentActivity extends AppCompatActivity {
                 "Computer Science",
                 "Information Technology",
                 "Data Science",
-                "Software Engineering"
         };
 
         ArrayAdapter<String> programmeAdapter =

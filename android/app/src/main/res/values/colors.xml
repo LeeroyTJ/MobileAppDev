@@ -32,4 +32,9 @@
     <color name="avatar_background">#555555</color>
     <color name="button_cancel_bg">#F7F7F7</color>
 
+    <!-- Primary Variants -->
+    <color name="primary">#1E90FF</color>
+    <color name="primary_light">#60A5FA</color>
+    <color name="primary_dark">#1870D5</color>
+
 </resources>

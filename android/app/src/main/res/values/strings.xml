@@ -44,6 +44,8 @@
     <string name="label_password">Password</string>
     <string name="label_programme">Programme</string>
     <string name="label_lab_group">Lab Group</string>
+    <string name="hint_programme">Select programme</string>
+    <string name="hint_lab_group">Select lab group</string>
     <string name="draft_notice">Draft saved</string>
     <string name="btn_save_registration">Register</string>
     <string name="already_have_account">Already have an account?</string>
