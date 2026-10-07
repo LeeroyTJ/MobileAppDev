@@ -65,4 +65,32 @@
     <string name="nav_sync">Sync</string>
     <string name="nav_profile">Profile</string>
 
+
+    <!-- Dropdown data -->
+    <string-array name="programme_options">
+        <item>BSc Computer Science</item>
+        <item>BSc Information Technology</item>
+        <item>BSc Software Engineering</item>
+        <item>BEng Computer Engineering</item>
+        <item>Other</item>
+    </string-array>
+
+    <string-array name="lab_group_options">
+        <item>G01</item>
+        <item>G02</item>
+        <item>G03</item>
+        <item>G04</item>
+    </string-array>
+    <string name="cd_logo">CohortHub logo</string>
+
+    <!-- Dialog Strings (Task 3.1) -->
+    <string name="cd_close_dialog">Close dialog</string>
+    <string name="dialog_editor_title">Edit Student</string>
+    <string name="dialog_editor_subtitle">Modify student details and group assignment below.</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="btn_save_changes">Save Changes</string>
+    <string name="dialog_delete_title">Delete Student</string>
+    <string name="dialog_delete_message">Are you sure you want to delete this student record? This action will disable their account and release their lab group slot.</string>
+    <string name="btn_confirm_delete">Delete Student</string>
+
 </resources>
