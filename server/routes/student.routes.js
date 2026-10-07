@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const jwt = require('jsonwebtoken');
+const { authenticateToken, verifyRole } = require('../middleware/auth');
 const {
     isValidName,
     isValidBaseVersion,
@@ -10,33 +10,11 @@ const {
     isValidSearch
 } = require('../utils/validators');
 
-const JWT_SECRET = process.env.JWT_SECRET;
-if (!JWT_SECRET) {
-    throw new Error('JWT_SECRET is not set. Check your .env file.');
-}
-
-function authenticateToken(req, res, next) {
-    const authHeader = req.headers['authorization'];
-    const token = authHeader && authHeader.split(' ')[1];
-    if (!token) return res.status(401).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Token missing' } });
-
-    jwt.verify(token, JWT_SECRET, (err, user) => {
-        if (err) return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Invalid token' } });
-        req.user = user;
-        next();
-    });
-}
-
-function requireLecturer(req, res, next) {
-    if (req.user.role !== 'LECTURER') {
-        return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Lecturer access required' } });
-    }
-    next();
-}
-
-// GET /api/v1/students — lecturer roster with combined filters
-router.get('/', authenticateToken, async (req, res) => {
-    const { programme, group, search } = req.query;
+/**
+ * GET /api/v1/students — lecturer roster with combined filters, indexed pagination (LIMIT, OFFSET), and SQL LIKE search
+ */
+router.get('/', authenticateToken, verifyRole('LECTURER'), async (req, res) => {
+    const { programme, group, search, limit, offset } = req.query;
 
     if (programme && !['CS', 'IT', 'DS'].includes(programme)) {
         return res.status(400).json({
@@ -59,6 +37,28 @@ router.get('/', authenticateToken, async (req, res) => {
         });
     }
 
+    let limitVal = 50;
+    let offsetVal = 0;
+    if (limit !== undefined) {
+        if (!isPositiveInt(limit) || Number(limit) > 200) {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'INVALID_LIMIT', message: 'limit must be a positive integer <= 200' }
+            });
+        }
+        limitVal = Number(limit);
+    }
+    if (offset !== undefined) {
+        const offsetNum = Number(offset);
+        if (!Number.isInteger(offsetNum) || offsetNum < 0) {
+            return res.status(400).json({
+                success: false,
+                error: { code: 'INVALID_OFFSET', message: 'offset must be a non-negative integer' }
+            });
+        }
+        offsetVal = offsetNum;
+    }
+
     const where = ['s.deleted_at IS NULL'];
     const params = [];
 
@@ -75,11 +75,12 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 
     if (search) {
-        where.push('s.student_name LIKE ?');
-        params.push(`%${search}%`);
+        where.push('(s.student_name LIKE ? OR s.student_number LIKE ?)');
+        params.push(`%${search}%`, `%${search}%`);
     }
 
     try {
+        params.push(limitVal, offsetVal);
         const [rows] = await pool.query(
             `SELECT s.student_id, s.student_number, s.student_name,
                     s.programme_id, s.group_id, s.version,
@@ -89,7 +90,8 @@ router.get('/', authenticateToken, async (req, res) => {
              JOIN programmes p ON s.programme_id = p.programme_id
              LEFT JOIN lab_groups g ON s.group_id = g.group_id
              WHERE ${where.join(' AND ')}
-             ORDER BY s.student_name`,
+             ORDER BY s.student_name
+             LIMIT ? OFFSET ?`,
             params
         );
 
@@ -103,7 +105,9 @@ router.get('/', authenticateToken, async (req, res) => {
     }
 });
 
-// GET /api/v1/students/me/profile
+/**
+ * GET /api/v1/students/me/profile — student views own profile (strictly restricted to req.user.id)
+ */
 router.get('/me/profile', authenticateToken, async (req, res) => {
     try {
         const [rows] = await pool.query(
@@ -126,12 +130,14 @@ router.get('/me/profile', authenticateToken, async (req, res) => {
     }
 });
 
-// PUT /api/v1/students/:id (Optimistic Concurrency)
+/**
+ * PUT /api/v1/students/:id — update student with optimistic concurrency & strict ownership checks
+ */
 router.put('/:id', authenticateToken, async (req, res) => {
     const studentId = req.params.id;
     const { studentName, baseVersion } = req.body;
 
-    if (!isPositiveInt(req.params.id)) {
+    if (!isPositiveInt(studentId)) {
         return res.status(400).json({
             success: false,
             error: { code: 'INVALID_STUDENT_ID', message: 'Invalid student id' }
@@ -145,10 +151,10 @@ router.put('/:id', authenticateToken, async (req, res) => {
         });
     }
 
-    if (baseVersion !== undefined && !isValidBaseVersion(baseVersion)) {
+    if (baseVersion === undefined || !isValidBaseVersion(baseVersion)) {
         return res.status(400).json({
             success: false,
-            error: { code: 'INVALID_BASE_VERSION', message: 'baseVersion must be a positive integer' }
+            error: { code: 'VALIDATION_ERROR', message: 'Valid baseVersion is required' }
         });
     }
 
@@ -161,20 +167,10 @@ router.put('/:id', authenticateToken, async (req, res) => {
         });
     }
 
-
-    if (baseVersion === undefined) {
-        return res.status(400).json({
-            success: false,
-            error: { code: 'VALIDATION_ERROR', message: 'baseVersion is required' }
-        });
-    }
-
     const connection = await pool.getConnection();
     try {
         await connection.beginTransaction();
 
-        // Fetch current state first, so we can tell "not found" apart
-        // from "found but version mismatch"
         const [rows] = await connection.query(
             'SELECT * FROM students WHERE student_id = ? AND deleted_at IS NULL',
             [studentId]
@@ -188,11 +184,12 @@ router.put('/:id', authenticateToken, async (req, res) => {
         }
         const student = rows[0];
 
+        // Task 11.2: Strict ownership enforcement
         if (req.user.role !== 'LECTURER' && student.account_id !== req.user.id) {
             await connection.rollback();
             return res.status(403).json({
                 success: false,
-                error: { code: 'FORBIDDEN', message: 'Access denied' }
+                error: { code: 'FORBIDDEN', message: 'Access denied: Cannot edit records belonging to other users' }
             });
         }
 
@@ -213,8 +210,6 @@ router.put('/:id', authenticateToken, async (req, res) => {
             [studentName, studentId, baseVersion]
         );
 
-        // Safety net: if two requests race between the SELECT above and this
-        // UPDATE, affectedRows will be 0 even though our SELECT said it matched.
         if (result.affectedRows === 0) {
             await connection.rollback();
             return res.status(409).json({
@@ -241,9 +236,18 @@ router.put('/:id', authenticateToken, async (req, res) => {
     }
 });
 
-// DELETE /api/v1/students/:id (Lecturer Soft Delete)
-router.delete('/:id', authenticateToken, requireLecturer, async (req, res) => {
+/**
+ * DELETE /api/v1/students/:id — Lecturer soft delete
+ */
+router.delete('/:id', authenticateToken, verifyRole('LECTURER'), async (req, res) => {
     const studentId = req.params.id;
+
+    if (!isPositiveInt(studentId)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_STUDENT_ID', message: 'Invalid student id' }
+        });
+    }
 
     const connection = await pool.getConnection();
     try {
