@@ -36,6 +36,10 @@
         <activity
             android:name=".UnassignedActivity"
             android:exported="false" />
+        <activity
+            android:name=".RosterActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>
