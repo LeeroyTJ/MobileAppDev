@@ -6,13 +6,14 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mobileappdev.adapter.StudentAdapter;
+import com.example.mobileappdev.data.local.entity.StudentEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
-import com.example.mobileappdev.model.Student;
 import com.example.mobileappdev.session.SessionManager;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -31,14 +32,11 @@ import retrofit2.Response;
 
 public class UnassignedActivity extends AppCompatActivity {
 
-    private MaterialToolbar toolbar;
     private TextView tvCountPill;
     private RecyclerView recyclerView;
     private CircularProgressIndicator loadingIndicator;
     private View emptyState;
     private View errorState;
-    private MaterialButton btnErrorRetry;
-    private BottomNavigationView bottomNav;
 
     private StudentAdapter adapter;
 
@@ -60,26 +58,29 @@ public class UnassignedActivity extends AppCompatActivity {
     }
 
     private void bindViews() {
-        toolbar = findViewById(R.id.toolbar);
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
         tvCountPill = findViewById(R.id.unassigned_count);
         recyclerView = findViewById(R.id.unassigned_list);
         loadingIndicator = findViewById(R.id.loading_indicator);
         emptyState = findViewById(R.id.empty_state);
         errorState = findViewById(R.id.error_state);
-        btnErrorRetry = findViewById(R.id.error_retry);
-        bottomNav = findViewById(R.id.bottom_navigation);
+        MaterialButton btnErrorRetry = findViewById(R.id.error_retry);
+
+        toolbar.setNavigationOnClickListener(v -> finish());
+        if (btnErrorRetry != null) {
+            btnErrorRetry.setOnClickListener(v -> loadUnassignedStudents());
+        }
     }
 
     private void setupNavigation() {
-        toolbar.setNavigationOnClickListener(v -> finish());
-
+        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         bottomNav.setSelectedItemId(R.id.nav_unassigned);
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
             if (id == R.id.nav_unassigned) {
                 return true;
             } else if (id == R.id.nav_students) {
-                startActivity(new Intent(UnassignedActivity.this, MainActivity.class));
+                startActivity(new Intent(UnassignedActivity.this, RosterActivity.class));
                 finish();
                 return true;
             } else if (id == R.id.nav_more) {
@@ -89,15 +90,16 @@ public class UnassignedActivity extends AppCompatActivity {
             }
             return false;
         });
-
-        if (btnErrorRetry != null) {
-            btnErrorRetry.setOnClickListener(v -> loadUnassignedStudents());
-        }
     }
 
     private void setupRecyclerView() {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new StudentAdapter(this::showGroupAssignmentDialog);
+        adapter = new StudentAdapter(new StudentAdapter.OnStudentClickListener() {
+            @Override
+            public void onStudentClick(StudentEntity student) {
+                showGroupAssignmentDialog(student);
+            }
+        });
         recyclerView.setAdapter(adapter);
     }
 
@@ -105,9 +107,9 @@ public class UnassignedActivity extends AppCompatActivity {
         showLoadingState();
 
         ApiClient.getStudentService(this).getRoster(null, "UNASSIGNED", null)
-                .enqueue(new Callback<Map<String, Object>>() {
+                .enqueue(new Callback<>() {
                     @Override
-                    public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+                    public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
                         if (!response.isSuccessful() || response.body() == null
                                 || !Boolean.TRUE.equals(response.body().get("success"))) {
                             handleFailure(response.code());
@@ -115,11 +117,23 @@ public class UnassignedActivity extends AppCompatActivity {
                         }
 
                         List<?> dataList = (List<?>) response.body().get("data");
-                        List<Student> students = new ArrayList<>();
+                        List<StudentEntity> students = new ArrayList<>();
                         if (dataList != null) {
                             for (Object item : dataList) {
                                 if (item instanceof Map) {
-                                    students.add(Student.fromMap((Map<?, ?>) item));
+                                    Map<?, ?> map = (Map<?, ?>) item;
+                                    StudentEntity entity = new StudentEntity();
+                                    entity.serverId = map.get("student_id") instanceof Number ?
+                                            ((Number) map.get("student_id")).longValue() : 0;
+                                    entity.studentNumber = map.get("student_number") != null ? map.get("student_number").toString() : "";
+                                    entity.name = map.get("student_name") != null ? map.get("student_name").toString() : "";
+                                    entity.programme = map.get("programme_name") != null ? map.get("programme_name").toString() :
+                                            (map.get("programme_code") != null ? map.get("programme_code").toString() : "");
+                                    entity.labGroup = map.get("group_code") != null ? map.get("group_code").toString() : null;
+                                    entity.baseVersion = map.get("version") instanceof Number ?
+                                            ((Number) map.get("version")).intValue() : 1;
+                                    entity.syncStatus = StudentEntity.STATUS_SYNCED;
+                                    students.add(entity);
                                 }
                             }
                         }
@@ -128,13 +142,13 @@ public class UnassignedActivity extends AppCompatActivity {
                     }
 
                     @Override
-                    public void onFailure(Call<Map<String, Object>> call, Throwable t) {
+                    public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
                         showErrorState();
                     }
                 });
     }
 
-    private void updateUiWithStudents(List<Student> students) {
+    private void updateUiWithStudents(List<StudentEntity> students) {
         hideAllContentStates();
         adapter.setStudents(students);
 
@@ -178,10 +192,10 @@ public class UnassignedActivity extends AppCompatActivity {
         }
     }
 
-    private void showGroupAssignmentDialog(Student student) {
-        ApiClient.getGroupService(this).listGroups().enqueue(new Callback<Map<String, Object>>() {
+    private void showGroupAssignmentDialog(StudentEntity student) {
+        ApiClient.getGroupService(this).listGroups().enqueue(new Callback<>() {
             @Override
-            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+            public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
                 if (!response.isSuccessful() || response.body() == null
                         || !Boolean.TRUE.equals(response.body().get("success"))) {
                     Toast.makeText(UnassignedActivity.this, "Failed to load groups", Toast.LENGTH_SHORT).show();
@@ -217,10 +231,8 @@ public class UnassignedActivity extends AppCompatActivity {
                 final int[] selectedIndex = {0};
 
                 new MaterialAlertDialogBuilder(UnassignedActivity.this)
-                        .setTitle("Assign " + student.getName() + " to Group")
-                        .setSingleChoiceItems(groupNames.toArray(new CharSequence[0]), 0, (dialog, which) -> {
-                            selectedIndex[0] = which;
-                        })
+                        .setTitle("Assign " + student.name + " to Group")
+                        .setSingleChoiceItems(groupNames.toArray(new CharSequence[0]), 0, (dialog, which) -> selectedIndex[0] = which)
                         .setPositiveButton("Assign", (dialog, which) -> {
                             if (selectedIndex[0] >= 0 && selectedIndex[0] < groupIds.size()) {
                                 long targetGroupId = groupIds.get(selectedIndex[0]);
@@ -232,24 +244,24 @@ public class UnassignedActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onFailure(Call<Map<String, Object>> call, Throwable t) {
+            public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
                 Toast.makeText(UnassignedActivity.this, "Network error loading groups", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private void executeAssignStudent(Student student, long groupId) {
+    private void executeAssignStudent(StudentEntity student, long groupId) {
         Map<String, Object> body = new HashMap<>();
-        body.put("studentId", student.getId());
+        body.put("studentId", student.serverId != null ? student.serverId : 0);
 
         ApiClient.getGroupService(this).assignStudent(groupId, body)
-                .enqueue(new Callback<Map<String, Object>>() {
+                .enqueue(new Callback<>() {
                     @Override
-                    public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+                    public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
                         if (response.isSuccessful() && response.body() != null
                                 && Boolean.TRUE.equals(response.body().get("success"))) {
                             Toast.makeText(UnassignedActivity.this,
-                                    "Assigned " + student.getName() + " to group", Toast.LENGTH_SHORT).show();
+                                    "Assigned " + student.name + " to group", Toast.LENGTH_SHORT).show();
                             loadUnassignedStudents();
                         } else if (response.code() == 409) {
                             Toast.makeText(UnassignedActivity.this,
@@ -261,7 +273,7 @@ public class UnassignedActivity extends AppCompatActivity {
                     }
 
                     @Override
-                    public void onFailure(Call<Map<String, Object>> call, Throwable t) {
+                    public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
                         Toast.makeText(UnassignedActivity.this,
                                 "Network error during assignment", Toast.LENGTH_SHORT).show();
                     }

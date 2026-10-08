@@ -2,14 +2,17 @@ package com.example.mobileappdev;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mobileappdev.data.remote.ApiClient;
 import com.example.mobileappdev.session.SessionManager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.button.MaterialButton;
 
 import java.util.Map;
 
@@ -24,6 +27,7 @@ public class ProfileActivity extends AppCompatActivity {
     private TextView tvProfileStudentNumber;
     private TextView tvProfileProgramme;
     private TextView tvLabGroupValue;
+    private MaterialButton btnLogout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,8 +35,7 @@ public class ProfileActivity extends AppCompatActivity {
         setContentView(R.layout.activity_profile);
 
         if (!SessionManager.getInstance(this).isLoggedIn()) {
-            startActivity(new Intent(this, SignInActivity.class));
-            finish();
+            navigateToLogin();
             return;
         }
 
@@ -52,6 +55,8 @@ public class ProfileActivity extends AppCompatActivity {
                     finish();
                     return true;
                 } else if (id == R.id.navGroup) {
+                    startActivity(new Intent(this, RosterActivity.class));
+                    finish();
                     return true;
                 } else if (id == R.id.navSync) {
                     startActivity(new Intent(this, SyncActivity.class));
@@ -66,17 +71,27 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void bindViews() {
+        View btnBack = findViewById(R.id.btnBack);
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> finish());
+        }
+
         tvAvatarInitials = findViewById(R.id.tvAvatarInitials);
         tvProfileName = findViewById(R.id.tvProfileName);
         tvProfileStudentNumber = findViewById(R.id.tvProfileStudentNumber);
         tvProfileProgramme = findViewById(R.id.tvProfileProgramme);
         tvLabGroupValue = findViewById(R.id.tvLabGroupValue);
+        btnLogout = findViewById(R.id.btnLogout);
+
+        if (btnLogout != null) {
+            btnLogout.setOnClickListener(v -> performLogout());
+        }
     }
 
     private void loadProfile() {
-        ApiClient.getStudentService(this).getMyProfile().enqueue(new Callback<Map<String, Object>>() {
+        ApiClient.getStudentService(this).getMyProfile().enqueue(new Callback<>() {
             @Override
-            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+            public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
                 if (!response.isSuccessful() || response.body() == null
                         || !Boolean.TRUE.equals(response.body().get("success"))) {
                     handleFailure(response.code());
@@ -103,7 +118,7 @@ public class ProfileActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onFailure(Call<Map<String, Object>> call, Throwable t) {
+            public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
                 Toast.makeText(ProfileActivity.this,
                         "Couldn't reach the server — check your connection", Toast.LENGTH_LONG).show();
             }
@@ -112,12 +127,23 @@ public class ProfileActivity extends AppCompatActivity {
 
     private void handleFailure(int code) {
         if (code == 401 || code == 403) {
-            SessionManager.getInstance(this).clearSession();
-            startActivity(new Intent(this, SignInActivity.class));
-            finish();
+            performLogout();
         } else {
             Toast.makeText(this, "Couldn't load your profile", Toast.LENGTH_LONG).show();
         }
+    }
+
+    private void performLogout() {
+        SessionManager.getInstance(this).clearSession();
+        Toast.makeText(this, "Signed out successfully", Toast.LENGTH_SHORT).show();
+        navigateToLogin();
+    }
+
+    private void navigateToLogin() {
+        Intent intent = new Intent(this, SignInActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+        finish();
     }
 
     private String initialsOf(String name) {
