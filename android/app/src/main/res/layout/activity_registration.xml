@@ -22,7 +22,7 @@
             android:paddingStart="@dimen/screen_padding_horizontal"
             android:paddingEnd="@dimen/screen_padding_horizontal">
 
-            <!-- Back button -->
+            <!-- Back button (48dp touch target) -->
             <ImageButton
                 android:id="@+id/btnBack"
                 android:layout_width="48dp"
@@ -247,12 +247,13 @@
                     android:textSize="15sp" />
             </LinearLayout>
 
-            <!-- Save / Register Button -->
+            <!-- Save / Register Button (Flexible height for 200% text scale) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnSaveRegistration"
                 style="@style/CohortHubPrimaryButton"
                 android:layout_width="0dp"
-                android:layout_height="56dp"
+                android:layout_height="wrap_content"
+                android:minHeight="56dp"
                 android:layout_marginTop="@dimen/section_spacing"
                 android:text="@string/btn_save_registration"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -264,8 +265,9 @@
                 android:id="@+id/signInLinkContainer"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:minHeight="48dp"
                 android:layout_marginTop="16dp"
-                android:gravity="center"
+                android:gravity="center_vertical"
                 android:orientation="horizontal"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
