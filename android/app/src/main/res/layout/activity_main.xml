@@ -1,45 +1,117 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
     android:padding="24dp"
     android:background="@color/white">
 
-    <TextView
+    <!-- Top App Bar / Title -->
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Students"
-        android:textColor="@color/black"
-        android:textSize="28sp"
-        android:textStyle="bold"/>
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
 
-    <TextView
+        <ImageView
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/logo_circle"
+            android:contentDescription="@string/cd_logo" />
+
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:text="@string/app_name"
+            android:textColor="@color/text_primary"
+            android:textSize="24sp"
+            android:textStyle="bold" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnLogout"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minHeight="48dp"
+            android:text="@string/action_logout"
+            android:textColor="@color/dodger_blue" />
+    </LinearLayout>
+
+    <!-- Dynamic Profile Card -->
+    <com.google.android.material.card.MaterialCardView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="30dp"
-        android:text="Thabo Jumbe"
-        android:textColor="@color/black"
-        android:textSize="20sp"
-        android:textStyle="bold"/>
+        android:layout_marginTop="24dp"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="2dp"
+        app:strokeColor="@color/light_gray"
+        app:strokeWidth="1dp">
 
-    <TextView
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:id="@+id/tvStudentName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceTitleLarge"
+                android:textColor="@color/text_primary"
+                android:textStyle="bold"
+                tools:text="Student Name" />
+
+            <TextView
+                android:id="@+id/tvStudentNumberProgramme"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textAppearance="?attr/textAppearanceBodyMedium"
+                android:textColor="@color/text_secondary"
+                tools:text="Student Number • Programme" />
+
+            <View
+                android:layout_width="match_parent"
+                android:layout_height="1dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="16dp"
+                android:background="@color/light_gray" />
+
+            <TextView
+                android:id="@+id/tvLabGroupInfo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textAppearance="?attr/textAppearanceBodyLarge"
+                android:textColor="@color/dodger_blue"
+                android:textStyle="bold"
+                tools:text="Lab Group: Unassigned" />
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <!-- Navigation Buttons -->
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnViewProfile"
+        style="@style/Widget.Material3.Button.OutlinedButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="202312345 • CS"
-        android:textColor="@color/dark_gray"
-        android:textSize="15sp"/>
+        android:minHeight="52dp"
+        android:layout_marginTop="24dp"
+        android:text="View Full Profile" />
 
-    <Button
-        android:id="@+id/editStudentButton"
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/btnViewRoster"
+        style="@style/CohortHubPrimaryButton"
         android:layout_width="match_parent"
-        android:layout_height="55dp"
-        android:layout_marginTop="30dp"
-        android:text="Edit Student"
-        android:textColor="@color/white"
-        android:textSize="16sp"
-        android:backgroundTint="@color/dodger_blue"/>
+        android:layout_height="wrap_content"
+        android:minHeight="52dp"
+        android:layout_marginTop="12dp"
+        android:text="View Roster / Lab Groups" />
 
 </LinearLayout>

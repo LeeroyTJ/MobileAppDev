@@ -1,9 +1,10 @@
 <resources>
 
-    <string name="app_name">Student Manager</string>
+    <string name="app_name">CohortHub</string>
 
     <string name="students">Students</string>
     <string name="edit_student">Edit Student</string>
+    <string name="action_logout">Logout</string>
 
     <string name="student_name">Thabo Jumbe</string>
     <string name="student_number">202312345</string>

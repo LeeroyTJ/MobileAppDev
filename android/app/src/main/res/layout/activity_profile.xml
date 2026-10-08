@@ -435,6 +435,22 @@
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
+            <!-- Logout Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnLogout"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:minHeight="52dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="24dp"
+                android:text="@string/action_logout"
+                android:textColor="@color/error_red"
+                app:strokeColor="@color/error_red"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/cardQuickActions" />
+
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>
 

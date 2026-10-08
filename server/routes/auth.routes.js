@@ -65,11 +65,25 @@ router.post('/register', async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // Check for an existing (possibly lecturer pre-entered) student with this number
-        const [existingStudents] = await connection.query(
-            'SELECT * FROM students WHERE student_number = ? AND deleted_at IS NULL',
+        // E9: Check if this student number belongs to a soft-deleted student (reserved number rule)
+        const [allStudentsWithNumber] = await connection.query(
+            'SELECT * FROM students WHERE student_number = ?',
             [studentNumber]
         );
+
+        if (allStudentsWithNumber.length > 0) {
+            const softDeleted = allStudentsWithNumber.find(s => s.deleted_at !== null);
+            if (softDeleted) {
+                await connection.rollback();
+                return res.status(409).json({
+                    success: false,
+                    error: { code: 'STUDENT_NUMBER_RESERVED', message: 'This student number is reserved and cannot be re-registered' }
+                });
+            }
+        }
+
+        // Check for an active (possibly lecturer pre-entered) student with this number
+        const existingStudents = allStudentsWithNumber.filter(s => s.deleted_at === null);
 
         let studentId, accountId;
 

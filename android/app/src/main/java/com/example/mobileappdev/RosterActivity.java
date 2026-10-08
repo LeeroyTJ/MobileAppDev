@@ -112,9 +112,10 @@ public class RosterActivity extends AppCompatActivity {
         resultCount = findViewById(R.id.result_count);
         
         MaterialButton buttonOpenFilters = findViewById(R.id.button_open_filters);
-        buttonOpenFilters.setOnClickListener(v ->
-                Toast.makeText(RosterActivity.this, "Filter options", Toast.LENGTH_SHORT).show()
-        );
+        buttonOpenFilters.setOnClickListener(v -> {
+            FilterBottomSheetDialogFragment dialog = new FilterBottomSheetDialogFragment();
+            dialog.show(getSupportFragmentManager(), FilterBottomSheetDialogFragment.TAG);
+        });
 
         rosterList = findViewById(R.id.roster_list);
         loadingIndicator = findViewById(R.id.loading_indicator);
@@ -131,6 +132,14 @@ public class RosterActivity extends AppCompatActivity {
         fabAdd = findViewById(R.id.fab_add);
 
         toolbar.setNavigationOnClickListener(v -> finish());
+        toolbar.inflateMenu(R.menu.menu_roster_toolbar);
+        toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_share) {
+                shareSanitizedGroupSummary();
+                return true;
+            }
+            return false;
+        });
     }
 
     private void setupRecyclerView() {
@@ -389,6 +398,43 @@ public class RosterActivity extends AppCompatActivity {
                 offlineBanner.setVisibility(View.VISIBLE);
             }
         });
+    }
+
+    private void shareSanitizedGroupSummary() {
+        int g01Count = 0;
+        int g02Count = 0;
+        int g03Count = 0;
+        int g04Count = 0;
+        int unassignedCount = 0;
+
+        for (StudentEntity student : cachedAccountStudents) {
+            if (student == null) continue;
+            String group = student.labGroup;
+            if ("G01".equalsIgnoreCase(group)) g01Count++;
+            else if ("G02".equalsIgnoreCase(group)) g02Count++;
+            else if ("G03".equalsIgnoreCase(group)) g03Count++;
+            else if ("G04".equalsIgnoreCase(group)) g04Count++;
+            else unassignedCount++;
+        }
+
+        int totalEnrolled = cachedAccountStudents.size();
+
+        StringBuilder summary = new StringBuilder();
+        summary.append("CohortHub Lab Group Summary\n");
+        summary.append("Total Enrolled Students: ").append(totalEnrolled).append("\n\n");
+        summary.append("Group Capacity Breakdown (Max 15 per group):\n");
+        summary.append("• Lab Group G01: ").append(g01Count).append("/15 places filled\n");
+        summary.append("• Lab Group G02: ").append(g02Count).append("/15 places filled\n");
+        summary.append("• Lab Group G03: ").append(g03Count).append("/15 places filled\n");
+        summary.append("• Lab Group G04: ").append(g04Count).append("/15 places filled\n");
+        summary.append("• Unassigned Students: ").append(unassignedCount);
+
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "CohortHub Lab Group Summary");
+        shareIntent.putExtra(Intent.EXTRA_TEXT, summary.toString());
+
+        startActivity(Intent.createChooser(shareIntent, "Share Group Summary"));
     }
 
     @Override
