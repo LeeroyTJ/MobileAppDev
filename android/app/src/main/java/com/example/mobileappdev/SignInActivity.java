@@ -32,8 +32,13 @@ public class SignInActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_signin);
 
-        if (SessionManager.getInstance(this).isLoggedIn()) {
-            startActivity(new Intent(this, ProfileActivity.class));
+        SessionManager sessionManager = SessionManager.getInstance(this);
+        if (sessionManager.isLoggedIn()) {
+            if (sessionManager.isLecturer()) {
+                startActivity(new Intent(this, RosterActivity.class));
+            } else {
+                startActivity(new Intent(this, ProfileActivity.class));
+            }
             finish();
             return;
         }
@@ -80,9 +85,14 @@ public class SignInActivity extends AppCompatActivity {
                     String role = String.valueOf(data.get("role"));
                     long accountId = ((Number) data.get("accountId")).longValue();
 
-                    SessionManager.getInstance(SignInActivity.this).saveSession(token, accountId, role);
+                    SessionManager sessionManager = SessionManager.getInstance(SignInActivity.this);
+                    sessionManager.saveSession(token, accountId, role);
 
-                    startActivity(new Intent(SignInActivity.this, ProfileActivity.class));
+                    if (sessionManager.isLecturer()) {
+                        startActivity(new Intent(SignInActivity.this, RosterActivity.class));
+                    } else {
+                        startActivity(new Intent(SignInActivity.this, ProfileActivity.class));
+                    }
                     finish();
                 } else {
                     Toast.makeText(SignInActivity.this, "Invalid student number or password", Toast.LENGTH_SHORT).show();

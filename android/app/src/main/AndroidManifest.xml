@@ -19,8 +19,9 @@
 
         <!-- 1. Launcher Screen -->
         <activity
-            android:name=".ConnectionErrorActivity"
-            android:exported="true">
+            android:name=".RegistrationActivity"
+            android:exported="true"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -28,11 +29,10 @@
         </activity>
 
         <activity
-            android:name=".RegistrationActivity"
-            android:exported="false"
-            android:windowSoftInputMode="adjustResize" />
+            android:name=".ConnectionErrorActivity"
+            android:exported="false" />
 
-        <!-- 2. Existing App Screens -->
+        <!-- 2. App Screens -->
         <activity
             android:name=".SignInActivity"
             android:exported="false"
@@ -58,7 +58,11 @@
         <activity
             android:name=".MainActivity"
             android:exported="false" />
-      
+
+        <activity
+            android:name=".EditStudentActivity"
+            android:exported="false" />
+
         <activity
             android:name=".DeleteStudentActivity"
             android:exported="false" />
