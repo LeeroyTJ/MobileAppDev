@@ -9,6 +9,7 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mobileappdev.data.remote.ApiClient;
 import com.example.mobileappdev.session.SessionManager;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import java.util.Map;
 
@@ -36,7 +37,32 @@ public class ProfileActivity extends AppCompatActivity {
         }
 
         bindViews();
+        setupBottomNav();
         loadProfile();
+    }
+
+    private void setupBottomNav() {
+        BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
+        if (bottomNav != null) {
+            bottomNav.setSelectedItemId(R.id.navProfile);
+            bottomNav.setOnItemSelectedListener(item -> {
+                int id = item.getItemId();
+                if (id == R.id.navHome) {
+                    startActivity(new Intent(this, MainActivity.class));
+                    finish();
+                    return true;
+                } else if (id == R.id.navGroup) {
+                    return true;
+                } else if (id == R.id.navSync) {
+                    startActivity(new Intent(this, SyncActivity.class));
+                    finish();
+                    return true;
+                } else if (id == R.id.navProfile) {
+                    return true;
+                }
+                return false;
+            });
+        }
     }
 
     private void bindViews() {

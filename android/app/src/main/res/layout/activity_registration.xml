@@ -65,6 +65,8 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
+                android:accessibilityHeading="true"
+                tools:targetApi="28"
                 android:fontFamily="sans-serif-black"
                 android:text="@string/registration_title"
                 android:textColor="@color/text_primary"
@@ -178,15 +180,16 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tilPassword">
 
-                <AutoCompleteTextView
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/actProgramme"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:hint="@string/hint_programme"
                     android:inputType="none"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp"
                     android:paddingTop="20dp"
-                    android:paddingBottom="14dp" />
+                    android:paddingBottom="14dp"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Lab group (dropdown) -->
@@ -202,15 +205,16 @@
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tilProgramme">
 
-                <AutoCompleteTextView
+                <com.google.android.material.textfield.MaterialAutoCompleteTextView
                     android:id="@+id/actLabGroup"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:hint="@string/hint_lab_group"
                     android:inputType="none"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp"
                     android:paddingTop="20dp"
-                    android:paddingBottom="14dp" />
+                    android:paddingBottom="14dp"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp" />
             </com.google.android.material.textfield.TextInputLayout>
 
             <!-- Draft notice -->

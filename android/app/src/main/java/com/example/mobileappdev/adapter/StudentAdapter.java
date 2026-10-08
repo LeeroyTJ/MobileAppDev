@@ -22,13 +22,14 @@ import java.util.List;
 
 /**
  * RecyclerView Adapter for item_student.xml with card formatting,
- * avatar initials rendering, and group badge colors.
+ * avatar initials rendering, TalkBack accessibility, and group badge colors.
  */
 public class StudentAdapter extends RecyclerView.Adapter<StudentAdapter.StudentViewHolder> {
 
     // Callback interface fired when a student row itself is tapped (e.g. open profile/editor)
     public interface OnStudentClickListener {
         void onStudentClick(StudentEntity student);
+        default void onStudentOptionsClick(StudentEntity student, View anchorView) {}
     }
 
     // Callback interface fired when the row's action button (3-dot menu, edit icon, etc.) is tapped
@@ -36,7 +37,6 @@ public class StudentAdapter extends RecyclerView.Adapter<StudentAdapter.StudentV
         void onStudentActionClick(StudentEntity student, View view);
     }
 
-    // Backing data list the RecyclerView renders — never exposed directly for mutation outside the adapter
     private final List<StudentEntity> students = new ArrayList<>();
     private OnStudentClickListener clickListener;
     private OnStudentActionListener actionListener;
@@ -44,40 +44,40 @@ public class StudentAdapter extends RecyclerView.Adapter<StudentAdapter.StudentV
     public StudentAdapter() {
     }
 
-    // Optional constructor to seed the adapter with an initial list (e.g. from a ViewModel's LiveData)
+    public StudentAdapter(OnStudentClickListener listener) {
+        this.clickListener = listener;
+    }
+
     public StudentAdapter(@Nullable List<StudentEntity> initialStudents) {
         if (initialStudents != null) {
             this.students.addAll(initialStudents);
         }
     }
 
-    // Lets the hosting Activity/Fragment react to row taps without the adapter knowing navigation logic
     public void setOnStudentClickListener(OnStudentClickListener listener) {
         this.clickListener = listener;
     }
 
-    // Lets the hosting Activity/Fragment react to the action-button tap separately from the row tap
     public void setOnStudentActionListener(OnStudentActionListener listener) {
         this.actionListener = listener;
     }
 
-    /**
-     * Replaces the entire dataset (e.g. after a search/filter change or a fresh sync)
-     * and tells the RecyclerView to redraw everything.
-     */
     public void setStudents(@Nullable List<StudentEntity> newStudents) {
         this.students.clear();
         if (newStudents != null) {
             this.students.addAll(newStudents);
         }
-        notifyDataSetChanged(); // Simple full refresh; fine for now — DiffUtil would be a later optimization
+        notifyDataSetChanged();
+    }
+
+    public void submitList(@Nullable List<StudentEntity> newStudents) {
+        setStudents(newStudents);
     }
 
     public List<StudentEntity> getStudents() {
         return students;
     }
 
-    // Inflates the row layout (item_student.xml) once per recycled view
     @NonNull
     @Override
     public StudentViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -86,7 +86,6 @@ public class StudentAdapter extends RecyclerView.Adapter<StudentAdapter.StudentV
         return new StudentViewHolder(view);
     }
 
-    // Binds one student's data into an already-created (possibly recycled) row view
     @Override
     public void onBindViewHolder(@NonNull StudentViewHolder holder, int position) {
         StudentEntity student = students.get(position);
@@ -98,12 +97,7 @@ public class StudentAdapter extends RecyclerView.Adapter<StudentAdapter.StudentV
         return students.size();
     }
 
-    /**
-     * Holds references to each row's views so findViewById() only runs once per row,
-     * not on every scroll/bind — standard RecyclerView performance pattern.
-     */
     public static class StudentViewHolder extends RecyclerView.ViewHolder {
-
         private final TextView tvInitials;
         private final TextView tvName;
         private final TextView tvNumber;
@@ -121,10 +115,6 @@ public class StudentAdapter extends RecyclerView.Adapter<StudentAdapter.StudentV
             btnAction = itemView.findViewById(R.id.student_action);
         }
 
-        /**
-         * Populates this row's views with one student's data and wires up click listeners.
-         * Called by onBindViewHolder() above for every visible row.
-         */
         public void bind(
                 StudentEntity student,
                 @Nullable OnStudentClickListener clickListener,
@@ -132,21 +122,20 @@ public class StudentAdapter extends RecyclerView.Adapter<StudentAdapter.StudentV
         ) {
             Context context = itemView.getContext();
 
-            // 1. Name & Student Number — fall back to empty string so nulls never crash setText()
+            // 1. Name & Student Number
             String name = student.name != null ? student.name : "";
             String number = student.studentNumber != null ? student.studentNumber : "";
             tvName.setText(name);
             tvNumber.setText(number);
 
-            // 2. Avatar Initials — derived from the name, e.g. "Thabo Jumbe" -> "TJ"
+            // 2. Avatar Initials (e.g. "Thabo Jumbe" -> "TJ")
             tvInitials.setText(extractInitials(name));
 
-            // 3. Programme (CS / IT / DS etc.)
+            // 3. Programme
             String programme = student.programme != null ? student.programme : "";
             tvProgramme.setText(programme);
 
             // 4. Lab Group badge & color styling
-            // Treats empty, "Unassigned", or literal "NULL" string as the same unassigned state
             String group = student.labGroup;
             boolean isUnassigned = TextUtils.isEmpty(group)
                     || "Unassigned".equalsIgnoreCase(group)
@@ -157,8 +146,6 @@ public class StudentAdapter extends RecyclerView.Adapter<StudentAdapter.StudentV
             applyGroupBadgeColor(tvGroup, isUnassigned ? "UNASSIGNED" : group);
 
             // 5. Accessibility TalkBack Description
-            // Builds one spoken sentence per row so screen-reader users get all the key info at once,
-            // including current sync status (Saved locally / Pending / Synced / etc.)
             String syncLabel = getSyncStatusLabel(context, student.syncStatus);
             if (isUnassigned) {
                 itemView.setContentDescription(context.getString(
@@ -173,28 +160,23 @@ public class StudentAdapter extends RecyclerView.Adapter<StudentAdapter.StudentV
             }
 
             // 6. Click Listeners
-            // Tapping anywhere on the row triggers the row-click callback (e.g. open student profile)
             itemView.setOnClickListener(v -> {
                 if (clickListener != null) {
                     clickListener.onStudentClick(student);
                 }
             });
 
-            // Tapping the dedicated action button (if present in this layout) triggers a separate callback
-            // (e.g. opens an edit/delete menu) without also firing the row-click above
             if (btnAction != null) {
                 btnAction.setOnClickListener(v -> {
                     if (actionListener != null) {
                         actionListener.onStudentActionClick(student, v);
+                    } else if (clickListener != null) {
+                        clickListener.onStudentOptionsClick(student, v);
                     }
                 });
             }
         }
 
-        /**
-         * Builds up to 2 uppercase initials from a full name.
-         * Returns "?" for null/empty/literal "null" names so the avatar never renders blank.
-         */
         private static String extractInitials(String name) {
             if (TextUtils.isEmpty(name) || "null".equalsIgnoreCase(name.trim())) {
                 return "?";
@@ -206,17 +188,12 @@ public class StudentAdapter extends RecyclerView.Adapter<StudentAdapter.StudentV
                     sb.append(Character.toUpperCase(part.charAt(0)));
                 }
                 if (sb.length() >= 2) {
-                    break; // Stop once we have 2 initials, even for names with 3+ words
+                    break;
                 }
             }
             return sb.length() > 0 ? sb.toString() : "?";
         }
 
-        /**
-         * Colors the lab-group badge based on which group the student belongs to.
-         * NOTE: only G01–G04 have dedicated colors; any other/unknown group code
-         * falls through to the grey "unassigned" style via the default case.
-         */
         private static void applyGroupBadgeColor(TextView groupView, String groupCode) {
             Context context = groupView.getContext();
             int bgColor;
@@ -250,27 +227,20 @@ public class StudentAdapter extends RecyclerView.Adapter<StudentAdapter.StudentV
                     break;
             }
 
-            // Builds a rounded-rectangle "pill" background programmatically rather than
-            // using a drawable XML resource, so colors can vary per-group at runtime
             GradientDrawable drawable = new GradientDrawable();
             drawable.setShape(GradientDrawable.RECTANGLE);
             float density = context.getResources().getDisplayMetrics().density;
-            drawable.setCornerRadius(12 * density); // Converts dp to pixels using screen density
+            drawable.setCornerRadius(12 * density);
             drawable.setColor(bgColor);
 
             groupView.setBackground(drawable);
             groupView.setTextColor(textColor);
 
-            // Padding also scaled by density so the badge looks consistent across screen sizes
             int paddingH = (int) (8 * density);
             int paddingV = (int) (3 * density);
             groupView.setPadding(paddingH, paddingV, paddingH, paddingV);
         }
 
-        /**
-         * Maps a raw sync-status constant (stored on the entity) to its user-facing label string.
-         * Defaults to "Saved locally" for null/unrecognized values so the UI never shows a blank state.
-         */
         private static String getSyncStatusLabel(Context context, String syncStatus) {
             if (syncStatus == null) {
                 return context.getString(R.string.sync_saved_locally);

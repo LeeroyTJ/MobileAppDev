@@ -60,6 +60,8 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
+            android:accessibilityHeading="true"
+            tools:targetApi="28"
             android:fontFamily="sans-serif-black"
             android:text="@string/signin_title"
             android:textColor="@color/text_primary"
@@ -129,6 +131,7 @@
                 android:hint="@string/hint_password"
                 android:inputType="textPassword"
                 android:maxLines="1"
+                android:textColor="@color/text_primary"
                 android:textSize="16sp"
                 android:paddingTop="20dp"
                 android:paddingBottom="14dp" />
@@ -150,7 +153,7 @@
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toBottomOf="@id/tilPassword" />
 
-        <!-- Sign in button (Wrap content height + minHeight prevents font truncation) -->
+        <!-- Sign in button -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnSignIn"
             style="@style/CohortHubPrimaryButton"
