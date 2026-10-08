@@ -49,8 +49,13 @@ public class RegistrationActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_registration);
 
-        if (SessionManager.getInstance(this).isLoggedIn()) {
-            startActivity(new Intent(this, ProfileActivity.class));
+        SessionManager sessionManager = SessionManager.getInstance(this);
+        if (sessionManager.isLoggedIn()) {
+            if (sessionManager.isLecturer()) {
+                startActivity(new Intent(this, RosterActivity.class));
+            } else {
+                startActivity(new Intent(this, ProfileActivity.class));
+            }
             finish();
             return;
         }
