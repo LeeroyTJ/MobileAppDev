@@ -134,8 +134,17 @@ public class RosterActivity extends AppCompatActivity {
         toolbar.setNavigationOnClickListener(v -> finish());
         toolbar.inflateMenu(R.menu.menu_roster_toolbar);
         toolbar.setOnMenuItemClickListener(item -> {
-            if (item.getItemId() == R.id.action_share) {
+            int itemId = item.getItemId();
+            if (itemId == R.id.action_share) {
                 shareSanitizedGroupSummary();
+                return true;
+            } else if (itemId == R.id.action_logout) {
+                sessionManager.clearSession();
+                Toast.makeText(this, "Signed out successfully", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(this, SignInActivity.class);
+                intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                startActivity(intent);
+                finish();
                 return true;
             }
             return false;
@@ -146,12 +155,20 @@ public class RosterActivity extends AppCompatActivity {
         adapter = new StudentAdapter(new StudentAdapter.OnStudentClickListener() {
             @Override
             public void onStudentClick(StudentEntity student) {
-                Toast.makeText(RosterActivity.this, student.name + " (" + student.studentNumber + ")", Toast.LENGTH_SHORT).show();
+                if (sessionManager.isLecturer()) {
+                    Intent intent = new Intent(RosterActivity.this, EditStudentActivity.class);
+                    intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_NAME, student.name);
+                    intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_NUMBER, student.studentNumber);
+                    intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_PROGRAMME, student.programme);
+                    startActivity(intent);
+                } else {
+                    Toast.makeText(RosterActivity.this, student.name + " (" + student.studentNumber + ")", Toast.LENGTH_SHORT).show();
+                }
             }
 
             @Override
             public void onStudentOptionsClick(StudentEntity student, View anchorView) {
-                Toast.makeText(RosterActivity.this, "Options for " + student.name, Toast.LENGTH_SHORT).show();
+                onStudentClick(student);
             }
         });
 
@@ -248,6 +265,9 @@ public class RosterActivity extends AppCompatActivity {
         bottomNavigation.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
             if (itemId == R.id.nav_students) {
+                return true;
+            } else if (itemId == R.id.nav_unassigned) {
+                startActivity(new Intent(this, UnassignedActivity.class));
                 return true;
             } else if (itemId == R.id.nav_more) {
                 startActivity(new Intent(this, ProfileActivity.class));

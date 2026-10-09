@@ -8,4 +8,9 @@
         android:icon="@drawable/ic_document"
         app:showAsAction="ifRoom" />
 
+    <item
+        android:id="@+id/action_logout"
+        android:title="@string/action_logout"
+        app:showAsAction="never" />
+
 </menu>

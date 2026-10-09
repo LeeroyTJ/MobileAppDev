@@ -43,14 +43,25 @@ public class UnassignedActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_unassigned);
 
-        if (!SessionManager.getInstance(this).isLoggedIn()) {
-            startActivity(new Intent(this, SignInActivity.class));
+        // Role Guard: Lecturer only
+        SessionManager sessionManager = SessionManager.getInstance(this);
+        if (!sessionManager.isLoggedIn()) {
+            Intent intent = new Intent(this, SignInActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+            return;
+        }
+        if (!sessionManager.isLecturer()) {
+            Intent intent = new Intent(this, ProfileActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
             finish();
             return;
         }
 
+        setContentView(R.layout.activity_unassigned);
         bindViews();
         setupNavigation();
         setupRecyclerView();
@@ -66,14 +77,14 @@ public class UnassignedActivity extends AppCompatActivity {
         errorState = findViewById(R.id.error_state);
         MaterialButton btnErrorRetry = findViewById(R.id.error_retry);
 
-        toolbar.setNavigationOnClickListener(v -> finish());
-        if (btnErrorRetry != null) {
-            btnErrorRetry.setOnClickListener(v -> loadUnassignedStudents());
-        }
+        if (toolbar != null) toolbar.setNavigationOnClickListener(v -> finish());
+        if (btnErrorRetry != null) btnErrorRetry.setOnClickListener(v -> loadUnassignedStudents());
     }
 
     private void setupNavigation() {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
+        if (bottomNav == null) return;
+
         bottomNav.setSelectedItemId(R.id.nav_unassigned);
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
@@ -94,12 +105,7 @@ public class UnassignedActivity extends AppCompatActivity {
 
     private void setupRecyclerView() {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new StudentAdapter(new StudentAdapter.OnStudentClickListener() {
-            @Override
-            public void onStudentClick(StudentEntity student) {
-                showGroupAssignmentDialog(student);
-            }
-        });
+        adapter = new StudentAdapter(student -> showGroupAssignmentDialog(student));
         recyclerView.setAdapter(adapter);
     }
 
@@ -185,7 +191,9 @@ public class UnassignedActivity extends AppCompatActivity {
     private void handleFailure(int code) {
         if (code == 401 || code == 403) {
             SessionManager.getInstance(this).clearSession();
-            startActivity(new Intent(this, SignInActivity.class));
+            Intent intent = new Intent(this, SignInActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
             finish();
         } else {
             showErrorState();
