@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
+const {
+    isValidStudentNumber,
+    isValidName
+} = require('../utils/validators');
 
 /**
  * POST /api/v1/sync
@@ -10,6 +14,7 @@ const { authenticateToken } = require('../middleware/auth');
 router.post('/', authenticateToken, async (req, res) => {
     const { operations } = req.body;
     const userId = req.user.id;
+    const userRole = req.user.role;
 
     if (!Array.isArray(operations)) {
         return res.status(400).json({
@@ -59,10 +64,15 @@ router.post('/', authenticateToken, async (req, res) => {
 
             if (existing.length > 0) {
                 let cachedPayload = {};
-                try {
-                    cachedPayload = JSON.parse(existing[0].response_payload || '{}');
-                } catch (parseError) {
-                    cachedPayload = {};
+                const rawPayload = existing[0].response_payload;
+                if (typeof rawPayload === 'string') {
+                    try {
+                        cachedPayload = JSON.parse(rawPayload || '{}');
+                    } catch (parseError) {
+                        cachedPayload = {};
+                    }
+                } else if (typeof rawPayload === 'object' && rawPayload !== null) {
+                    cachedPayload = rawPayload;
                 }
 
                 results.push({
@@ -91,7 +101,6 @@ router.post('/', authenticateToken, async (req, res) => {
                     const rawStudentNumber = payload?.studentNumber;
                     const rawStudentName = payload?.name || payload?.studentName;
 
-                    // TASK 12.3: Input Sanitization & Regex Validation
                     const studentNumber = typeof rawStudentNumber === 'string'
                         ? rawStudentNumber.trim()
                         : rawStudentNumber;
@@ -113,6 +122,9 @@ router.post('/', authenticateToken, async (req, res) => {
                             message: 'Student name must be between 2 and 100 characters'
                         };
                     } else {
+                        // Lecturer-created student has account_id = NULL
+                        const accountIdForStudent = userRole === 'LECTURER' ? null : userId;
+
                         const [result] = await connection.execute(
                             `INSERT INTO students (
                                 account_id,
@@ -122,7 +134,7 @@ router.post('/', authenticateToken, async (req, res) => {
                                 version
                             ) VALUES (?, ?, ?, ?, 1)`,
                             [
-                                userId,
+                                accountIdForStudent,
                                 payload.programmeId || 1,
                                 studentNumber,
                                 studentName
@@ -144,7 +156,6 @@ router.post('/', authenticateToken, async (req, res) => {
                     const studentId = payload?.id || op.entityId;
                     const rawStudentName = payload?.name || payload?.studentName;
 
-                    // TASK 12.3: Input Sanitization & Regex Validation
                     const studentName = typeof rawStudentName === 'string'
                         ? rawStudentName.trim()
                         : rawStudentName;
@@ -163,7 +174,7 @@ router.post('/', authenticateToken, async (req, res) => {
                         };
                     } else {
                         const [current] = await connection.execute(
-                            `SELECT version FROM students WHERE student_id = ? AND deleted_at IS NULL`,
+                            `SELECT account_id, version FROM students WHERE student_id = ? AND deleted_at IS NULL`,
                             [studentId]
                         );
 
@@ -172,6 +183,12 @@ router.post('/', authenticateToken, async (req, res) => {
                             responsePayload = {
                                 code: 'STUDENT_NOT_FOUND',
                                 message: 'Student not found'
+                            };
+                        } else if (userRole !== 'LECTURER' && current[0].account_id !== userId) {
+                            opStatus = 'REJECTED';
+                            responsePayload = {
+                                code: 'FORBIDDEN',
+                                message: 'Access denied: Cannot edit records belonging to other users'
                             };
                         } else if (baseVersion !== undefined && baseVersion !== null && current[0].version !== baseVersion) {
                             opStatus = 'CONFLICT';
@@ -203,7 +220,13 @@ router.post('/', authenticateToken, async (req, res) => {
                 else if (type === 'DELETE_STUDENT') {
                     const studentId = payload?.id || op.entityId;
 
-                    if (!studentId) {
+                    if (userRole !== 'LECTURER') {
+                        opStatus = 'REJECTED';
+                        responsePayload = {
+                            code: 'FORBIDDEN',
+                            message: 'Lecturer access required for deletion'
+                        };
+                    } else if (!studentId) {
                         opStatus = 'REJECTED';
                         responsePayload = {
                             code: 'INVALID_OPERATION',

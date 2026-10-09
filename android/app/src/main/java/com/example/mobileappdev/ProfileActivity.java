@@ -27,18 +27,18 @@ public class ProfileActivity extends AppCompatActivity {
     private TextView tvProfileStudentNumber;
     private TextView tvProfileProgramme;
     private TextView tvLabGroupValue;
-    private MaterialButton btnLogout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_profile);
 
-        if (!SessionManager.getInstance(this).isLoggedIn()) {
+        SessionManager sessionManager = SessionManager.getInstance(this);
+        if (!sessionManager.isLoggedIn()) {
             navigateToLogin();
             return;
         }
 
+        setContentView(R.layout.activity_profile);
         bindViews();
         setupBottomNav();
         loadProfile();
@@ -50,9 +50,7 @@ public class ProfileActivity extends AppCompatActivity {
             bottomNav.setSelectedItemId(R.id.navProfile);
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
-                if (id == R.id.navHome) {
-                    startActivity(new Intent(this, MainActivity.class));
-                    finish();
+                if (id == R.id.navHome || id == R.id.navProfile) {
                     return true;
                 } else if (id == R.id.navGroup) {
                     startActivity(new Intent(this, RosterActivity.class));
@@ -61,8 +59,6 @@ public class ProfileActivity extends AppCompatActivity {
                 } else if (id == R.id.navSync) {
                     startActivity(new Intent(this, SyncActivity.class));
                     finish();
-                    return true;
-                } else if (id == R.id.navProfile) {
                     return true;
                 }
                 return false;
@@ -81,10 +77,40 @@ public class ProfileActivity extends AppCompatActivity {
         tvProfileStudentNumber = findViewById(R.id.tvProfileStudentNumber);
         tvProfileProgramme = findViewById(R.id.tvProfileProgramme);
         tvLabGroupValue = findViewById(R.id.tvLabGroupValue);
-        btnLogout = findViewById(R.id.btnLogout);
+        MaterialButton btnLogout = findViewById(R.id.btnLogout);
 
         if (btnLogout != null) {
             btnLogout.setOnClickListener(v -> performLogout());
+        }
+
+        View btnEditProfile = findViewById(R.id.btnEditProfile);
+        if (btnEditProfile != null) {
+            btnEditProfile.setOnClickListener(v -> {
+                SessionManager s = SessionManager.getInstance(this);
+                if (s.isLecturer()) {
+                    startActivity(new Intent(this, EditStudentActivity.class));
+                } else {
+                    Toast.makeText(this, "Profile edit requested", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        View rowEditDetails = findViewById(R.id.rowEditDetails);
+        if (rowEditDetails != null) {
+            rowEditDetails.setOnClickListener(v ->
+                    Toast.makeText(this, "Edit details requested", Toast.LENGTH_SHORT).show());
+        }
+
+        View rowRequestGroupChange = findViewById(R.id.rowRequestGroupChange);
+        if (rowRequestGroupChange != null) {
+            rowRequestGroupChange.setOnClickListener(v ->
+                    Toast.makeText(this, "Group change request submitted", Toast.LENGTH_SHORT).show());
+        }
+
+        View rowRequestNumberCorrection = findViewById(R.id.rowRequestNumberCorrection);
+        if (rowRequestNumberCorrection != null) {
+            rowRequestNumberCorrection.setOnClickListener(v ->
+                    Toast.makeText(this, "Student number correction request submitted", Toast.LENGTH_SHORT).show());
         }
     }
 
@@ -141,7 +167,7 @@ public class ProfileActivity extends AppCompatActivity {
 
     private void navigateToLogin() {
         Intent intent = new Intent(this, SignInActivity.class);
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
     }
