@@ -2,23 +2,29 @@ package com.example.mobileappdev;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.View;
 import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.mobileappdev.data.local.AppDatabase;
+import com.example.mobileappdev.data.local.entity.PendingOperationEntity;
 import com.example.mobileappdev.session.SessionManager;
 import com.example.mobileappdev.sync.SyncWorker;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 public class SyncActivity extends AppCompatActivity {
 
+    private SessionManager sessionManager;
+    private AppDatabase db;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        SessionManager sessionManager = SessionManager.getInstance(this);
+        sessionManager = SessionManager.getInstance(this);
         if (!sessionManager.isLoggedIn()) {
             Intent intent = new Intent(this, SignInActivity.class);
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
@@ -27,8 +33,12 @@ public class SyncActivity extends AppCompatActivity {
             return;
         }
 
+        db = AppDatabase.getInstance(this);
+        SyncWorker.schedulePeriodic(this);
+
         setContentView(R.layout.activity_sync);
         bindViews();
+        observeSyncQueue();
         setupListeners();
     }
 
@@ -45,6 +55,32 @@ public class SyncActivity extends AppCompatActivity {
                 Toast.makeText(this, "Retrying all pending sync operations...", Toast.LENGTH_SHORT).show();
             });
         }
+
+        View actionRequiredItem = findViewById(R.id.containerGroupTransfer);
+        if (actionRequiredItem != null) {
+            actionRequiredItem.setOnClickListener(v -> {
+                ConflictReviewBottomSheetDialogFragment dialog = new ConflictReviewBottomSheetDialogFragment();
+                dialog.show(getSupportFragmentManager(), ConflictReviewBottomSheetDialogFragment.TAG);
+            });
+        }
+    }
+
+    private void observeSyncQueue() {
+        long accountId = sessionManager.getAccountId();
+        db.pendingOperationDao().observeQueueForAccount(accountId).observe(this, operations -> {
+            if (operations != null && !operations.isEmpty()) {
+                boolean hasConflict = false;
+                for (PendingOperationEntity op : operations) {
+                    if (PendingOperationEntity.STATUS_CONFLICT.equals(op.status)) {
+                        hasConflict = true;
+                        break;
+                    }
+                }
+                if (hasConflict) {
+                    Toast.makeText(SyncActivity.this, "Sync conflict detected — review action required", Toast.LENGTH_SHORT).show();
+                }
+            }
+        });
     }
 
     private void setupListeners() {
@@ -63,10 +99,6 @@ public class SyncActivity extends AppCompatActivity {
                 finish();
                 return true;
             } else if (id == R.id.navSync) {
-                return true;
-            } else if (id == R.id.navProfile) {
-                startActivity(new Intent(this, ProfileActivity.class));
-                finish();
                 return true;
             }
             return false;

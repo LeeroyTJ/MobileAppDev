@@ -38,6 +38,15 @@ public class ProfileActivity extends AppCompatActivity {
             return;
         }
 
+        // Role Guard: Student only screen
+        if (sessionManager.isLecturer()) {
+            Intent intent = new Intent(this, RosterActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+            return;
+        }
+
         setContentView(R.layout.activity_profile);
         bindViews();
         setupBottomNav();
@@ -47,13 +56,13 @@ public class ProfileActivity extends AppCompatActivity {
     private void setupBottomNav() {
         BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
         if (bottomNav != null) {
-            bottomNav.setSelectedItemId(R.id.navProfile);
+            bottomNav.setSelectedItemId(R.id.navHome);
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
-                if (id == R.id.navHome || id == R.id.navProfile) {
+                if (id == R.id.navHome) {
                     return true;
                 } else if (id == R.id.navGroup) {
-                    startActivity(new Intent(this, RosterActivity.class));
+                    startActivity(new Intent(this, StudentGroupActivity.class));
                     finish();
                     return true;
                 } else if (id == R.id.navSync) {
@@ -85,14 +94,8 @@ public class ProfileActivity extends AppCompatActivity {
 
         View btnEditProfile = findViewById(R.id.btnEditProfile);
         if (btnEditProfile != null) {
-            btnEditProfile.setOnClickListener(v -> {
-                SessionManager s = SessionManager.getInstance(this);
-                if (s.isLecturer()) {
-                    startActivity(new Intent(this, EditStudentActivity.class));
-                } else {
-                    Toast.makeText(this, "Profile edit requested", Toast.LENGTH_SHORT).show();
-                }
-            });
+            btnEditProfile.setOnClickListener(v ->
+                    Toast.makeText(this, "Profile edit requested", Toast.LENGTH_SHORT).show());
         }
 
         View rowEditDetails = findViewById(R.id.rowEditDetails);
@@ -103,8 +106,10 @@ public class ProfileActivity extends AppCompatActivity {
 
         View rowRequestGroupChange = findViewById(R.id.rowRequestGroupChange);
         if (rowRequestGroupChange != null) {
-            rowRequestGroupChange.setOnClickListener(v ->
-                    Toast.makeText(this, "Group change request submitted", Toast.LENGTH_SHORT).show());
+            rowRequestGroupChange.setOnClickListener(v -> {
+                GroupPickerBottomSheetDialogFragment dialog = new GroupPickerBottomSheetDialogFragment();
+                dialog.show(getSupportFragmentManager(), GroupPickerBottomSheetDialogFragment.TAG);
+            });
         }
 
         View rowRequestNumberCorrection = findViewById(R.id.rowRequestNumberCorrection);
@@ -153,16 +158,14 @@ public class ProfileActivity extends AppCompatActivity {
 
     private void handleFailure(int code) {
         if (code == 401 || code == 403) {
-            performLogout();
+            new SessionExpiredDialogFragment().show(getSupportFragmentManager(), SessionExpiredDialogFragment.TAG);
         } else {
             Toast.makeText(this, "Couldn't load your profile", Toast.LENGTH_LONG).show();
         }
     }
 
     private void performLogout() {
-        SessionManager.getInstance(this).clearSession();
-        Toast.makeText(this, "Signed out successfully", Toast.LENGTH_SHORT).show();
-        navigateToLogin();
+        new SignOutConfirmationDialogFragment().show(getSupportFragmentManager(), SignOutConfirmationDialogFragment.TAG);
     }
 
     private void navigateToLogin() {

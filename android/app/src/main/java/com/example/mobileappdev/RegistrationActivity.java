@@ -67,7 +67,7 @@ public class RegistrationActivity extends AppCompatActivity {
     private void bindViews() {
         View btnBack = findViewById(R.id.btnBack);
         if (btnBack != null) {
-            btnBack.setOnClickListener(v -> finish());
+            btnBack.setOnClickListener(v -> navigateToSignIn());
         }
 
         etFullName = findViewById(R.id.etFullName);
@@ -80,7 +80,7 @@ public class RegistrationActivity extends AppCompatActivity {
 
         btnSaveRegistration.setOnClickListener(v -> attemptRegistration());
         if (tvSignIn != null) {
-            tvSignIn.setOnClickListener(v -> finish());
+            tvSignIn.setOnClickListener(v -> navigateToSignIn());
         }
     }
 
@@ -137,7 +137,7 @@ public class RegistrationActivity extends AppCompatActivity {
                     Toast.makeText(RegistrationActivity.this,
                             "Registration successful — please sign in", Toast.LENGTH_LONG).show();
 
-                    finish(); // Unwinds back to SignInActivity
+                    navigateToSignIn();
                 } else {
                     Toast.makeText(RegistrationActivity.this,
                             extractErrorMessage(response), Toast.LENGTH_LONG).show();
@@ -151,6 +151,12 @@ public class RegistrationActivity extends AppCompatActivity {
                         "Couldn't reach the server — check your connection", Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    private void navigateToSignIn() {
+        Intent intent = new Intent(this, SignInActivity.class);
+        startActivity(intent);
+        finish();
     }
 
     private String extractErrorMessage(Response<Map<String, Object>> response) {
