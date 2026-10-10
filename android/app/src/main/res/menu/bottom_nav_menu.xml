@@ -16,9 +16,4 @@
         android:icon="@drawable/ic_refresh"
         android:title="@string/nav_sync" />
 
-    <item
-        android:id="@+id/navProfile"
-        android:icon="@drawable/ic_person"
-        android:title="@string/nav_profile" />
-
 </menu>

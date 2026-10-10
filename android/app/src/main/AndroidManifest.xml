@@ -17,11 +17,10 @@
         android:theme="@style/Theme.CohortHub"
         android:networkSecurityConfig="@xml/network_security_config">
 
-        <!-- 1. Launcher Screen -->
+        <!-- 1. Launcher Screen: MainActivity (Invisible Router) -->
         <activity
-            android:name=".RegistrationActivity"
-            android:exported="true"
-            android:windowSoftInputMode="adjustResize">
+            android:name=".MainActivity"
+            android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -29,17 +28,21 @@
         </activity>
 
         <activity
-            android:name=".ConnectionErrorActivity"
-            android:exported="false" />
-
-        <!-- 2. App Screens -->
-        <activity
             android:name=".SignInActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
 
         <activity
+            android:name=".RegistrationActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
+
+        <activity
             android:name=".ProfileActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".StudentGroupActivity"
             android:exported="false" />
 
         <activity
@@ -56,15 +59,15 @@
             android:exported="false" />
 
         <activity
-            android:name=".MainActivity"
-            android:exported="false" />
-
-        <activity
             android:name=".EditStudentActivity"
             android:exported="false" />
 
         <activity
             android:name=".DeleteStudentActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ConnectionErrorActivity"
             android:exported="false" />
 
     </application>
