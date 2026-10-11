@@ -13,8 +13,13 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiClient {
 
-    // Physical device testing via mobile hotspot / LAN IP:
-    private static final String BASE_URL = "http://172.20.10.3:3000/";
+    // 10.0.2.2 is the Android emulator's alias for the host machine's
+    // localhost. Change this if testing on a physical device or once
+    // you have a real deployed server address.
+    //
+    // Backend dev machine on the LAN (physical-device testing):
+    //   http://192.168.137.1:3000/
+    private static final String BASE_URL = "http://10.0.2.2:3000/";
 
     private static volatile Retrofit retrofit;
 

@@ -65,7 +65,7 @@
                     android:id="@+id/tvG01Occupancy"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="14 / 15"
+                    android:text="-- / --"
                     android:textAppearance="?attr/textAppearanceLabelLarge"
                     android:textColor="@color/dodger_blue" />
             </LinearLayout>
@@ -103,7 +103,7 @@
                     android:id="@+id/tvG02Occupancy"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="5 / 15"
+                    android:text="-- / --"
                     android:textAppearance="?attr/textAppearanceLabelLarge"
                     android:textColor="@color/dodger_blue" />
             </LinearLayout>
@@ -141,7 +141,7 @@
                     android:id="@+id/tvG03Occupancy"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="3 / 15"
+                    android:text="-- / --"
                     android:textAppearance="?attr/textAppearanceLabelLarge"
                     android:textColor="@color/dodger_blue" />
             </LinearLayout>
@@ -179,7 +179,7 @@
                     android:id="@+id/tvG04Occupancy"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="0 / 15"
+                    android:text="-- / --"
                     android:textAppearance="?attr/textAppearanceLabelLarge"
                     android:textColor="@color/dodger_blue" />
             </LinearLayout>

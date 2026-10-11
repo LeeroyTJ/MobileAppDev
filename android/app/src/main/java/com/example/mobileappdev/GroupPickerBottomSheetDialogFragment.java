@@ -4,6 +4,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -16,8 +17,8 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.button.MaterialButton;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-
 import java.util.concurrent.Executors;
 
 import retrofit2.Call;
@@ -34,6 +35,11 @@ public class GroupPickerBottomSheetDialogFragment extends BottomSheetDialogFragm
 
     private OnGroupSelectedListener listener;
     private long studentServerId = 0;
+
+    private TextView tvG01Occupancy;
+    private TextView tvG02Occupancy;
+    private TextView tvG03Occupancy;
+    private TextView tvG04Occupancy;
 
     public static GroupPickerBottomSheetDialogFragment newInstance(long studentServerId) {
         GroupPickerBottomSheetDialogFragment fragment = new GroupPickerBottomSheetDialogFragment();
@@ -70,6 +76,12 @@ public class GroupPickerBottomSheetDialogFragment extends BottomSheetDialogFragm
         View g02 = view.findViewById(R.id.cardGroupG02);
         View g03 = view.findViewById(R.id.cardGroupG03);
         View g04 = view.findViewById(R.id.cardGroupG04);
+
+        tvG01Occupancy = view.findViewById(R.id.tvG01Occupancy);
+        tvG02Occupancy = view.findViewById(R.id.tvG02Occupancy);
+        tvG03Occupancy = view.findViewById(R.id.tvG03Occupancy);
+        tvG04Occupancy = view.findViewById(R.id.tvG04Occupancy);
+
         MaterialButton btnCancel = view.findViewById(R.id.btnCancelPicker);
 
         if (g01 != null) g01.setOnClickListener(v -> selectGroup("G01", 1));
@@ -77,6 +89,59 @@ public class GroupPickerBottomSheetDialogFragment extends BottomSheetDialogFragm
         if (g03 != null) g03.setOnClickListener(v -> selectGroup("G03", 3));
         if (g04 != null) g04.setOnClickListener(v -> selectGroup("G04", 4));
         if (btnCancel != null) btnCancel.setOnClickListener(v -> dismiss());
+
+        fetchGroupCapacities();
+    }
+
+    private void fetchGroupCapacities() {
+        if (getContext() == null) return;
+
+        ApiClient.getGroupService(requireContext()).listGroups().enqueue(new Callback<>() {
+            @Override
+            public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
+                if (!isAdded() || !response.isSuccessful() || response.body() == null
+                        || !Boolean.TRUE.equals(response.body().get("success"))) {
+                    return;
+                }
+
+                Object dataObj = response.body().get("data");
+                if (!(dataObj instanceof List)) {
+                    return;
+                }
+
+                List<?> groupList = (List<?>) dataObj;
+
+                for (Object item : groupList) {
+                    if (item instanceof Map) {
+                        Map<?, ?> groupMap = (Map<?, ?>) item;
+                        Object codeObj = groupMap.get("group_code");
+                        Object occupiedObj = groupMap.get("occupied");
+                        Object capacityObj = groupMap.get("capacity");
+
+                        String code = codeObj != null ? codeObj.toString() : "";
+                        long occupied = (occupiedObj instanceof Number) ? ((Number) occupiedObj).longValue() : 0;
+                        long capacity = (capacityObj instanceof Number) ? ((Number) capacityObj).longValue() : 15;
+
+                        String text = occupied + " / " + capacity;
+
+                        if ("G01".equalsIgnoreCase(code) && tvG01Occupancy != null) {
+                            tvG01Occupancy.setText(text);
+                        } else if ("G02".equalsIgnoreCase(code) && tvG02Occupancy != null) {
+                            tvG02Occupancy.setText(text);
+                        } else if ("G03".equalsIgnoreCase(code) && tvG03Occupancy != null) {
+                            tvG03Occupancy.setText(text);
+                        } else if ("G04".equalsIgnoreCase(code) && tvG04Occupancy != null) {
+                            tvG04Occupancy.setText(text);
+                        }
+                    }
+                }
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
+                // If fetch fails (e.g. offline), placeholders ("-- / --") remain visible
+            }
+        });
     }
 
     private void selectGroup(String groupCode, long groupId) {
