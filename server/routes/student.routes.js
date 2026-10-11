@@ -23,11 +23,28 @@ router.get('/', authenticateToken, verifyRole('LECTURER'), async (req, res) => {
         });
     }
 
-    if (group && group !== 'UNASSIGNED' && !isPositiveInt(group)) {
-        return res.status(400).json({
-            success: false,
-            error: { code: 'INVALID_GROUP', message: 'group must be UNASSIGNED or a valid group id' }
-        });
+    let resolvedGroupId = null;
+    if (group && group !== 'UNASSIGNED') {
+        if (isPositiveInt(group)) {
+            resolvedGroupId = group;
+        } else {
+            try {
+                const [gRows] = await pool.query('SELECT group_id FROM lab_groups WHERE group_code = ?', [group]);
+                if (gRows.length > 0) {
+                    resolvedGroupId = gRows[0].group_id;
+                } else {
+                    return res.status(400).json({
+                        success: false,
+                        error: { code: 'INVALID_GROUP', message: 'group must be UNASSIGNED, a valid group id, or a valid group code' }
+                    });
+                }
+            } catch (err) {
+                return res.status(400).json({
+                    success: false,
+                    error: { code: 'INVALID_GROUP', message: 'Invalid group filter format' }
+                });
+            }
+        }
     }
 
     if (search && !isValidSearch(search)) {
@@ -69,9 +86,9 @@ router.get('/', authenticateToken, verifyRole('LECTURER'), async (req, res) => {
 
     if (group === 'UNASSIGNED') {
         where.push('s.group_id IS NULL');
-    } else if (group) {
+    } else if (resolvedGroupId) {
         where.push('s.group_id = ?');
-        params.push(group);
+        params.push(resolvedGroupId);
     }
 
     if (search) {
@@ -237,7 +254,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 /**
- * DELETE /api/v1/students/:id — Lecturer soft delete
+ * DELETE /api/v1/students/:id — Lecturer soft delete with version increment
  */
 router.delete('/:id', authenticateToken, verifyRole('LECTURER'), async (req, res) => {
     const studentId = req.params.id;
@@ -261,14 +278,14 @@ router.delete('/:id', authenticateToken, verifyRole('LECTURER'), async (req, res
 
         const student = rows[0];
 
-        await connection.query('UPDATE students SET deleted_at = NOW(), group_id = NULL WHERE student_id = ?', [studentId]);
+        await connection.query('UPDATE students SET deleted_at = NOW(), group_id = NULL, version = version + 1 WHERE student_id = ?', [studentId]);
 
         if (student.account_id) {
             await connection.query('UPDATE accounts SET is_active = FALSE WHERE account_id = ?', [student.account_id]);
         }
 
         await connection.commit();
-        return res.status(200).json({ success: true, data: { deleted: true } });
+        return res.status(200).json({ success: true, data: { deleted: true, version: student.version + 1 } });
 
     } catch (error) {
         await connection.rollback();

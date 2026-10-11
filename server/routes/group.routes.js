@@ -4,6 +4,64 @@ const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 const { isPositiveInt } = require('../utils/validators');
 
+// GET /api/v1/groups/:groupId — return group capacity, member list, and programme code breakdown
+router.get('/:groupId', authenticateToken, async (req, res) => {
+    const { groupId } = req.params;
+    if (!isPositiveInt(groupId)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'VALIDATION_ERROR', message: 'Valid groupId is required' }
+        });
+    }
+
+    try {
+        const [groupRows] = await pool.query(
+            `SELECT g.group_id, g.group_code, g.name, g.capacity,
+                    COUNT(s.student_id) AS occupied
+             FROM lab_groups g
+             LEFT JOIN students s ON s.group_id = g.group_id AND s.deleted_at IS NULL
+             WHERE g.group_id = ?
+             GROUP BY g.group_id, g.group_code, g.name, g.capacity`,
+            [groupId]
+        );
+
+        if (groupRows.length === 0) {
+            return res.status(404).json({ success: false, error: { code: 'GROUP_NOT_FOUND', message: 'Group not found' } });
+        }
+        const group = groupRows[0];
+
+        const [members] = await pool.query(
+            `SELECT s.student_id, s.student_number, s.student_name, s.version, p.code AS programme_code
+             FROM students s
+             JOIN programmes p ON s.programme_id = p.programme_id
+             WHERE s.group_id = ? AND s.deleted_at IS NULL
+             ORDER BY s.student_name`,
+            [groupId]
+        );
+
+        const [programmeBreakdown] = await pool.query(
+            `SELECT p.code, COUNT(*) AS count
+             FROM students s
+             JOIN programmes p ON s.programme_id = p.programme_id
+             WHERE s.group_id = ? AND s.deleted_at IS NULL
+             GROUP BY p.code`,
+            [groupId]
+        );
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                ...group,
+                members,
+                programmeBreakdown
+            }
+        });
+    } catch (error) {
+        console.error('Get group details error:', error);
+        return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
+    }
+});
+
 // POST /api/v1/groups/:groupId/assign
 // Body: { studentId }
 // Assigns an unassigned student into a group, respecting capacity.
@@ -60,7 +118,7 @@ router.post('/:groupId/assign', authenticateToken, async (req, res) => {
         }
 
         await connection.query(
-            'UPDATE students SET group_id = ? WHERE student_id = ?',
+            'UPDATE students SET group_id = ?, version = version + 1 WHERE student_id = ?',
             [groupId, studentId]
         );
 
@@ -138,7 +196,7 @@ router.post('/:groupId/transfer', authenticateToken, async (req, res) => {
         }
 
         await connection.query(
-            'UPDATE students SET group_id = ? WHERE student_id = ?',
+            'UPDATE students SET group_id = ?, version = version + 1 WHERE student_id = ?',
             [groupId, studentId]
         );
 
