@@ -30,6 +30,7 @@ public class RegistrationActivity extends AppCompatActivity {
     private TextInputEditText etFullName;
     private TextInputEditText etStudentNumber;
     private TextInputEditText etPassword;
+    private TextInputEditText etClaimCode;
     private AutoCompleteTextView actProgramme;
     private AutoCompleteTextView actLabGroup;
     private MaterialButton btnSaveRegistration;
@@ -73,6 +74,7 @@ public class RegistrationActivity extends AppCompatActivity {
         etFullName = findViewById(R.id.etFullName);
         etStudentNumber = findViewById(R.id.etStudentNumber);
         etPassword = findViewById(R.id.etPassword);
+        etClaimCode = findViewById(R.id.etClaimCode);
         actProgramme = findViewById(R.id.actProgramme);
         actLabGroup = findViewById(R.id.actLabGroup);
         btnSaveRegistration = findViewById(R.id.btnSaveRegistration);
@@ -104,6 +106,7 @@ public class RegistrationActivity extends AppCompatActivity {
         String name = safeText(etFullName);
         String studentNumber = safeText(etStudentNumber);
         String password = safeText(etPassword);
+        String claimCode = safeText(etClaimCode);
 
         if (TextUtils.isEmpty(name) || TextUtils.isEmpty(studentNumber) || TextUtils.isEmpty(password)) {
             Toast.makeText(this, "Please fill in all required fields", Toast.LENGTH_SHORT).show();
@@ -125,6 +128,9 @@ public class RegistrationActivity extends AppCompatActivity {
         body.put("name", name);
         body.put("password", password);
         body.put("programmeId", selectedProgrammeId);
+        if (!TextUtils.isEmpty(claimCode)) {
+            body.put("claimCode", claimCode);
+        }
 
         ApiClient.getAuthService(this).register(body).enqueue(new Callback<>() {
             @Override
