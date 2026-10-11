@@ -52,6 +52,5 @@ public class PendingOperationEntity {
     public static final String STATUS_FAILED = "FAILED";
     public static final String STATUS_CONFLICT = "CONFLICT";
     public static final String STATUS_REJECTED = "REJECTED";
+    public static final String STATUS_ACTION_REQUIRED = "ACTION_REQUIRED";
 }
-
-
