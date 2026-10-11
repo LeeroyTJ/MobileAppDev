@@ -112,6 +112,15 @@ public class SyncActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
+        if (bottomNav != null) {
+            bottomNav.setSelectedItemId(sessionManager.isLecturer() ? R.id.nav_more : R.id.navSync);
+        }
+    }
+
     private void setupListeners() {
         BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
         if (bottomNav == null) return;
@@ -122,17 +131,19 @@ public class SyncActivity extends AppCompatActivity {
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
                 if (id == R.id.nav_students) {
-                    startActivity(new Intent(this, RosterActivity.class));
-                    finish();
+                    Intent intent = new Intent(this, RosterActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                    startActivity(intent);
                     return true;
                 } else if (id == R.id.nav_unassigned) {
-                    startActivity(new Intent(this, UnassignedActivity.class));
-                    finish();
+                    Intent intent = new Intent(this, UnassignedActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                    startActivity(intent);
                     return true;
                 } else if (id == R.id.nav_more) {
                     MoreBottomSheetDialogFragment sheet = new MoreBottomSheetDialogFragment();
                     sheet.show(getSupportFragmentManager(), MoreBottomSheetDialogFragment.TAG);
-                    return true;
+                    return false;
                 }
                 return false;
             });
@@ -142,12 +153,14 @@ public class SyncActivity extends AppCompatActivity {
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
                 if (id == R.id.navHome) {
-                    startActivity(new Intent(this, MainActivity.class));
-                    finish();
+                    Intent intent = new Intent(this, MainActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                    startActivity(intent);
                     return true;
                 } else if (id == R.id.navGroup) {
-                    startActivity(new Intent(this, ProfileActivity.class));
-                    finish();
+                    Intent intent = new Intent(this, ProfileActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                    startActivity(intent);
                     return true;
                 } else if (id == R.id.navSync) {
                     return true;
