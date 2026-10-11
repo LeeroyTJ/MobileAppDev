@@ -8,6 +8,7 @@ import android.widget.LinearLayout;
 import android.widget.Spinner;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -68,6 +69,13 @@ public class EditStudentActivity extends AppCompatActivity {
         Button deleteStudent = findViewById(R.id.deleteStudent);
 
         findViewById(R.id.btnBack).setOnClickListener(v -> finish());
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                finish();
+            }
+        });
 
         String[] groups = {"G01 (14/15)", "G02 (5/15)", "G03 (3/15)", "G04 (0/15)", "Unassigned"};
         ArrayAdapter<String> groupAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, groups);

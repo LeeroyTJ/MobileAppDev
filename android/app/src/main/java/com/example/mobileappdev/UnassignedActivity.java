@@ -6,6 +6,7 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -66,6 +67,20 @@ public class UnassignedActivity extends AppCompatActivity {
         setupNavigation();
         setupRecyclerView();
         loadUnassignedStudents();
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                navigateToParentRoster();
+            }
+        });
+    }
+
+    private void navigateToParentRoster() {
+        Intent intent = new Intent(this, RosterActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(intent);
+        finish();
     }
 
     private void bindViews() {
@@ -77,7 +92,7 @@ public class UnassignedActivity extends AppCompatActivity {
         errorState = findViewById(R.id.error_state);
         MaterialButton btnErrorRetry = findViewById(R.id.error_retry);
 
-        if (toolbar != null) toolbar.setNavigationOnClickListener(v -> finish());
+        if (toolbar != null) toolbar.setNavigationOnClickListener(v -> navigateToParentRoster());
         if (btnErrorRetry != null) btnErrorRetry.setOnClickListener(v -> loadUnassignedStudents());
     }
 

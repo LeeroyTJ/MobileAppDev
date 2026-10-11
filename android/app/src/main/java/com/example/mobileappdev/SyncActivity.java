@@ -7,6 +7,7 @@ import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mobileappdev.data.local.AppDatabase;
@@ -40,12 +41,40 @@ public class SyncActivity extends AppCompatActivity {
         bindViews();
         observeSyncQueue();
         setupListeners();
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                navigateToHome();
+            }
+        });
+    }
+
+    private void navigateToHome() {
+        Intent intent;
+
+        if (sessionManager.isLecturer()) {
+            intent = new Intent(this, RosterActivity.class);
+        } else {
+            intent = new Intent(this, ProfileActivity.class);
+        }
+
+        intent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK |
+                        Intent.FLAG_ACTIVITY_CLEAR_TASK
+        );
+
+        startActivity(intent);
+        finish();
     }
 
     private void bindViews() {
         ImageButton btnBack = findViewById(R.id.btnBack);
+
         if (btnBack != null) {
-            btnBack.setOnClickListener(v -> finish());
+            btnBack.setClickable(true);
+            btnBack.setFocusable(true);
+            btnBack.setOnClickListener(view -> navigateToHome());
         }
 
         Button btnRetryAll = findViewById(R.id.btnRetryAll);
