@@ -2,20 +2,34 @@ package com.example.mobileappdev;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.InputType;
+import android.text.TextUtils;
+import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.mobileappdev.data.local.AppDatabase;
+import com.example.mobileappdev.data.local.entity.PendingOperationEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
 import com.example.mobileappdev.session.SessionManager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
 
+import org.json.JSONObject;
+
+import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -28,6 +42,9 @@ public class ProfileActivity extends AppCompatActivity {
     private TextView tvProfileStudentNumber;
     private TextView tvProfileProgramme;
     private TextView tvLabGroupValue;
+
+    private long myStudentId = 0;
+    private int myBaseVersion = 0;
 
     private long lastBackPressTime = 0;
     private static final long BACK_PRESS_INTERVAL = 2000;
@@ -62,16 +79,6 @@ public class ProfileActivity extends AppCompatActivity {
                 handleBackPress();
             }
         });
-    }
-
-    private void handleBackPress() {
-        long now = System.currentTimeMillis();
-        if (now - lastBackPressTime < BACK_PRESS_INTERVAL) {
-            moveTaskToBack(true);
-        } else {
-            lastBackPressTime = now;
-            Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show();
-        }
     }
 
     private void setupBottomNav() {
@@ -115,28 +122,32 @@ public class ProfileActivity extends AppCompatActivity {
 
         View btnEditProfile = findViewById(R.id.btnEditProfile);
         if (btnEditProfile != null) {
-            btnEditProfile.setOnClickListener(v ->
-                    Toast.makeText(this, "Profile edit requested", Toast.LENGTH_SHORT).show());
+            btnEditProfile.setOnClickListener(v -> showEditDetailsSheet());
         }
 
         View rowEditDetails = findViewById(R.id.rowEditDetails);
         if (rowEditDetails != null) {
-            rowEditDetails.setOnClickListener(v ->
-                    Toast.makeText(this, "Edit details requested", Toast.LENGTH_SHORT).show());
+            rowEditDetails.setOnClickListener(v -> showEditDetailsSheet());
         }
 
         View rowRequestGroupChange = findViewById(R.id.rowRequestGroupChange);
         if (rowRequestGroupChange != null) {
             rowRequestGroupChange.setOnClickListener(v -> {
-                GroupPickerBottomSheetDialogFragment dialog = new GroupPickerBottomSheetDialogFragment();
+                if (myStudentId <= 0) {
+                    Toast.makeText(this, "Profile not loaded yet — try again in a moment", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                GroupPickerBottomSheetDialogFragment dialog =
+                        GroupPickerBottomSheetDialogFragment.newInstance(myStudentId);
+                dialog.setOnGroupSelectedListener(groupCode -> tvLabGroupValue.setText(groupCode));
                 dialog.show(getSupportFragmentManager(), GroupPickerBottomSheetDialogFragment.TAG);
             });
         }
 
         View rowRequestNumberCorrection = findViewById(R.id.rowRequestNumberCorrection);
         if (rowRequestNumberCorrection != null) {
-            rowRequestNumberCorrection.setOnClickListener(v ->
-                    Toast.makeText(this, "Student number correction request submitted", Toast.LENGTH_SHORT).show());
+            rowRequestNumberCorrection.setOnClickListener(v -> showNumberCorrectionDialog());
         }
     }
 
@@ -156,9 +167,14 @@ public class ProfileActivity extends AppCompatActivity {
                     return;
                 }
 
-                String name = String.valueOf(data.get("student_name"));
-                String number = String.valueOf(data.get("student_number"));
-                String programmeName = String.valueOf(data.get("programme_name"));
+                Object idObj = data.get("student_id");
+                myStudentId = idObj instanceof Number ? ((Number) idObj).longValue() : 0;
+                Object versionObj = data.get("version");
+                myBaseVersion = versionObj instanceof Number ? ((Number) versionObj).intValue() : 0;
+
+                String name = safeStr(data.get("student_name"));
+                String number = safeStr(data.get("student_number"));
+                String programmeName = safeStr(data.get("programme_name"));
                 Object groupCodeObj = data.get("group_code");
                 String groupCode = groupCodeObj != null ? groupCodeObj.toString() : "Unassigned";
 
@@ -194,6 +210,156 @@ public class ProfileActivity extends AppCompatActivity {
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
         startActivity(intent);
         finish();
+    }
+
+    private void handleBackPress() {
+        long now = System.currentTimeMillis();
+        if (now - lastBackPressTime < BACK_PRESS_INTERVAL) {
+            moveTaskToBack(true);
+        } else {
+            lastBackPressTime = now;
+            Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private String safeStr(Object obj) {
+        if (obj == null) return "N/A";
+        String s = String.valueOf(obj);
+        return "null".equals(s) ? "N/A" : s;
+    }
+
+    private void showEditDetailsSheet() {
+        if (myStudentId <= 0) {
+            Toast.makeText(this, "Profile not loaded yet — try again in a moment", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_student_editor, null);
+        EditText etName = dialogView.findViewById(R.id.et_student_name);
+        EditText etNumber = dialogView.findViewById(R.id.et_student_number);
+
+        if (etName != null) etName.setText(tvProfileName.getText());
+        if (etNumber != null) {
+            etNumber.setText(tvProfileStudentNumber.getText());
+            etNumber.setEnabled(false);
+        }
+
+        // Hide programme and lab group fields — students can only edit their name
+        View tilProgramme = dialogView.findViewById(R.id.til_programme);
+        if (tilProgramme != null) tilProgramme.setVisibility(View.GONE);
+        View tilLabGroup = dialogView.findViewById(R.id.til_lab_group);
+        if (tilLabGroup != null) tilLabGroup.setVisibility(View.GONE);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Edit My Details")
+                .setView(dialogView)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String newName = etName != null && etName.getText() != null
+                            ? etName.getText().toString().trim() : "";
+                    if (TextUtils.isEmpty(newName)) {
+                        Toast.makeText(this, "Name cannot be empty", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    Map<String, Object> body = new HashMap<>();
+                    body.put("studentName", newName);
+                    body.put("baseVersion", myBaseVersion);
+
+                    ApiClient.getStudentService(this).updateStudent(myStudentId, body)
+                            .enqueue(new Callback<>() {
+                                @Override
+                                public void onResponse(@NonNull Call<Map<String, Object>> call,
+                                                       @NonNull Response<Map<String, Object>> response) {
+                                    if (response.isSuccessful() && response.body() != null
+                                            && Boolean.TRUE.equals(response.body().get("success"))) {
+                                        tvProfileName.setText(newName);
+                                        tvAvatarInitials.setText(initialsOf(newName));
+                                        Object responseData = response.body().get("data");
+                                        Object version = responseData instanceof Map
+                                                ? ((Map<?, ?>) responseData).get("version") : null;
+                                        if (version instanceof Number) {
+                                            myBaseVersion = ((Number) version).intValue();
+                                        }
+                                        Toast.makeText(ProfileActivity.this,
+                                                "Details updated", Toast.LENGTH_SHORT).show();
+                                    } else if (response.code() == 409) {
+                                        Toast.makeText(ProfileActivity.this,
+                                                "Record was modified on the server — pull to refresh",
+                                                Toast.LENGTH_LONG).show();
+                                    } else {
+                                        Toast.makeText(ProfileActivity.this,
+                                                "Failed to update details", Toast.LENGTH_SHORT).show();
+                                    }
+                                }
+
+                                @Override
+                                public void onFailure(@NonNull Call<Map<String, Object>> call,
+                                                      @NonNull Throwable t) {
+                                    Toast.makeText(ProfileActivity.this,
+                                            "Couldn't reach the server — try again later",
+                                            Toast.LENGTH_LONG).show();
+                                }
+                            });
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void showNumberCorrectionDialog() {
+        if (myStudentId <= 0) {
+            Toast.makeText(this, "Profile not loaded yet — try again in a moment", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        final EditText etCorrected = new EditText(this);
+        etCorrected.setInputType(InputType.TYPE_CLASS_NUMBER);
+        etCorrected.setHint("Enter corrected student number");
+        LinearLayout container = new LinearLayout(this);
+        container.setPadding(56, 32, 56, 8);
+        container.addView(etCorrected);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Request Student Number Correction")
+                .setView(container)
+                .setPositiveButton("Submit Request", (dialog, which) -> {
+                    String corrected = etCorrected.getText() != null
+                            ? etCorrected.getText().toString().trim() : "";
+                    if (TextUtils.isEmpty(corrected)) {
+                        Toast.makeText(this, "Enter a corrected number", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    PendingOperationEntity op = new PendingOperationEntity();
+                    op.operationId = UUID.randomUUID().toString();
+                    op.entityId = myStudentId;
+                    op.studentLocalId = null;
+                    op.accountId = SessionManager.getInstance(this).getAccountId();
+                    op.operationType = PendingOperationEntity.TYPE_CORRECT_STUDENT_NUMBER;
+                    op.payloadJson = new JSONObject().toString();
+                    try {
+                        op.payloadJson = new JSONObject()
+                                .put("studentId", myStudentId)
+                                .put("correctedStudentNumber", corrected)
+                                .put("baseVersion", myBaseVersion)
+                                .toString();
+                    } catch (Exception ignored) {
+                        op.payloadJson = "{\"correctedStudentNumber\":\"" + corrected + "\"}";
+                    }
+                    op.baseVersion = myBaseVersion;
+                    op.status = PendingOperationEntity.STATUS_PENDING;
+                    op.createdAt = System.currentTimeMillis();
+
+                    ExecutorService executor = Executors.newSingleThreadExecutor();
+                    executor.execute(() -> {
+                        AppDatabase.getInstance(this).pendingOperationDao().insert(op);
+                        runOnUiThread(() -> Toast.makeText(this,
+                                "Correction request submitted — will sync when online",
+                                Toast.LENGTH_SHORT).show());
+                        executor.shutdown();
+                    });
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
     private String initialsOf(String name) {
