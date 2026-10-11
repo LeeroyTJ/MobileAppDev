@@ -87,21 +87,44 @@ public class SyncActivity extends AppCompatActivity {
         BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
         if (bottomNav == null) return;
 
-        bottomNav.setSelectedItemId(R.id.navSync);
-        bottomNav.setOnItemSelectedListener(item -> {
-            int id = item.getItemId();
-            if (id == R.id.navHome) {
-                startActivity(new Intent(this, ProfileActivity.class));
-                finish();
-                return true;
-            } else if (id == R.id.navGroup) {
-                startActivity(new Intent(this, RosterActivity.class));
-                finish();
-                return true;
-            } else if (id == R.id.navSync) {
-                return true;
-            }
-            return false;
-        });
+        if (sessionManager.isLecturer()) {
+            bottomNav.inflateMenu(R.menu.menu_bottom_nav);
+            bottomNav.setSelectedItemId(R.id.nav_more);
+            bottomNav.setOnItemSelectedListener(item -> {
+                int id = item.getItemId();
+                if (id == R.id.nav_students) {
+                    startActivity(new Intent(this, RosterActivity.class));
+                    finish();
+                    return true;
+                } else if (id == R.id.nav_unassigned) {
+                    startActivity(new Intent(this, UnassignedActivity.class));
+                    finish();
+                    return true;
+                } else if (id == R.id.nav_more) {
+                    MoreBottomSheetDialogFragment sheet = new MoreBottomSheetDialogFragment();
+                    sheet.show(getSupportFragmentManager(), MoreBottomSheetDialogFragment.TAG);
+                    return true;
+                }
+                return false;
+            });
+        } else {
+            bottomNav.inflateMenu(R.menu.bottom_nav_menu);
+            bottomNav.setSelectedItemId(R.id.navSync);
+            bottomNav.setOnItemSelectedListener(item -> {
+                int id = item.getItemId();
+                if (id == R.id.navHome) {
+                    startActivity(new Intent(this, MainActivity.class));
+                    finish();
+                    return true;
+                } else if (id == R.id.navGroup) {
+                    startActivity(new Intent(this, ProfileActivity.class));
+                    finish();
+                    return true;
+                } else if (id == R.id.navSync) {
+                    return true;
+                }
+                return false;
+            });
+        }
     }
 }
