@@ -95,8 +95,8 @@ public class UnassignedActivity extends AppCompatActivity {
                 finish();
                 return true;
             } else if (id == R.id.nav_more) {
-                startActivity(new Intent(UnassignedActivity.this, ProfileActivity.class));
-                finish();
+                MoreBottomSheetDialogFragment sheet = new MoreBottomSheetDialogFragment();
+                sheet.show(getSupportFragmentManager(), MoreBottomSheetDialogFragment.TAG);
                 return true;
             }
             return false;
@@ -105,7 +105,18 @@ public class UnassignedActivity extends AppCompatActivity {
 
     private void setupRecyclerView() {
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new StudentAdapter(student -> showGroupAssignmentDialog(student));
+        adapter = new StudentAdapter(new StudentAdapter.OnStudentClickListener() {
+            @Override
+            public void onStudentClick(StudentEntity student) {
+                showGroupAssignmentDialog(student);
+            }
+
+            @Override
+            public void onStudentOptionsClick(StudentEntity student, View anchorView) {
+                showGroupAssignmentDialog(student);
+            }
+        });
+        adapter.setOnStudentActionListener((student, view) -> showGroupAssignmentDialog(student));
         recyclerView.setAdapter(adapter);
     }
 

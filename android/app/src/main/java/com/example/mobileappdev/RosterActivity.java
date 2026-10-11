@@ -284,9 +284,10 @@ public class RosterActivity extends AppCompatActivity {
     private void setupFab() {
         if (sessionManager.isLecturer()) {
             fabAdd.setVisibility(View.VISIBLE);
-            fabAdd.setOnClickListener(v ->
-                    Toast.makeText(RosterActivity.this, "Add Student Dialog", Toast.LENGTH_SHORT).show()
-            );
+            fabAdd.setOnClickListener(v -> {
+                AddStudentDialogFragment dialog = new AddStudentDialogFragment();
+                dialog.show(getSupportFragmentManager(), AddStudentDialogFragment.TAG);
+            });
         } else {
             fabAdd.setVisibility(View.GONE);
         }
