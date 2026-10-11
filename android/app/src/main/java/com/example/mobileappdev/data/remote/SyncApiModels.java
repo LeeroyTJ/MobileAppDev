@@ -40,6 +40,8 @@ public class SyncApiModels {
         public String entityType;
         public Long entityId;
         public Integer version;
+        public String message;
+        public Map<String, Object> data;
 
         @SerializedName("serverRecord")
         public Map<String, Object> serverRecord;
@@ -49,6 +51,3 @@ public class SyncApiModels {
         public Integer serverVersion;
     }
 }
-
-
-

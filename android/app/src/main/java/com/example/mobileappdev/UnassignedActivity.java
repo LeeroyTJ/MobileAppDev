@@ -96,6 +96,15 @@ public class UnassignedActivity extends AppCompatActivity {
         if (btnErrorRetry != null) btnErrorRetry.setOnClickListener(v -> loadUnassignedStudents());
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
+        if (bottomNav != null) {
+            bottomNav.setSelectedItemId(R.id.nav_unassigned);
+        }
+    }
+
     private void setupNavigation() {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         if (bottomNav == null) return;
@@ -106,13 +115,14 @@ public class UnassignedActivity extends AppCompatActivity {
             if (id == R.id.nav_unassigned) {
                 return true;
             } else if (id == R.id.nav_students) {
-                startActivity(new Intent(UnassignedActivity.this, RosterActivity.class));
-                finish();
+                Intent intent = new Intent(UnassignedActivity.this, RosterActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                startActivity(intent);
                 return true;
             } else if (id == R.id.nav_more) {
                 MoreBottomSheetDialogFragment sheet = new MoreBottomSheetDialogFragment();
                 sheet.show(getSupportFragmentManager(), MoreBottomSheetDialogFragment.TAG);
-                return true;
+                return false;
             }
             return false;
         });

@@ -152,6 +152,7 @@ public class EditStudentActivity extends AppCompatActivity {
             intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_NAME, finalName);
             intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_NUMBER, finalNumber);
             intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_PROGRAMME, finalProg);
+            intent.putExtra("student_server_id", studentServerId);
             startActivity(intent);
         });
     }

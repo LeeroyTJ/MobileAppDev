@@ -284,6 +284,14 @@ public class RosterActivity extends AppCompatActivity {
         viewModel.clearAllFilters();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (bottomNavigation != null) {
+            bottomNavigation.setSelectedItemId(R.id.nav_students);
+        }
+    }
+
     private void setupBottomNavigation() {
         bottomNavigation.setSelectedItemId(R.id.nav_students);
         bottomNavigation.setOnItemSelectedListener(item -> {
@@ -291,12 +299,14 @@ public class RosterActivity extends AppCompatActivity {
             if (itemId == R.id.nav_students) {
                 return true;
             } else if (itemId == R.id.nav_unassigned) {
-                startActivity(new Intent(this, UnassignedActivity.class));
+                Intent intent = new Intent(this, UnassignedActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                startActivity(intent);
                 return true;
             } else if (itemId == R.id.nav_more) {
                 MoreBottomSheetDialogFragment sheet = new MoreBottomSheetDialogFragment();
                 sheet.show(getSupportFragmentManager(), MoreBottomSheetDialogFragment.TAG);
-                return true;
+                return false;
             }
             return false;
         });

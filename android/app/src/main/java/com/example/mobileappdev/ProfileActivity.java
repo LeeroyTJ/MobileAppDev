@@ -81,6 +81,15 @@ public class ProfileActivity extends AppCompatActivity {
         });
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
+        if (bottomNav != null) {
+            bottomNav.setSelectedItemId(R.id.navHome);
+        }
+    }
+
     private void setupBottomNav() {
         BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
         if (bottomNav != null) {
@@ -90,12 +99,14 @@ public class ProfileActivity extends AppCompatActivity {
                 if (id == R.id.navHome) {
                     return true;
                 } else if (id == R.id.navGroup) {
-                    startActivity(new Intent(this, StudentGroupActivity.class));
-                    finish();
+                    Intent intent = new Intent(this, StudentGroupActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                    startActivity(intent);
                     return true;
                 } else if (id == R.id.navSync) {
-                    startActivity(new Intent(this, SyncActivity.class));
-                    finish();
+                    Intent intent = new Intent(this, SyncActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                    startActivity(intent);
                     return true;
                 }
                 return false;
