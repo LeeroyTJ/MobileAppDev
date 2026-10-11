@@ -7,6 +7,7 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
@@ -28,6 +29,9 @@ public class SignInActivity extends AppCompatActivity {
     private TextInputEditText etPassword;
     private MaterialButton btnSignIn;
 
+    private long lastBackPressTime = 0;
+    private static final long BACK_PRESS_INTERVAL = 2000;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -44,12 +48,29 @@ public class SignInActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_signin);
         bindViews();
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                handleBackPress();
+            }
+        });
+    }
+
+    private void handleBackPress() {
+        long now = System.currentTimeMillis();
+        if (now - lastBackPressTime < BACK_PRESS_INTERVAL) {
+            moveTaskToBack(true);
+        } else {
+            lastBackPressTime = now;
+            Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void bindViews() {
         View btnBack = findViewById(R.id.btnBack);
         if (btnBack != null) {
-            btnBack.setOnClickListener(v -> finish());
+            btnBack.setOnClickListener(v -> handleBackPress());
         }
 
         etStudentNumber = findViewById(R.id.etStudentNumber);

@@ -11,6 +11,7 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
@@ -74,6 +75,9 @@ public class RosterActivity extends AppCompatActivity {
 
     private List<StudentEntity> cachedAccountStudents = new ArrayList<>();
 
+    private long lastBackPressTime = 0;
+    private static final long BACK_PRESS_INTERVAL = 2000;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -111,6 +115,23 @@ public class RosterActivity extends AppCompatActivity {
         observeViewModel();
         loadLocalStudents();
         fetchRemoteRoster();
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                handleBackPress();
+            }
+        });
+    }
+
+    private void handleBackPress() {
+        long now = System.currentTimeMillis();
+        if (now - lastBackPressTime < BACK_PRESS_INTERVAL) {
+            moveTaskToBack(true);
+        } else {
+            lastBackPressTime = now;
+            Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void bindViews() {
@@ -145,7 +166,7 @@ public class RosterActivity extends AppCompatActivity {
         bottomNavigation = findViewById(R.id.bottom_navigation);
         fabAdd = findViewById(R.id.fab_add);
 
-        toolbar.setNavigationOnClickListener(v -> finish());
+        toolbar.setNavigationOnClickListener(v -> handleBackPress());
         toolbar.inflateMenu(R.menu.menu_roster_toolbar);
         toolbar.setOnMenuItemClickListener(item -> {
             int itemId = item.getItemId();
