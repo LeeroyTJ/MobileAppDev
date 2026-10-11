@@ -17,6 +17,7 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.mobileappdev.adapter.StudentAdapter;
 import com.example.mobileappdev.data.local.AppDatabase;
 import com.example.mobileappdev.data.local.entity.StudentEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
@@ -34,6 +35,7 @@ import com.google.android.material.textfield.TextInputEditText;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -330,7 +332,7 @@ public class RosterActivity extends AppCompatActivity {
     private void loadLocalStudents() {
         long accountId = sessionManager.getAccountId();
         db.studentDao().observeAllForAccount(accountId).observe(this, students -> {
-            if (students != null && !students.isEmpty()) {
+            if (students != null) {
                 cachedAccountStudents = students;
                 applyFiltersAndFilterList();
             }
@@ -439,6 +441,7 @@ public class RosterActivity extends AppCompatActivity {
 
                         cachedAccountStudents = remoteStudents;
                         applyFiltersAndFilterList();
+                        saveRemoteStudentsToLocalDb(remoteStudents);
                     }
                 } else if (response.code() == 401 || response.code() == 403) {
                     new SessionExpiredDialogFragment().show(getSupportFragmentManager(), SessionExpiredDialogFragment.TAG);
@@ -451,6 +454,28 @@ public class RosterActivity extends AppCompatActivity {
             public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
                 loadingIndicator.setVisibility(View.GONE);
                 offlineBanner.setVisibility(View.VISIBLE);
+            }
+        });
+    }
+
+    private void saveRemoteStudentsToLocalDb(List<StudentEntity> remoteStudents) {
+        if (remoteStudents == null || remoteStudents.isEmpty()) return;
+        long accountId = sessionManager.getAccountId();
+        Executors.newSingleThreadExecutor().execute(() -> {
+            for (StudentEntity remote : remoteStudents) {
+                if (remote.serverId != null && remote.serverId > 0) {
+                    StudentEntity existing = db.studentDao().findByServerId(remote.serverId);
+                    if (existing != null) {
+                        remote.localId = existing.localId;
+                        if (StudentEntity.STATUS_PENDING.equals(existing.syncStatus)) {
+                            remote.labGroup = existing.labGroup;
+                            remote.name = existing.name;
+                            remote.syncStatus = existing.syncStatus;
+                        }
+                    }
+                }
+                remote.accountId = accountId;
+                db.studentDao().insert(remote);
             }
         });
     }
