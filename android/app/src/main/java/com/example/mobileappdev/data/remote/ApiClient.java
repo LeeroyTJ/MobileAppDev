@@ -3,6 +3,7 @@ package com.example.mobileappdev.data.remote;
 import android.content.Context;
 
 import com.example.mobileappdev.session.SessionManager;
+import com.example.mobileappdev.sync.SyncApiService;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
@@ -12,13 +13,8 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiClient {
 
-    // 10.0.2.2 is the Android emulator's alias for the host machine's
-    // localhost. Change this if testing on a physical device or once
-    // you have a real deployed server address.
-    //
-    // Backend dev machine on the LAN (physical-device testing):
-    //   http://192.168.1.219:3000/
-    private static final String BASE_URL = "http://10.0.2.2:3000/";
+    // Physical device testing via Wi-Fi network IP:
+    private static final String BASE_URL = "http://10.0.2.2:3000:3000/";
 
     private static volatile Retrofit retrofit;
 
@@ -55,5 +51,9 @@ public class ApiClient {
 
     public static GroupApiService getGroupService(Context context) {
         return getInstance(context).create(GroupApiService.class);
+    }
+
+    public static SyncApiService getSyncService(Context context) {
+        return getInstance(context).create(SyncApiService.class);
     }
 }

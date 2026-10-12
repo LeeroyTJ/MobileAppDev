@@ -29,19 +29,26 @@ public class RosterViewModel extends ViewModel {
             new MutableLiveData<>();
 
     public void setSearchQuery(String value) {
-        searchQuery.setValue(value);
+        searchQuery.setValue(value != null ? value : "");
     }
 
     public void setProgrammeFilter(String value) {
-        programmeFilter.setValue(value);
+        programmeFilter.setValue(value != null ? value : "");
     }
 
     public void setGroupFilter(String value) {
-        groupFilter.setValue(value);
+        groupFilter.setValue(value != null ? value : "");
     }
 
     public void setStatusFilter(String value) {
-        statusFilter.setValue(value);
+        statusFilter.setValue(value != null ? value : "");
+    }
+
+    public void clearAllFilters() {
+        searchQuery.setValue("");
+        programmeFilter.setValue("");
+        groupFilter.setValue("");
+        statusFilter.setValue("");
     }
 
     public void setStudentsFound(int value) {

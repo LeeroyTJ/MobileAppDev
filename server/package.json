@@ -1,12 +1,16 @@
 {
   "name": "server",
   "version": "1.0.0",
-  "description": "",
+  "description": "CohortHub Node.js Express Backend",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "jest --runInBand --verbose"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testTimeout": 30000
   },
   "keywords": [],
   "type": "commonjs",
@@ -16,5 +20,9 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mysql2": "^3.24.4"
+  },
+  "devDependencies": {
+    "jest": "^29.7.0",
+    "supertest": "^6.3.4"
   }
 }

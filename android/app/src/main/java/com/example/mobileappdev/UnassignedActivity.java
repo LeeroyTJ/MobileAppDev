@@ -1,0 +1,326 @@
+package com.example.mobileappdev;
+
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.mobileappdev.adapter.StudentAdapter;
+import com.example.mobileappdev.data.local.entity.StudentEntity;
+import com.example.mobileappdev.data.remote.ApiClient;
+import com.example.mobileappdev.session.SessionManager;
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.progressindicator.CircularProgressIndicator;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import retrofit2.Call;
+import retrofit2.Callback;
+import retrofit2.Response;
+
+public class UnassignedActivity extends AppCompatActivity {
+
+    private TextView tvCountPill;
+    private RecyclerView recyclerView;
+    private CircularProgressIndicator loadingIndicator;
+    private View emptyState;
+    private View errorState;
+
+    private StudentAdapter adapter;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        // Role Guard: Lecturer only
+        SessionManager sessionManager = SessionManager.getInstance(this);
+        if (!sessionManager.isLoggedIn()) {
+            Intent intent = new Intent(this, SignInActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+            return;
+        }
+        if (!sessionManager.isLecturer()) {
+            Intent intent = new Intent(this, ProfileActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+            return;
+        }
+
+        setContentView(R.layout.activity_unassigned);
+        bindViews();
+        setupNavigation();
+        setupRecyclerView();
+        loadUnassignedStudents();
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                navigateToParentRoster();
+            }
+        });
+    }
+
+    private void navigateToParentRoster() {
+        Intent intent = new Intent(this, RosterActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(intent);
+        finish();
+    }
+
+    private void bindViews() {
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        tvCountPill = findViewById(R.id.unassigned_count);
+        recyclerView = findViewById(R.id.unassigned_list);
+        loadingIndicator = findViewById(R.id.loading_indicator);
+        emptyState = findViewById(R.id.empty_state);
+        errorState = findViewById(R.id.error_state);
+        MaterialButton btnErrorRetry = findViewById(R.id.error_retry);
+
+        if (toolbar != null) toolbar.setNavigationOnClickListener(v -> navigateToParentRoster());
+        if (btnErrorRetry != null) btnErrorRetry.setOnClickListener(v -> loadUnassignedStudents());
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
+        if (bottomNav != null) {
+            bottomNav.setSelectedItemId(R.id.nav_unassigned);
+        }
+    }
+
+    private void setupNavigation() {
+        BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
+        if (bottomNav == null) return;
+
+        bottomNav.setSelectedItemId(R.id.nav_unassigned);
+        bottomNav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            if (id == R.id.nav_unassigned) {
+                return true;
+            } else if (id == R.id.nav_students) {
+                Intent intent = new Intent(UnassignedActivity.this, RosterActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                startActivity(intent);
+                return true;
+            } else if (id == R.id.nav_more) {
+                MoreBottomSheetDialogFragment sheet = new MoreBottomSheetDialogFragment();
+                sheet.show(getSupportFragmentManager(), MoreBottomSheetDialogFragment.TAG);
+                return false;
+            }
+            return false;
+        });
+    }
+
+    private void setupRecyclerView() {
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        adapter = new StudentAdapter(new StudentAdapter.OnStudentClickListener() {
+            @Override
+            public void onStudentClick(StudentEntity student) {
+                showGroupAssignmentDialog(student);
+            }
+
+            @Override
+            public void onStudentOptionsClick(StudentEntity student, View anchorView) {
+                showGroupAssignmentDialog(student);
+            }
+        });
+        adapter.setOnStudentActionListener((student, view) -> showGroupAssignmentDialog(student));
+        recyclerView.setAdapter(adapter);
+    }
+
+    private void loadUnassignedStudents() {
+        showLoadingState();
+
+        ApiClient.getStudentService(this).getRoster(null, "UNASSIGNED", null)
+                .enqueue(new Callback<>() {
+                    @Override
+                    public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
+                        if (!response.isSuccessful() || response.body() == null
+                                || !Boolean.TRUE.equals(response.body().get("success"))) {
+                            handleFailure(response.code());
+                            return;
+                        }
+
+                        List<?> dataList = (List<?>) response.body().get("data");
+                        List<StudentEntity> students = new ArrayList<>();
+                        if (dataList != null) {
+                            for (Object item : dataList) {
+                                if (item instanceof Map) {
+                                    Map<?, ?> map = (Map<?, ?>) item;
+                                    StudentEntity entity = new StudentEntity();
+                                    entity.serverId = map.get("student_id") instanceof Number ?
+                                            ((Number) map.get("student_id")).longValue() : 0;
+                                    entity.studentNumber = map.get("student_number") != null ? map.get("student_number").toString() : "";
+                                    entity.name = map.get("student_name") != null ? map.get("student_name").toString() : "";
+                                    entity.programme = map.get("programme_name") != null ? map.get("programme_name").toString() :
+                                            (map.get("programme_code") != null ? map.get("programme_code").toString() : "");
+                                    entity.labGroup = map.get("group_code") != null ? map.get("group_code").toString() : null;
+                                    entity.baseVersion = map.get("version") instanceof Number ?
+                                            ((Number) map.get("version")).intValue() : 1;
+                                    entity.syncStatus = StudentEntity.STATUS_SYNCED;
+                                    students.add(entity);
+                                }
+                            }
+                        }
+
+                        updateUiWithStudents(students);
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
+                        showErrorState();
+                    }
+                });
+    }
+
+    private void updateUiWithStudents(List<StudentEntity> students) {
+        hideAllContentStates();
+        adapter.setStudents(students);
+
+        int count = students.size();
+        String countText = count + (count == 1 ? " student" : " students");
+        tvCountPill.setText(countText);
+
+        if (students.isEmpty()) {
+            emptyState.setVisibility(View.VISIBLE);
+            recyclerView.setVisibility(View.GONE);
+        } else {
+            recyclerView.setVisibility(View.VISIBLE);
+            emptyState.setVisibility(View.GONE);
+        }
+    }
+
+    private void showLoadingState() {
+        hideAllContentStates();
+        loadingIndicator.setVisibility(View.VISIBLE);
+    }
+
+    private void showErrorState() {
+        hideAllContentStates();
+        errorState.setVisibility(View.VISIBLE);
+    }
+
+    private void hideAllContentStates() {
+        if (loadingIndicator != null) loadingIndicator.setVisibility(View.GONE);
+        if (emptyState != null) emptyState.setVisibility(View.GONE);
+        if (errorState != null) errorState.setVisibility(View.GONE);
+        if (recyclerView != null) recyclerView.setVisibility(View.GONE);
+    }
+
+    private void handleFailure(int code) {
+        if (code == 401 || code == 403) {
+            SessionManager.getInstance(this).clearSession();
+            Intent intent = new Intent(this, SignInActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+        } else {
+            showErrorState();
+        }
+    }
+
+    private void showGroupAssignmentDialog(StudentEntity student) {
+        ApiClient.getGroupService(this).listGroups().enqueue(new Callback<>() {
+            @Override
+            public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
+                if (!response.isSuccessful() || response.body() == null
+                        || !Boolean.TRUE.equals(response.body().get("success"))) {
+                    Toast.makeText(UnassignedActivity.this, "Failed to load groups", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                List<?> groupsData = (List<?>) response.body().get("data");
+                if (groupsData == null || groupsData.isEmpty()) {
+                    Toast.makeText(UnassignedActivity.this, "No groups available", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                List<Long> groupIds = new ArrayList<>();
+                List<String> groupNames = new ArrayList<>();
+
+                for (Object item : groupsData) {
+                    if (item instanceof Map) {
+                        Map<?, ?> groupMap = (Map<?, ?>) item;
+                        long gId = groupMap.get("group_id") instanceof Number ?
+                                ((Number) groupMap.get("group_id")).longValue() : 0;
+                        String code = groupMap.get("group_code") != null ? groupMap.get("group_code").toString() : "";
+                        String name = groupMap.get("name") != null ? groupMap.get("name").toString() : "";
+                        long occupied = groupMap.get("occupied") instanceof Number ?
+                                ((Number) groupMap.get("occupied")).longValue() : 0;
+                        long capacity = groupMap.get("capacity") instanceof Number ?
+                                ((Number) groupMap.get("capacity")).longValue() : 0;
+
+                        groupIds.add(gId);
+                        groupNames.add(code + " - " + name + " (" + occupied + "/" + capacity + ")");
+                    }
+                }
+
+                final int[] selectedIndex = {0};
+
+                new MaterialAlertDialogBuilder(UnassignedActivity.this)
+                        .setTitle("Assign " + student.name + " to Group")
+                        .setSingleChoiceItems(groupNames.toArray(new CharSequence[0]), 0, (dialog, which) -> selectedIndex[0] = which)
+                        .setPositiveButton("Assign", (dialog, which) -> {
+                            if (selectedIndex[0] >= 0 && selectedIndex[0] < groupIds.size()) {
+                                long targetGroupId = groupIds.get(selectedIndex[0]);
+                                executeAssignStudent(student, targetGroupId);
+                            }
+                        })
+                        .setNegativeButton("Cancel", null)
+                        .show();
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
+                Toast.makeText(UnassignedActivity.this, "Network error loading groups", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    private void executeAssignStudent(StudentEntity student, long groupId) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("studentId", student.serverId != null ? student.serverId : 0);
+
+        ApiClient.getGroupService(this).assignStudent(groupId, body)
+                .enqueue(new Callback<>() {
+                    @Override
+                    public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
+                        if (response.isSuccessful() && response.body() != null
+                                && Boolean.TRUE.equals(response.body().get("success"))) {
+                            Toast.makeText(UnassignedActivity.this,
+                                    "Assigned " + student.name + " to group", Toast.LENGTH_SHORT).show();
+                            loadUnassignedStudents();
+                        } else if (response.code() == 409) {
+                            Toast.makeText(UnassignedActivity.this,
+                                    "Selected group is full", Toast.LENGTH_LONG).show();
+                        } else {
+                            Toast.makeText(UnassignedActivity.this,
+                                    "Failed to assign student to group", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
+                        Toast.makeText(UnassignedActivity.this,
+                                "Network error during assignment", Toast.LENGTH_SHORT).show();
+                    }
+                });
+    }
+}

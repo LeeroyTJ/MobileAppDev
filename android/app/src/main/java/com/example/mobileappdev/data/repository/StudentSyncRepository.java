@@ -42,7 +42,7 @@ public class StudentSyncRepository {
             student.syncStatus = StudentEntity.STATUS_PENDING;
             studentDao.update(student);
 
-            PendingOperationEntity collapseTarget = findUnsyncedOp(studentLocalId,
+            PendingOperationEntity collapseTarget = findUnsyncedOp(studentLocalId, accountId,
                     PendingOperationEntity.TYPE_CREATE_STUDENT,
                     PendingOperationEntity.TYPE_UPDATE_STUDENT);
 
@@ -65,7 +65,7 @@ public class StudentSyncRepository {
             StudentEntity student = studentDao.findByLocalId(studentLocalId);
             if (student == null) return;
 
-            List<PendingOperationEntity> existing = pendingOperationDao.findForStudent(studentLocalId);
+            List<PendingOperationEntity> existing = pendingOperationDao.findForStudent(studentLocalId, accountId);
             boolean neverLeftDevice = false;
             for (PendingOperationEntity op : existing) {
                 if (PendingOperationEntity.STATUS_PENDING.equals(op.status)
@@ -156,8 +156,8 @@ public class StudentSyncRepository {
         return op;
     }
 
-    private PendingOperationEntity findUnsyncedOp(long studentLocalId, String... types) {
-        List<PendingOperationEntity> ops = pendingOperationDao.findForStudent(studentLocalId);
+    private PendingOperationEntity findUnsyncedOp(long studentLocalId, long accountId, String... types) {
+        List<PendingOperationEntity> ops = pendingOperationDao.findForStudent(studentLocalId, accountId);
         for (PendingOperationEntity op : ops) {
             if (!PendingOperationEntity.STATUS_PENDING.equals(op.status))
                 continue;

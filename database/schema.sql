@@ -167,8 +167,10 @@ CREATE TABLE sync_operations (
     status ENUM(
         'PROCESSING',
         'APPROVED',
+        'APPLIED',
         'CONFLICT',
-        'REJECTED'
+        'REJECTED',
+        'NOT_FOUND'
     ) NOT NULL DEFAULT 'PROCESSING',
     request_hash VARCHAR(64) NULL,
     response_payload JSON NULL,

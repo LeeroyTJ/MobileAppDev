@@ -4,6 +4,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 const pool = require('../db');
+const { authenticateToken } = require('../middleware/auth');
 
 const {
     isValidStudentNumber,
@@ -65,11 +66,25 @@ router.post('/register', async (req, res) => {
     try {
         await connection.beginTransaction();
 
-        // Check for an existing (possibly lecturer pre-entered) student with this number
-        const [existingStudents] = await connection.query(
-            'SELECT * FROM students WHERE student_number = ? AND deleted_at IS NULL',
+        // E9: Check if this student number belongs to a soft-deleted student (reserved number rule)
+        const [allStudentsWithNumber] = await connection.query(
+            'SELECT * FROM students WHERE student_number = ?',
             [studentNumber]
         );
+
+        if (allStudentsWithNumber.length > 0) {
+            const softDeleted = allStudentsWithNumber.find(s => s.deleted_at !== null);
+            if (softDeleted) {
+                await connection.rollback();
+                return res.status(409).json({
+                    success: false,
+                    error: { code: 'STUDENT_NUMBER_RESERVED', message: 'This student number is reserved and cannot be re-registered' }
+                });
+            }
+        }
+
+        // Check for an active (possibly lecturer pre-entered) student with this number
+        const existingStudents = allStudentsWithNumber.filter(s => s.deleted_at === null);
 
         let studentId, accountId;
 
@@ -228,6 +243,50 @@ router.post('/login', async (req, res) => {
             success: false,
             error: { code: 'INTERNAL_ERROR', message: 'Server error during login' }
         });
+    }
+});
+
+/**
+ * GET /api/v1/auth/me — authenticated user's profile and role
+ */
+router.get('/me', authenticateToken, async (req, res) => {
+    try {
+        const [rows] = await pool.query(
+            `SELECT a.account_id, a.username, a.role, a.is_active,
+                    s.student_id, s.student_number, s.student_name,
+                    s.programme_id, s.group_id
+             FROM accounts a
+             LEFT JOIN students s ON s.account_id = a.account_id AND s.deleted_at IS NULL
+             WHERE a.account_id = ?`,
+            [req.user.id]
+        );
+
+        if (rows.length === 0 || !rows[0].is_active) {
+            return res.status(401).json({
+                success: false,
+                error: { code: 'UNAUTHORIZED', message: 'Account not found or disabled' }
+            });
+        }
+
+        const r = rows[0];
+        return res.status(200).json({
+            success: true,
+            data: {
+                accountId: r.account_id,
+                username: r.username,
+                role: r.role,
+                student: r.student_id ? {
+                    student_id: r.student_id,
+                    student_number: r.student_number,
+                    student_name: r.student_name,
+                    programme_id: r.programme_id,
+                    group_id: r.group_id
+                } : null
+            }
+        });
+    } catch (error) {
+        console.error('Me error:', error);
+        return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
     }
 });
 
