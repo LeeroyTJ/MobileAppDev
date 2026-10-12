@@ -13,6 +13,17 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+<<<<<<< Updated upstream
+=======
+import com.example.mobileappdev.StudentAdapter;
+import com.example.mobileappdev.data.remote.ApiClient;
+import com.example.mobileappdev.model.Student;
+import com.example.mobileappdev.session.SessionManager;
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.progressindicator.CircularProgressIndicator;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
+>>>>>>> Stashed changes
 import com.example.mobileappdev.data.local.entity.StudentEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
 import com.example.mobileappdev.session.SessionManager;
@@ -64,7 +75,50 @@ public class StudentGroupActivity extends AppCompatActivity {
         setupNavigation();
         loadGroupData();
 
+<<<<<<< Updated upstream
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+=======
+    private void bindViews() {
+        toolbar = findViewById(R.id.toolbar);
+        tvGroupTitle = findViewById(R.id.tvGroupTitle);
+        tvCapacityRatio = findViewById(R.id.tvCapacityRatio);
+        tvPlacesRemainingPill = findViewById(R.id.tvPlacesRemainingPill);
+        progressCapacity = findViewById(R.id.progressCapacity);
+        tvProgrammeBreakdown = findViewById(R.id.tvProgrammeBreakdown);
+        rvGroupMembers = findViewById(R.id.rvGroupMembers);
+        loadingIndicator = findViewById(R.id.loading_indicator);
+        errorState = findViewById(R.id.error_state);
+        btnRetry = findViewById(R.id.btnRetry);
+
+        toolbar.setNavigationOnClickListener(v -> finish());
+        if (btnRetry != null) {
+            btnRetry.setOnClickListener(v -> loadGroupDetails());
+        }
+    }
+
+    private void setupRecyclerView() {
+        rvGroupMembers.setLayoutManager(new LinearLayoutManager(this));
+        adapter = new StudentAdapter(new StudentAdapter.OnStudentClickListener() {
+            @Override
+            public void onStudentClick(StudentEntity student) {
+                onStudentClicked(student);
+            }
+
+            @Override
+            public void onStudentOptionsClick(StudentEntity student, View anchorView) {
+                onStudentClicked(student);
+            }
+        });
+        rvGroupMembers.setAdapter(adapter);
+    }
+
+    private void loadGroupDetails() {
+        showLoading(true);
+        hideError();
+
+        // Fix 3B: Use GroupApiService.getGroup(groupId) instead of getRoster()
+        ApiClient.getGroupService(this).getGroup(groupId).enqueue(new Callback<>() {
+>>>>>>> Stashed changes
             @Override
             public void handleOnBackPressed() {
                 navigateToParentProfile();
@@ -108,6 +162,7 @@ public class StudentGroupActivity extends AppCompatActivity {
         }
     }
 
+<<<<<<< Updated upstream
     private void setupNavigation() {
         BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
         if (bottomNav != null) {
@@ -154,6 +209,27 @@ public class StudentGroupActivity extends AppCompatActivity {
                 fetchGroupRoster("G02");
             }
         });
+=======
+        // Populate members list
+        List<StudentEntity> membersList = new ArrayList<>();
+        List<?> membersData = (List<?>) data.get("members");
+        if (membersData != null) {
+            for (Object obj : membersData) {
+                if (obj instanceof Map) {
+                    Map<?, ?> map = (Map<?, ?>) obj;
+                    StudentEntity student = new StudentEntity();
+                    student.serverId = map.get("student_id") instanceof Number ? ((Number) map.get("student_id")).longValue() : 0;
+                    student.studentNumber = map.get("student_number") != null ? map.get("student_number").toString() : "";
+                    student.name = map.get("student_name") != null ? map.get("student_name").toString() : "";
+                    student.programme = map.get("programme_code") != null ? map.get("programme_code").toString() :
+                            (map.get("programme_name") != null ? map.get("programme_name").toString() : "");
+                    student.labGroup = groupCode;
+                    membersList.add(student);
+                }
+            }
+        }
+        adapter.submitList(membersList);
+>>>>>>> Stashed changes
     }
 
     private void fetchGroupRoster(String groupCode) {
@@ -205,6 +281,70 @@ public class StudentGroupActivity extends AppCompatActivity {
                 progressCapacity.setProgress(11);
                 tvPlacesRemainingPill.setText("4 places remaining");
             }
+<<<<<<< Updated upstream
         });
+=======
+        }
+
+        if (formattedLines.isEmpty()) {
+            tvProgrammeBreakdown.setText("No programme breakdown available");
+        } else {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < formattedLines.size(); i++) {
+                sb.append(formattedLines.get(i));
+                if (i < formattedLines.size() - 1) {
+                    sb.append("\n");
+                }
+            }
+            tvProgrammeBreakdown.setText(sb.toString());
+        }
+    }
+
+    private String formatFullProgrammeName(String line) {
+        if (line.contains(":")) {
+            String[] parts = line.split(":", 2);
+            String prog = parts[0].trim();
+            String count = parts[1].trim();
+            return getFullProgrammeName(prog) + ": " + count;
+        }
+        return line;
+    }
+
+    private String getFullProgrammeName(String code) {
+        if ("CS".equalsIgnoreCase(code) || "Computer Science".equalsIgnoreCase(code) || code.toLowerCase().contains("computer science")) {
+            return "Computer Science";
+        } else if ("IT".equalsIgnoreCase(code) || "Information Technology".equalsIgnoreCase(code) || code.toLowerCase().contains("information technology")) {
+            return "Information Technology";
+        } else if ("DS".equalsIgnoreCase(code) || "Data Science".equalsIgnoreCase(code) || code.toLowerCase().contains("data science")) {
+            return "Data Science";
+        } else if ("SE".equalsIgnoreCase(code) || "Software Engineering".equalsIgnoreCase(code)) {
+            return "Software Engineering";
+        } else if ("CE".equalsIgnoreCase(code) || "Computer Engineering".equalsIgnoreCase(code)) {
+            return "Computer Engineering";
+        }
+        return code;
+    }
+
+    private void onStudentClicked(StudentEntity student) {
+        Toast.makeText(this, student.name + " (" + student.studentNumber + ")", Toast.LENGTH_SHORT).show();
+    }
+
+    private void showLoading(boolean loading) {
+        if (loadingIndicator != null) {
+            loadingIndicator.setVisibility(loading ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    private void showError() {
+        if (errorState != null) {
+            errorState.setVisibility(View.VISIBLE);
+        }
+    }
+
+    private void hideError() {
+        if (errorState != null) {
+            errorState.setVisibility(View.GONE);
+        }
+>>>>>>> Stashed changes
     }
 }
