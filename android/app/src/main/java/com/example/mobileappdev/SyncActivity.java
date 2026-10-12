@@ -1,268 +1,173 @@
 package com.example.mobileappdev;
 
-import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.text.format.DateUtils;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.format.DateFormat;
 import android.view.View;
-import android.widget.Button;
-import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+import androidx.work.OneTimeWorkRequest;
+import androidx.work.WorkManager;
 
-import com.example.mobileappdev.adapter.PendingOperationAdapter;
 import com.example.mobileappdev.data.local.AppDatabase;
-import com.example.mobileappdev.data.local.entity.PendingOperationEntity;
 import com.example.mobileappdev.session.SessionManager;
 import com.example.mobileappdev.sync.SyncWorker;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 
-import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
+/**
+ * SyncActivity
+ * <p>
+ * Displays real-time pending operations queue, student requests, and sync status timeline.
+ * Serves Member 5's requirements for Sync Timeline and Pending Operations Queue.
+ * </p>
+ */
 public class SyncActivity extends AppCompatActivity {
 
-    private SessionManager sessionManager;
-    private AppDatabase db;
+    private static final String PREF_LAST_SYNC_TIME = "last_sync_timestamp";
 
-    private TextView tvLastSynced;
-    private RecyclerView rvStudentRequests;
-    private RecyclerView rvPendingQueue;
-    private TextView tvEmptyRequests;
-    private TextView tvEmptyQueue;
+    private MaterialToolbar syncToolbar;
+    private TextView tvLastSyncedTime;
+    private TextView tvPendingCountHeader;
+    private MaterialButton btnSyncNow;
+    private LinearProgressIndicator syncProgressIndicator;
 
-    private PendingOperationAdapter adapterRequests;
-    private PendingOperationAdapter adapterQueue;
+    private View sectionRequests;
+    private RecyclerView recyclerStudentRequests;
+    private RecyclerView recyclerPendingQueue;
+    private View layoutEmptySync;
+
+    private PendingOperationAdapter pendingQueueAdapter;
+    private PendingOperationAdapter studentRequestsAdapter;
+
+    private long accountId = -1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        sessionManager = SessionManager.getInstance(this);
-        if (!sessionManager.isLoggedIn()) {
-            Intent intent = new Intent(this, SignInActivity.class);
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
-            startActivity(intent);
-            finish();
-            return;
-        }
-
-        db = AppDatabase.getInstance(this);
-        SyncWorker.schedulePeriodic(this);
-
         setContentView(R.layout.activity_sync);
-        bindViews();
-        observeSyncQueue();
-        setupListeners();
 
-        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
-            @Override
-            public void handleOnBackPressed() {
-                navigateToHome();
+        initViews();
+        loadAccountId();
+        loadLastSyncedTimestamp();
+        setupRecyclerViews();
+        observePendingQueue();
+        observeStudentRequests();
+    }
+
+    private void initViews() {
+        syncToolbar = findViewById(R.id.syncToolbar);
+        tvLastSyncedTime = findViewById(R.id.tvLastSyncedTime);
+        tvPendingCountHeader = findViewById(R.id.tvPendingCountHeader);
+        btnSyncNow = findViewById(R.id.btnSyncNow);
+        syncProgressIndicator = findViewById(R.id.syncProgressIndicator);
+
+        sectionRequests = findViewById(R.id.sectionRequests);
+        recyclerStudentRequests = findViewById(R.id.recyclerStudentRequests);
+        recyclerPendingQueue = findViewById(R.id.recyclerPendingQueue);
+        layoutEmptySync = findViewById(R.id.layoutEmptySync);
+
+        if (syncToolbar != null) {
+            syncToolbar.setNavigationOnClickListener(v -> finish());
+        }
+
+        if (btnSyncNow != null) {
+            btnSyncNow.setOnClickListener(v -> triggerManualSync());
+        }
+    }
+
+    private void loadAccountId() {
+        SessionManager sessionManager = SessionManager.getInstance(this);
+        accountId = sessionManager.getAccountId();
+    }
+
+    private void loadLastSyncedTimestamp() {
+        SharedPreferences prefs = getSharedPreferences("cohorthub_sync_prefs", MODE_PRIVATE);
+        long lastTime = prefs.getLong(PREF_LAST_SYNC_TIME, 0);
+
+        if (lastTime > 0) {
+            CharSequence formatted = DateFormat.format("MMM d, yyyy h:mm a", new Date(lastTime));
+            tvLastSyncedTime.setText(formatted);
+        } else {
+            tvLastSyncedTime.setText("Never");
+        }
+    }
+
+    private void saveLastSyncedTimestamp() {
+        SharedPreferences prefs = getSharedPreferences("cohorthub_sync_prefs", MODE_PRIVATE);
+        prefs.edit().putLong(PREF_LAST_SYNC_TIME, System.currentTimeMillis()).apply();
+        loadLastSyncedTimestamp();
+    }
+
+    private void setupRecyclerViews() {
+        pendingQueueAdapter = new PendingOperationAdapter();
+        if (recyclerPendingQueue != null) {
+            recyclerPendingQueue.setLayoutManager(new LinearLayoutManager(this));
+            recyclerPendingQueue.setAdapter(pendingQueueAdapter);
+        }
+
+        studentRequestsAdapter = new PendingOperationAdapter();
+        if (recyclerStudentRequests != null) {
+            recyclerStudentRequests.setLayoutManager(new LinearLayoutManager(this));
+            recyclerStudentRequests.setAdapter(studentRequestsAdapter);
+        }
+    }
+
+    private void observePendingQueue() {
+        AppDatabase db = AppDatabase.getInstance(this);
+        db.pendingOperationDao().observeQueueForAccount(accountId).observe(this, list -> {
+            if (list != null) {
+                pendingQueueAdapter.submitList(list);
+
+                int count = list.size();
+                tvPendingCountHeader.setText(count == 1 ? "1 operation pending" : count + " operations pending");
+
+                if (count == 0 && (studentRequestsAdapter.getCurrentList() == null || studentRequestsAdapter.getCurrentList().isEmpty())) {
+                    if (layoutEmptySync != null) layoutEmptySync.setVisibility(View.VISIBLE);
+                } else {
+                    if (layoutEmptySync != null) layoutEmptySync.setVisibility(View.GONE);
+                }
             }
         });
     }
 
-    private void navigateToHome() {
-        Intent intent;
-
-        if (sessionManager.isLecturer()) {
-            intent = new Intent(this, RosterActivity.class);
-        } else {
-            intent = new Intent(this, ProfileActivity.class);
-        }
-
-        intent.addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK |
-                        Intent.FLAG_ACTIVITY_CLEAR_TASK
-        );
-
-        startActivity(intent);
-        finish();
-    }
-
-    private void bindViews() {
-        ImageButton btnBack = findViewById(R.id.btnBack);
-        if (btnBack != null) {
-            btnBack.setClickable(true);
-            btnBack.setFocusable(true);
-            btnBack.setOnClickListener(view -> navigateToHome());
-        }
-
-        tvLastSynced = findViewById(R.id.tvLastSynced);
-        rvStudentRequests = findViewById(R.id.rvStudentRequests);
-        rvPendingQueue = findViewById(R.id.rvPendingQueue);
-        tvEmptyRequests = findViewById(R.id.tvEmptyRequests);
-        tvEmptyQueue = findViewById(R.id.tvEmptyQueue);
-
-        if (rvStudentRequests != null) {
-            rvStudentRequests.setLayoutManager(new LinearLayoutManager(this));
-            adapterRequests = new PendingOperationAdapter();
-            rvStudentRequests.setAdapter(adapterRequests);
-        }
-
-        if (rvPendingQueue != null) {
-            rvPendingQueue.setLayoutManager(new LinearLayoutManager(this));
-            adapterQueue = new PendingOperationAdapter();
-            rvPendingQueue.setAdapter(adapterQueue);
-        }
-
-        PendingOperationAdapter.OnItemClickListener listener = op -> {
-            if (PendingOperationEntity.STATUS_CONFLICT.equals(op.status)
-                    || PendingOperationEntity.STATUS_ACTION_REQUIRED.equals(op.status)
-                    || PendingOperationEntity.STATUS_REJECTED.equals(op.status)) {
-                ConflictReviewBottomSheetDialogFragment dialog =
-                        ConflictReviewBottomSheetDialogFragment.newInstance(op);
-                dialog.show(getSupportFragmentManager(), ConflictReviewBottomSheetDialogFragment.TAG);
+    private void observeStudentRequests() {
+        AppDatabase db = AppDatabase.getInstance(this);
+        db.pendingOperationDao().observeRequestsForAccount(accountId).observe(this, requests -> {
+            if (requests != null && !requests.isEmpty()) {
+                if (sectionRequests != null) sectionRequests.setVisibility(View.VISIBLE);
+                studentRequestsAdapter.submitList(requests);
             } else {
-                Toast.makeText(this,
-                        PendingOperationAdapter.getOperationTypeLabel(op.operationType) + " — " + PendingOperationAdapter.getStatusLabel(op.status),
-                        Toast.LENGTH_SHORT).show();
-            }
-        };
-
-        if (adapterRequests != null) adapterRequests.setOnItemClickListener(listener);
-        if (adapterQueue != null) adapterQueue.setOnItemClickListener(listener);
-
-        Button btnRetryAll = findViewById(R.id.btnRetryAll);
-        if (btnRetryAll != null) {
-            btnRetryAll.setOnClickListener(v -> {
-                SyncWorker.triggerManualSync(this);
-                Toast.makeText(this, "Retrying all pending sync operations...", Toast.LENGTH_SHORT).show();
-                updateLastSyncedDisplay();
-            });
-        }
-    }
-
-    private void observeSyncQueue() {
-        long accountId = sessionManager.getAccountId();
-        db.pendingOperationDao().observeQueueForAccount(accountId).observe(this, operations -> {
-            updateLastSyncedDisplay();
-
-            List<PendingOperationEntity> studentRequests = new ArrayList<>();
-            List<PendingOperationEntity> pendingQueue = new ArrayList<>();
-
-            if (operations != null) {
-                boolean hasConflict = false;
-                for (PendingOperationEntity op : operations) {
-                    if (isStudentRequest(op)) {
-                        studentRequests.add(op);
-                    } else {
-                        pendingQueue.add(op);
-                    }
-
-                    if (PendingOperationEntity.STATUS_CONFLICT.equals(op.status)) {
-                        hasConflict = true;
-                    }
-                }
-
-                if (hasConflict) {
-                    Toast.makeText(SyncActivity.this, "Sync conflict detected — review action required", Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            if (adapterRequests != null) adapterRequests.setItems(studentRequests);
-            if (adapterQueue != null) adapterQueue.setItems(pendingQueue);
-
-            if (tvEmptyRequests != null) {
-                tvEmptyRequests.setVisibility(studentRequests.isEmpty() ? View.VISIBLE : View.GONE);
-            }
-            if (tvEmptyQueue != null) {
-                tvEmptyQueue.setVisibility(pendingQueue.isEmpty() ? View.VISIBLE : View.GONE);
+                if (sectionRequests != null) sectionRequests.setVisibility(View.GONE);
             }
         });
     }
 
-    private boolean isStudentRequest(PendingOperationEntity op) {
-        if (op == null || op.operationType == null) return false;
-        switch (op.operationType) {
-            case PendingOperationEntity.TYPE_REQUEST_GROUP_CHANGE:
-            case PendingOperationEntity.TYPE_CORRECT_STUDENT_NUMBER:
-            case PendingOperationEntity.TYPE_TRANSFER_GROUP:
-            case PendingOperationEntity.TYPE_ASSIGN_GROUP:
-                return true;
-            default:
-                return false;
-        }
-    }
+    private void triggerManualSync() {
+        if (syncProgressIndicator != null) syncProgressIndicator.setVisibility(View.VISIBLE);
+        if (btnSyncNow != null) btnSyncNow.setEnabled(false);
 
-    private void updateLastSyncedDisplay() {
-        if (tvLastSynced == null) return;
-        long lastSynced = sessionManager.getLastSyncedTime();
-        tvLastSynced.setText(getFormattedLastSynced(lastSynced));
-    }
-
-    private String getFormattedLastSynced(long lastSyncedTime) {
-        if (lastSyncedTime <= 0) {
-            return "Last synced: Never";
-        }
-        long now = System.currentTimeMillis();
-        CharSequence relative = DateUtils.getRelativeTimeSpanString(
-                lastSyncedTime, now, DateUtils.MINUTE_IN_MILLIS, DateUtils.FORMAT_ABBREV_RELATIVE
+        // Enqueue SyncWorker
+        WorkManager.getInstance(getApplicationContext()).enqueue(
+                new OneTimeWorkRequest.Builder(SyncWorker.class).build()
         );
-        return "Last synced: " + relative;
-    }
 
-    @Override
-    protected void onResume() {
-        super.onResume();
-        updateLastSyncedDisplay();
-        BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
-        if (bottomNav != null) {
-            bottomNav.setSelectedItemId(sessionManager.isLecturer() ? R.id.nav_more : R.id.navSync);
-        }
-    }
-
-    private void setupListeners() {
-        BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
-        if (bottomNav == null) return;
-
-        if (sessionManager.isLecturer()) {
-            bottomNav.inflateMenu(R.menu.menu_bottom_nav);
-            bottomNav.setSelectedItemId(R.id.nav_more);
-            bottomNav.setOnItemSelectedListener(item -> {
-                int id = item.getItemId();
-                if (id == R.id.nav_students) {
-                    Intent intent = new Intent(this, RosterActivity.class);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                    startActivity(intent);
-                    return true;
-                } else if (id == R.id.nav_unassigned) {
-                    Intent intent = new Intent(this, UnassignedActivity.class);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                    startActivity(intent);
-                    return true;
-                } else if (id == R.id.nav_more) {
-                    MoreBottomSheetDialogFragment sheet = new MoreBottomSheetDialogFragment();
-                    sheet.show(getSupportFragmentManager(), MoreBottomSheetDialogFragment.TAG);
-                    return false;
-                }
-                return false;
-            });
-        } else {
-            bottomNav.inflateMenu(R.menu.bottom_nav_menu);
-            bottomNav.setSelectedItemId(R.id.navSync);
-            bottomNav.setOnItemSelectedListener(item -> {
-                int id = item.getItemId();
-                if (id == R.id.navHome) {
-                    Intent intent = new Intent(this, MainActivity.class);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                    startActivity(intent);
-                    return true;
-                } else if (id == R.id.navGroup) {
-                    Intent intent = new Intent(this, ProfileActivity.class);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                    startActivity(intent);
-                    return true;
-                } else if (id == R.id.navSync) {
-                    return true;
-                }
-                return false;
-            });
-        }
+        // Simulate sync completion feedback
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            saveLastSyncedTimestamp();
+            if (syncProgressIndicator != null) syncProgressIndicator.setVisibility(View.GONE);
+            if (btnSyncNow != null) btnSyncNow.setEnabled(true);
+            Toast.makeText(SyncActivity.this, "Sync trigger sent successfully", Toast.LENGTH_SHORT).show();
+        }, 1500);
     }
 }

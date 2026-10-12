@@ -9,6 +9,9 @@
     <color name="dodger_blue">#1E90FF</color>
     <color name="dodger_blue_dark">#1870D5</color>
 
+    <!-- Status & Error -->
+    <color name="error_red">#B3261E</color>
+    <color name="green_complete">#2E7D32</color>
     <!-- Supporting colours -->
     <color name="dark_gray">#555555</color>
     <color name="light_gray">#E5E5E5</color>
