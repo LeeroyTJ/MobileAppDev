@@ -75,4 +75,26 @@
         <item>G04</item>
     </string-array>
 
+    <!-- Additional Dialog & Action strings -->
+    <string name="students">Students</string>
+    <string name="edit_student">Edit Student</string>
+    <string name="student_name">Student Name</string>
+    <string name="lab_group">Lab Group</string>
+    <string name="programme">Programme</string>
+    <string name="change_group">Change Group</string>
+    <string name="correct_student_number">Correct Student Number</string>
+    <string name="edit_details">Edit Details</string>
+    <string name="delete_student">Delete Student</string>
+    <string name="cd_logo">App Logo</string>
+    <string name="action_logout">Sign Out</string>
+    <string name="btn_cancel">Cancel</string>
+    <string name="dialog_delete_title">Delete Student?</string>
+    <string name="dialog_delete_message">Are you sure you want to delete this student record?</string>
+    <string name="btn_confirm_delete">Delete</string>
+    <string name="dialog_editor_title">Student Editor</string>
+    <string name="cd_close_dialog">Close dialog</string>
+    <string name="dialog_editor_subtitle">Edit student profile information</string>
+    <string name="btn_save_changes">Save changes</string>
+    <string name="nav_sync">Sync</string>
+
 </resources>
