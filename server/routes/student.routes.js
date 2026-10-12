@@ -1,13 +1,16 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const crypto = require('crypto');
 const { authenticateToken, verifyRole } = require('../middleware/auth');
 const {
     isValidName,
     isValidBaseVersion,
     isValidProgrammeId,
     isPositiveInt,
-    isValidSearch
+    isValidSearch,
+    isValidStudentNumber,
+    isValidGroupId
 } = require('../utils/validators');
 
 /**
@@ -123,6 +126,71 @@ router.get('/', authenticateToken, verifyRole('LECTURER'), async (req, res) => {
 });
 
 /**
+ * POST /api/v1/students — lecturer creates a student
+ */
+router.post('/', authenticateToken, verifyRole('LECTURER'), async (req, res) => {
+    const { studentNumber, studentName, programmeId, groupId } = req.body;
+
+    if (!isValidStudentNumber(studentNumber)) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_STUDENT_NUMBER', message: 'Student number must be exactly 9 digits' } });
+    }
+    if (!isValidName(studentName)) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_NAME', message: 'Name must be between 2 and 100 characters' } });
+    }
+    if (!isValidProgrammeId(programmeId)) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_PROGRAMME_ID', message: 'Valid programmeId is required' } });
+    }
+    if (groupId !== undefined && groupId !== null && !isValidGroupId(groupId)) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_GROUP', message: 'Invalid groupId' } });
+    }
+
+    let connection;
+    try {
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+
+        if (groupId) {
+            const [groupRows] = await connection.query(
+                'SELECT * FROM lab_groups WHERE group_id = ? FOR UPDATE', [groupId]
+            );
+            if (groupRows.length === 0) {
+                await connection.rollback();
+                return res.status(404).json({ success: false, error: { code: 'GROUP_NOT_FOUND', message: 'Group not found' } });
+            }
+            const [[{ count }]] = await connection.query(
+                'SELECT COUNT(*) AS count FROM students WHERE group_id = ? AND deleted_at IS NULL', [groupId]
+            );
+            if (count >= groupRows[0].capacity) {
+                await connection.rollback();
+                return res.status(409).json({ success: false, error: { code: 'GROUP_FULL', message: 'This group is full' } });
+            }
+        }
+
+        const [result] = await connection.query(
+            `INSERT INTO students (programme_id, group_id, student_number, student_name)
+             VALUES (?, ?, ?, ?)`,
+            [programmeId, groupId || null, studentNumber.trim(), studentName.trim()]
+        );
+
+        await connection.commit();
+        return res.status(201).json({ success: true, data: { studentId: result.insertId } });
+
+    } catch (error) {
+        if (connection) await connection.rollback();
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ success: false, error: { code: 'DUPLICATE_STUDENT_NUMBER', message: 'A student with this student number already exists' } });
+        }
+        if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+            return res.status(400).json({ success: false, error: { code: 'INVALID_PROGRAMME_ID', message: 'Programme does not exist' } });
+        }
+        console.error('Create student error:', error);
+        return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+/**
  * GET /api/v1/students/me/profile — student views own profile (strictly restricted to req.user.id)
  */
 router.get('/me/profile', authenticateToken, async (req, res) => {
@@ -144,6 +212,176 @@ router.get('/me/profile', authenticateToken, async (req, res) => {
     } catch (error) {
         console.error('Profile fetch error:', error);
         return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
+    }
+});
+
+/**
+ * GET /api/v1/students/:id — lecturer: any student; student: own record only
+ */
+router.get('/:id', authenticateToken, async (req, res) => {
+    const studentId = req.params.id;
+
+    if (!isPositiveInt(studentId)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_STUDENT_ID', message: 'Invalid student id' }
+        });
+    }
+
+    try {
+        const [rows] = await pool.query(
+            `SELECT s.student_id, s.account_id, s.student_number, s.student_name,
+                    s.programme_id, s.group_id, s.version,
+                    p.code AS programme_code, p.name AS programme_name,
+                    g.group_code, g.name AS group_name
+             FROM students s
+             JOIN programmes p ON s.programme_id = p.programme_id
+             LEFT JOIN lab_groups g ON s.group_id = g.group_id
+             WHERE s.student_id = ? AND s.deleted_at IS NULL`,
+            [studentId]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: { code: 'STUDENT_NOT_FOUND', message: 'Student not found' } });
+        }
+
+        const student = rows[0];
+        if (req.user.role !== 'LECTURER' && student.account_id !== req.user.id) {
+            return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied' } });
+        }
+
+        return res.status(200).json({ success: true, data: student });
+    } catch (error) {
+        console.error('Student fetch error:', error);
+        return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
+    }
+});
+
+/**
+ * PATCH /api/v1/students/:id/student-number — request student number correction
+ */
+router.patch('/:id/student-number', authenticateToken, async (req, res) => {
+    const studentId = req.params.id;
+    const { newStudentNumber } = req.body;
+
+    if (!isPositiveInt(studentId)) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_STUDENT_ID', message: 'Invalid student id' } });
+    }
+    if (!isValidStudentNumber(newStudentNumber)) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_STUDENT_NUMBER', message: 'Student number must be exactly 9 digits' } });
+    }
+    const newNumber = newStudentNumber.trim();
+
+    try {
+        const [rows] = await pool.query(
+            'SELECT student_id, account_id, student_number FROM students WHERE student_id = ? AND deleted_at IS NULL',
+            [studentId]
+        );
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: { code: 'STUDENT_NOT_FOUND', message: 'Student not found' } });
+        }
+        const student = rows[0];
+
+        if (req.user.role !== 'LECTURER' && student.account_id !== req.user.id) {
+            return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied' } });
+        }
+        if (student.student_number === newNumber) {
+            return res.status(400).json({ success: false, error: { code: 'NO_CHANGE', message: 'That is already your student number' } });
+        }
+
+        const [taken] = await pool.query('SELECT student_id FROM students WHERE student_number = ?', [newNumber]);
+        if (taken.length > 0) {
+            return res.status(409).json({ success: false, error: { code: 'STUDENT_NUMBER_TAKEN', message: 'That student number is already in use' } });
+        }
+
+        const operationId = crypto.randomUUID();
+        await pool.query(
+            `INSERT INTO sync_operations
+                (operation_id, account_id, operation_type, entity_type, entity_id, status, response_payload)
+             VALUES (?, ?, 'STUDENT_NUMBER_CORRECTION', 'student', ?, 'PROCESSING', ?)`,
+            [operationId, req.user.id, student.student_id,
+             JSON.stringify({ oldStudentNumber: student.student_number, newStudentNumber: newNumber })]
+        );
+
+        return res.status(202).json({ success: true, data: { operationId, status: 'PROCESSING' } });
+    } catch (error) {
+        console.error('Student number request error:', error);
+        return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
+    }
+});
+
+/**
+ * POST /api/v1/students/:id/group-requests — student requests group change with locking
+ */
+router.post('/:id/group-requests', authenticateToken, async (req, res) => {
+    const studentId = req.params.id;
+    const { targetGroupId } = req.body;
+
+    if (!isPositiveInt(studentId) || !isValidGroupId(targetGroupId)) {
+        return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Valid student id and targetGroupId are required' } });
+    }
+
+    let connection;
+    try {
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+
+        const [groupRows] = await connection.query(
+            'SELECT * FROM lab_groups WHERE group_id = ? AND is_active = TRUE FOR UPDATE',
+            [targetGroupId]
+        );
+        if (groupRows.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: { code: 'GROUP_NOT_FOUND', message: 'Group not found' } });
+        }
+        const group = groupRows[0];
+
+        const [studentRows] = await connection.query(
+            'SELECT student_id, account_id, group_id FROM students WHERE student_id = ? AND deleted_at IS NULL',
+            [studentId]
+        );
+        if (studentRows.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: { code: 'STUDENT_NOT_FOUND', message: 'Student not found' } });
+        }
+        const student = studentRows[0];
+
+        if (req.user.role !== 'LECTURER' && student.account_id !== req.user.id) {
+            await connection.rollback();
+            return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied' } });
+        }
+        if (student.group_id === Number(targetGroupId)) {
+            await connection.rollback();
+            return res.status(409).json({ success: false, error: { code: 'ALREADY_IN_GROUP', message: 'Student is already in this group' } });
+        }
+
+        const [[{ count }]] = await connection.query(
+            'SELECT COUNT(*) AS count FROM students WHERE group_id = ? AND deleted_at IS NULL',
+            [targetGroupId]
+        );
+        if (count >= group.capacity) {
+            await connection.rollback();
+            return res.status(409).json({ success: false, error: { code: 'GROUP_FULL', message: 'This group is full' } });
+        }
+
+        const operationId = crypto.randomUUID();
+        await connection.query(
+            `INSERT INTO sync_operations
+                (operation_id, account_id, operation_type, entity_type, entity_id, status, response_payload)
+             VALUES (?, ?, 'GROUP_REQUEST', 'student', ?, 'PROCESSING', ?)`,
+            [operationId, req.user.id, student.student_id,
+             JSON.stringify({ targetGroupId: Number(targetGroupId), placesRemaining: group.capacity - count })]
+        );
+
+        await connection.commit();
+        return res.status(202).json({ success: true, data: { operationId, status: 'PROCESSING' } });
+
+    } catch (error) {
+        if (connection) await connection.rollback();
+        console.error('Group request error:', error);
+        return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
+    } finally {
+        if (connection) connection.release();
     }
 });
 
