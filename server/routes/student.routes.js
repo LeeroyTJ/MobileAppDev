@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const crypto = require('crypto');
 const { authenticateToken, verifyRole } = require('../middleware/auth');
 const {
     isValidName,
@@ -235,6 +236,59 @@ router.get('/:id', authenticateToken, async (req, res) => {
         return res.status(200).json({ success: true, data: student });
     } catch (error) {
         console.error('Student fetch error:', error);
+        return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
+    }
+});
+
+/**
+ * PATCH /api/v1/students/:id/student-number — request student number correction
+ */
+router.patch('/:id/student-number', authenticateToken, async (req, res) => {
+    const studentId = req.params.id;
+    const { newStudentNumber } = req.body;
+
+    if (!isPositiveInt(studentId)) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_STUDENT_ID', message: 'Invalid student id' } });
+    }
+    if (!isValidStudentNumber(newStudentNumber)) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_STUDENT_NUMBER', message: 'Student number must be exactly 9 digits' } });
+    }
+    const newNumber = newStudentNumber.trim();
+
+    try {
+        const [rows] = await pool.query(
+            'SELECT student_id, account_id, student_number FROM students WHERE student_id = ? AND deleted_at IS NULL',
+            [studentId]
+        );
+        if (rows.length === 0) {
+            return res.status(404).json({ success: false, error: { code: 'STUDENT_NOT_FOUND', message: 'Student not found' } });
+        }
+        const student = rows[0];
+
+        if (req.user.role !== 'LECTURER' && student.account_id !== req.user.id) {
+            return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied' } });
+        }
+        if (student.student_number === newNumber) {
+            return res.status(400).json({ success: false, error: { code: 'NO_CHANGE', message: 'That is already your student number' } });
+        }
+
+        const [taken] = await pool.query('SELECT student_id FROM students WHERE student_number = ?', [newNumber]);
+        if (taken.length > 0) {
+            return res.status(409).json({ success: false, error: { code: 'STUDENT_NUMBER_TAKEN', message: 'That student number is already in use' } });
+        }
+
+        const operationId = crypto.randomUUID();
+        await pool.query(
+            `INSERT INTO sync_operations
+                (operation_id, account_id, operation_type, entity_type, entity_id, status, response_payload)
+             VALUES (?, ?, 'STUDENT_NUMBER_CORRECTION', 'student', ?, 'PROCESSING', ?)`,
+            [operationId, req.user.id, student.student_id,
+             JSON.stringify({ oldStudentNumber: student.student_number, newStudentNumber: newNumber })]
+        );
+
+        return res.status(202).json({ success: true, data: { operationId, status: 'PROCESSING' } });
+    } catch (error) {
+        console.error('Student number request error:', error);
         return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
     }
 });
