@@ -24,8 +24,20 @@ public interface StudentApiService {
     @GET("api/v1/students/me/profile")
     Call<Map<String, Object>> getMyProfile();
 
+    @GET("api/v1/students/{id}")
+    Call<Map<String, Object>> getStudentById(@Path("id") long id);
+
+    @POST("api/v1/students")
+    Call<Map<String, Object>> createStudent(@Body Map<String, Object> body);
+
     @PUT("api/v1/students/{id}")
     Call<Map<String, Object>> updateStudent(@Path("id") long id, @Body Map<String, Object> body);
+
+    @PATCH("api/v1/students/{id}/student-number")
+    Call<Map<String, Object>> updateStudentNumber(@Path("id") long id, @Body Map<String, Object> body);
+
+    @POST("api/v1/students/{id}/group-requests")
+    Call<Map<String, Object>> requestGroup(@Path("id") long id, @Body Map<String, Object> body);
 
     @DELETE("api/v1/students/{id}")
     Call<Map<String, Object>> deleteStudent(@Path("id") long id);

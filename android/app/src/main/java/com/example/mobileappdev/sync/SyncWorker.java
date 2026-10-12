@@ -94,6 +94,7 @@ public class SyncWorker extends Worker {
                         result.entityId,
                         result.version);
             }
+            SessionManager.getInstance(getApplicationContext()).saveLastSyncedTime(System.currentTimeMillis());
             return Result.success();
         } catch (Exception e) {
             markAllFailed(db, queue);
