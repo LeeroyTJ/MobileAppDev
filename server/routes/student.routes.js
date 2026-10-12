@@ -10,7 +10,6 @@ const {
     isValidProgrammeId,
     isPositiveInt,
     isValidSearch,
-    isValidStudentNumber,
     isValidGroupId
 } = require('../utils/validators');
 
