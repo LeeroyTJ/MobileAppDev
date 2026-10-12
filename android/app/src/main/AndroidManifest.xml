@@ -53,13 +53,14 @@
             android:name=".RosterActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+      
+        <activity
+            android:name=".EditStudentActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
 
         <activity
             android:name=".SyncActivity"
-            android:exported="false" />
-
-        <activity
-            android:name=".EditStudentActivity"
             android:exported="false" />
 
         <activity

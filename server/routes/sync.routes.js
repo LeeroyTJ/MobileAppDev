@@ -122,30 +122,44 @@ router.post('/', authenticateToken, async (req, res) => {
                             message: 'Student name must be between 2 and 100 characters'
                         };
                     } else {
-                        // Lecturer-created student has account_id = NULL
-                        const accountIdForStudent = userRole === 'LECTURER' ? null : userId;
-
-                        const [result] = await connection.execute(
-                            `INSERT INTO students (
-                                account_id,
-                                programme_id,
-                                student_number,
-                                student_name,
-                                version
-                            ) VALUES (?, ?, ?, ?, 1)`,
-                            [
-                                accountIdForStudent,
-                                payload.programmeId || 1,
-                                studentNumber,
-                                studentName
-                            ]
+                        // Pre-check for duplicate student number
+                        const [existingStudent] = await connection.execute(
+                            `SELECT student_id FROM students WHERE student_number = ?`,
+                            [studentNumber]
                         );
 
-                        responsePayload = {
-                            id: result.insertId,
-                            entityId: result.insertId,
-                            version: 1
-                        };
+                        if (existingStudent.length > 0) {
+                            opStatus = 'REJECTED';
+                            responsePayload = {
+                                code: 'DUPLICATE_STUDENT_NUMBER',
+                                message: 'A student with this student number already exists'
+                            };
+                        } else {
+                            // Lecturer-created student has account_id = NULL
+                            const accountIdForStudent = userRole === 'LECTURER' ? null : userId;
+
+                            const [result] = await connection.execute(
+                                `INSERT INTO students (
+                                    account_id,
+                                    programme_id,
+                                    student_number,
+                                    student_name,
+                                    version
+                                ) VALUES (?, ?, ?, ?, 1)`,
+                                [
+                                    accountIdForStudent,
+                                    payload.programmeId || 1,
+                                    studentNumber,
+                                    studentName
+                                ]
+                            );
+
+                            responsePayload = {
+                                id: result.insertId,
+                                entityId: result.insertId,
+                                version: 1
+                            };
+                        }
                     }
                 }
 
@@ -322,11 +336,33 @@ router.post('/', authenticateToken, async (req, res) => {
             await connection.rollback();
             console.error(`Error processing operation ${operationId}:`, error);
 
-            results.push({
-                operationId,
-                status: 'ERROR',
-                message: error.message
-            });
+            if (error.code === 'ER_DUP_ENTRY') {
+                const dupPayload = {
+                    code: 'DUPLICATE_STUDENT_NUMBER',
+                    message: 'A student with this student number already exists'
+                };
+                try {
+                    await pool.execute(
+                        `INSERT INTO sync_operations (
+                            operation_id, account_id, operation_type, entity_type, status, response_payload
+                        ) VALUES (?, ?, ?, ?, 'REJECTED', ?)`,
+                        [operationId, userId, type, entity, JSON.stringify(dupPayload)]
+                    );
+                } catch (ignored) {}
+
+                results.push({
+                    operationId,
+                    status: 'REJECTED',
+                    message: 'A student with this student number already exists',
+                    data: dupPayload
+                });
+            } else {
+                results.push({
+                    operationId,
+                    status: 'ERROR',
+                    message: error.message
+                });
+            }
         } finally {
             connection.release();
         }
@@ -339,6 +375,48 @@ router.post('/', authenticateToken, async (req, res) => {
         },
         results
     });
+});
+
+/**
+ * GET /api/v1/sync/changes?since=...
+ * Returns incremental delta changes updated since timestamp
+ */
+router.get('/changes', authenticateToken, async (req, res) => {
+    const { since } = req.query;
+    try {
+        let query = `SELECT s.*, p.code as programme_code, g.group_code
+                     FROM students s
+                     JOIN programmes p ON s.programme_id = p.programme_id
+                     LEFT JOIN lab_groups g ON s.group_id = g.group_id`;
+        const params = [];
+
+        if (since) {
+            let dateVal;
+            if (/^\d+$/.test(since)) {
+                dateVal = new Date(Number(since));
+            } else {
+                dateVal = new Date(since);
+            }
+            if (!isNaN(dateVal.getTime())) {
+                query += ` WHERE s.updated_at >= ?`;
+                params.push(dateVal);
+            }
+        }
+
+        query += ` ORDER BY s.updated_at ASC`;
+        const [rows] = await pool.query(query, params);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                changes: rows,
+                serverTime: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error('Sync changes error:', error);
+        return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
+    }
 });
 
 module.exports = router;
