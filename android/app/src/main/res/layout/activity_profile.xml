@@ -29,12 +29,14 @@
             <!-- Back button + title -->
             <ImageButton
                 android:id="@+id/btnBack"
-                android:layout_width="40dp"
-                android:layout_height="40dp"
+                android:layout_width="48dp"
+                android:layout_height="48dp"
                 android:layout_marginTop="12dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"
                 android:contentDescription="@string/cd_back"
-                android:padding="8dp"
+                android:padding="12dp"
                 android:src="@drawable/ic_arrowback"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
@@ -44,6 +46,8 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="4dp"
+                android:accessibilityHeading="true"
+                tools:targetApi="28"
                 android:fontFamily="sans-serif-medium"
                 android:text="@string/profile_title"
                 android:textColor="@color/text_primary"
@@ -129,11 +133,11 @@
 
                 <ImageButton
                     android:id="@+id/btnEditProfile"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
                     android:background="?attr/selectableItemBackgroundBorderless"
                     android:contentDescription="@string/cd_edit_profile"
-                    android:padding="4dp"
+                    android:padding="12dp"
                     android:src="@drawable/ic_edit_outline"
                     app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
@@ -155,33 +159,36 @@
 
                 <TextView
                     android:id="@+id/tvLabGroupCardTitle"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:text="@string/lab_group_card_title"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <TextView
                     android:id="@+id/tvLabGroupValue"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
                     android:fontFamily="sans-serif-medium"
                     android:textColor="@color/text_primary"
                     android:textSize="22sp"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tvLabGroupCardTitle"
                     tools:text="G02" />
 
                 <TextView
                     android:id="@+id/tvLabGroupCapacity"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tvLabGroupValue"
                     tools:text="11 / 15" />
@@ -203,7 +210,7 @@
                 <!-- Remaining Places Pill -->
                 <TextView
                     android:id="@+id/tvPlacesRemaining"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:background="@drawable/bg_pill"
@@ -214,20 +221,20 @@
                     android:paddingBottom="4dp"
                     android:textColor="@color/primary_dark"
                     android:textSize="12sp"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/progressLabGroup"
                     tools:text="4 places remaining" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <!-- Sync Status card -->
+            <!-- Sync Status card (Wrap content height for 200% font scale) -->
             <androidx.constraintlayout.widget.ConstraintLayout
                 android:id="@+id/cardSyncStatus"
                 android:layout_width="0dp"
-                android:layout_height="0dp"
+                android:layout_height="wrap_content"
                 android:background="@drawable/bg_card_outline"
                 android:padding="14dp"
-                app:layout_constraintBottom_toBottomOf="@id/cardLabGroup"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toEndOf="@id/cardLabGroup"
                 app:layout_constraintTop_toTopOf="@id/cardLabGroup"
@@ -255,7 +262,7 @@
 
                 <TextView
                     android:id="@+id/tvSyncedLabel"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="6dp"
                     android:fontFamily="sans-serif-medium"
@@ -263,32 +270,43 @@
                     android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     app:layout_constraintBottom_toBottomOf="@id/ivSyncCheck"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toEndOf="@id/ivSyncCheck"
                     app:layout_constraintTop_toTopOf="@id/ivSyncCheck" />
 
                 <TextView
                     android:id="@+id/tvLastUpdatedLabel"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:text="@string/last_updated_label"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/ivSyncCheck" />
 
                 <TextView
                     android:id="@+id/tvLastUpdatedValue"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tvLastUpdatedLabel"
                     tools:text="Today, 09:24" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- Barrier to prevent cardQuickActions from colliding with either card -->
+            <androidx.constraintlayout.widget.Barrier
+                android:id="@+id/barrierCards"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:barrierDirection="bottom"
+                app:constraint_referenced_ids="cardLabGroup,cardSyncStatus" />
 
             <!-- Quick Actions card -->
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -304,7 +322,7 @@
                 android:paddingBottom="4dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/cardLabGroup">
+                app:layout_constraintTop_toBottomOf="@id/barrierCards">
 
                 <TextView
                     android:id="@+id/tvQuickActionsTitle"
@@ -433,6 +451,22 @@
                 </LinearLayout>
 
             </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- Logout Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnLogout"
+                style="@style/Widget.Material3.Button.OutlinedButton"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:minHeight="52dp"
+                android:layout_marginTop="16dp"
+                android:layout_marginBottom="24dp"
+                android:text="@string/action_logout"
+                android:textColor="@color/error_red"
+                app:strokeColor="@color/error_red"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/cardQuickActions" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </ScrollView>

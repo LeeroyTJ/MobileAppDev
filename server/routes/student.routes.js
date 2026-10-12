@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const crypto = require('crypto');
 const { authenticateToken, verifyRole } = require('../middleware/auth');
 const {
     isValidName,
@@ -8,7 +9,9 @@ const {
     isValidBaseVersion,
     isValidProgrammeId,
     isPositiveInt,
-    isValidSearch
+    isValidSearch,
+    isValidStudentNumber,
+    isValidGroupId
 } = require('../utils/validators');
 
 /**
@@ -24,11 +27,28 @@ router.get('/', authenticateToken, verifyRole('LECTURER'), async (req, res) => {
         });
     }
 
-    if (group && group !== 'UNASSIGNED' && !isPositiveInt(group)) {
-        return res.status(400).json({
-            success: false,
-            error: { code: 'INVALID_GROUP', message: 'group must be UNASSIGNED or a valid group id' }
-        });
+    let resolvedGroupId = null;
+    if (group && group !== 'UNASSIGNED') {
+        if (isPositiveInt(group)) {
+            resolvedGroupId = group;
+        } else {
+            try {
+                const [gRows] = await pool.query('SELECT group_id FROM lab_groups WHERE group_code = ?', [group]);
+                if (gRows.length > 0) {
+                    resolvedGroupId = gRows[0].group_id;
+                } else {
+                    return res.status(400).json({
+                        success: false,
+                        error: { code: 'INVALID_GROUP', message: 'group must be UNASSIGNED, a valid group id, or a valid group code' }
+                    });
+                }
+            } catch (err) {
+                return res.status(400).json({
+                    success: false,
+                    error: { code: 'INVALID_GROUP', message: 'Invalid group filter format' }
+                });
+            }
+        }
     }
 
     if (search && !isValidSearch(search)) {
@@ -70,9 +90,9 @@ router.get('/', authenticateToken, verifyRole('LECTURER'), async (req, res) => {
 
     if (group === 'UNASSIGNED') {
         where.push('s.group_id IS NULL');
-    } else if (group) {
+    } else if (resolvedGroupId) {
         where.push('s.group_id = ?');
-        params.push(group);
+        params.push(resolvedGroupId);
     }
 
     if (search) {
@@ -103,6 +123,71 @@ router.get('/', authenticateToken, verifyRole('LECTURER'), async (req, res) => {
             success: false,
             error: { code: 'INTERNAL_ERROR', message: 'Server error' }
         });
+    }
+});
+
+/**
+ * POST /api/v1/students — lecturer creates a student
+ */
+router.post('/', authenticateToken, verifyRole('LECTURER'), async (req, res) => {
+    const { studentNumber, studentName, programmeId, groupId } = req.body;
+
+    if (!isValidStudentNumber(studentNumber)) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_STUDENT_NUMBER', message: 'Student number must be exactly 9 digits' } });
+    }
+    if (!isValidName(studentName)) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_NAME', message: 'Name must be between 2 and 100 characters' } });
+    }
+    if (!isValidProgrammeId(programmeId)) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_PROGRAMME_ID', message: 'Valid programmeId is required' } });
+    }
+    if (groupId !== undefined && groupId !== null && !isValidGroupId(groupId)) {
+        return res.status(400).json({ success: false, error: { code: 'INVALID_GROUP', message: 'Invalid groupId' } });
+    }
+
+    let connection;
+    try {
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+
+        if (groupId) {
+            const [groupRows] = await connection.query(
+                'SELECT * FROM lab_groups WHERE group_id = ? FOR UPDATE', [groupId]
+            );
+            if (groupRows.length === 0) {
+                await connection.rollback();
+                return res.status(404).json({ success: false, error: { code: 'GROUP_NOT_FOUND', message: 'Group not found' } });
+            }
+            const [[{ count }]] = await connection.query(
+                'SELECT COUNT(*) AS count FROM students WHERE group_id = ? AND deleted_at IS NULL', [groupId]
+            );
+            if (count >= groupRows[0].capacity) {
+                await connection.rollback();
+                return res.status(409).json({ success: false, error: { code: 'GROUP_FULL', message: 'This group is full' } });
+            }
+        }
+
+        const [result] = await connection.query(
+            `INSERT INTO students (programme_id, group_id, student_number, student_name)
+             VALUES (?, ?, ?, ?)`,
+            [programmeId, groupId || null, studentNumber.trim(), studentName.trim()]
+        );
+
+        await connection.commit();
+        return res.status(201).json({ success: true, data: { studentId: result.insertId } });
+
+    } catch (error) {
+        if (connection) await connection.rollback();
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ success: false, error: { code: 'DUPLICATE_STUDENT_NUMBER', message: 'A student with this student number already exists' } });
+        }
+        if (error.code === 'ER_NO_REFERENCED_ROW_2') {
+            return res.status(400).json({ success: false, error: { code: 'INVALID_PROGRAMME_ID', message: 'Programme does not exist' } });
+        }
+        console.error('Create student error:', error);
+        return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
+    } finally {
+        if (connection) connection.release();
     }
 });
 
@@ -324,7 +409,7 @@ router.put('/:id', authenticateToken, async (req, res) => {
 });
 
 /**
- * DELETE /api/v1/students/:id — Lecturer soft delete
+ * DELETE /api/v1/students/:id — Lecturer soft delete with version increment
  */
 router.delete('/:id', authenticateToken, verifyRole('LECTURER'), async (req, res) => {
     const studentId = req.params.id;
@@ -348,14 +433,14 @@ router.delete('/:id', authenticateToken, verifyRole('LECTURER'), async (req, res
 
         const student = rows[0];
 
-        await connection.query('UPDATE students SET deleted_at = NOW(), group_id = NULL WHERE student_id = ?', [studentId]);
+        await connection.query('UPDATE students SET deleted_at = NOW(), group_id = NULL, version = version + 1 WHERE student_id = ?', [studentId]);
 
         if (student.account_id) {
             await connection.query('UPDATE accounts SET is_active = FALSE WHERE account_id = ?', [student.account_id]);
         }
 
         await connection.commit();
-        return res.status(200).json({ success: true, data: { deleted: true } });
+        return res.status(200).json({ success: true, data: { deleted: true, version: student.version + 1 } });
 
     } catch (error) {
         await connection.rollback();

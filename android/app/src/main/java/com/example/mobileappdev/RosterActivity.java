@@ -11,12 +11,14 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.mobileappdev.adapter.StudentAdapter;
 import com.example.mobileappdev.data.local.AppDatabase;
 import com.example.mobileappdev.data.local.entity.StudentEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
@@ -34,6 +36,7 @@ import com.google.android.material.textfield.TextInputEditText;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -72,17 +75,32 @@ public class RosterActivity extends AppCompatActivity {
 
     private List<StudentEntity> cachedAccountStudents = new ArrayList<>();
 
+    private long lastBackPressTime = 0;
+    private static final long BACK_PRESS_INTERVAL = 2000;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_roster);
 
         sessionManager = SessionManager.getInstance(this);
         if (!sessionManager.isLoggedIn()) {
-            startActivity(new Intent(this, SignInActivity.class));
+            Intent intent = new Intent(this, SignInActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
             finish();
             return;
         }
+
+        // Role Guard: Roster is a Lecturer-only screen
+        if (!sessionManager.isLecturer()) {
+            Intent intent = new Intent(this, ProfileActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+            return;
+        }
+
+        setContentView(R.layout.activity_roster);
 
         db = AppDatabase.getInstance(this);
         viewModel = new ViewModelProvider(this).get(RosterViewModel.class);
@@ -97,6 +115,23 @@ public class RosterActivity extends AppCompatActivity {
         observeViewModel();
         loadLocalStudents();
         fetchRemoteRoster();
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                handleBackPress();
+            }
+        });
+    }
+
+    private void handleBackPress() {
+        long now = System.currentTimeMillis();
+        if (now - lastBackPressTime < BACK_PRESS_INTERVAL) {
+            moveTaskToBack(true);
+        } else {
+            lastBackPressTime = now;
+            Toast.makeText(this, "Press back again to exit", Toast.LENGTH_SHORT).show();
+        }
     }
 
     private void bindViews() {
@@ -112,9 +147,10 @@ public class RosterActivity extends AppCompatActivity {
         resultCount = findViewById(R.id.result_count);
         
         MaterialButton buttonOpenFilters = findViewById(R.id.button_open_filters);
-        buttonOpenFilters.setOnClickListener(v ->
-                Toast.makeText(RosterActivity.this, "Filter options", Toast.LENGTH_SHORT).show()
-        );
+        buttonOpenFilters.setOnClickListener(v -> {
+            FilterBottomSheetDialogFragment dialog = new FilterBottomSheetDialogFragment();
+            dialog.show(getSupportFragmentManager(), FilterBottomSheetDialogFragment.TAG);
+        });
 
         rosterList = findViewById(R.id.roster_list);
         loadingIndicator = findViewById(R.id.loading_indicator);
@@ -130,19 +166,39 @@ public class RosterActivity extends AppCompatActivity {
         bottomNavigation = findViewById(R.id.bottom_navigation);
         fabAdd = findViewById(R.id.fab_add);
 
-        toolbar.setNavigationOnClickListener(v -> finish());
+        toolbar.setNavigationOnClickListener(v -> handleBackPress());
+        toolbar.inflateMenu(R.menu.menu_roster_toolbar);
+        toolbar.setOnMenuItemClickListener(item -> {
+            int itemId = item.getItemId();
+            if (itemId == R.id.action_share) {
+                shareSanitizedGroupSummary();
+                return true;
+            } else if (itemId == R.id.action_logout) {
+                new SignOutConfirmationDialogFragment().show(getSupportFragmentManager(), SignOutConfirmationDialogFragment.TAG);
+                return true;
+            }
+            return false;
+        });
     }
 
     private void setupRecyclerView() {
         adapter = new StudentAdapter(new StudentAdapter.OnStudentClickListener() {
             @Override
             public void onStudentClick(StudentEntity student) {
-                Toast.makeText(RosterActivity.this, student.name + " (" + student.studentNumber + ")", Toast.LENGTH_SHORT).show();
+                if (sessionManager.isLecturer()) {
+                    long sId = student.serverId != null ? student.serverId : 0;
+                    StudentSheetBottomSheetDialogFragment sheet = StudentSheetBottomSheetDialogFragment.newInstance(
+                            student.name, student.studentNumber, student.programme, student.labGroup, sId
+                    );
+                    sheet.show(getSupportFragmentManager(), StudentSheetBottomSheetDialogFragment.TAG);
+                } else {
+                    Toast.makeText(RosterActivity.this, student.name + " (" + student.studentNumber + ")", Toast.LENGTH_SHORT).show();
+                }
             }
 
             @Override
             public void onStudentOptionsClick(StudentEntity student, View anchorView) {
-                Toast.makeText(RosterActivity.this, "Options for " + student.name, Toast.LENGTH_SHORT).show();
+                onStudentClick(student);
             }
         });
 
@@ -150,9 +206,6 @@ public class RosterActivity extends AppCompatActivity {
         rosterList.setAdapter(adapter);
     }
 
-    /**
-     * Task 4.2: Wire search bar input with a 300ms debounce timer to update RosterViewModel.setSearchQuery()
-     */
     private void setupSearchDebounce() {
         searchInput.addTextChangedListener(new TextWatcher() {
             @Override
@@ -176,9 +229,6 @@ public class RosterActivity extends AppCompatActivity {
         });
     }
 
-    /**
-     * Task 4.3: Connect programme chips (chip_cs, chip_it, chip_ds) and group chips (chip_g01-chip_g04, chip_unassigned) to dynamically update filter states
-     */
     private void setupChipFilters() {
         chipGroupProgramme.setOnCheckedStateChangeListener((group, checkedIds) -> {
             if (checkedIds.isEmpty()) {
@@ -234,15 +284,29 @@ public class RosterActivity extends AppCompatActivity {
         viewModel.clearAllFilters();
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (bottomNavigation != null) {
+            bottomNavigation.setSelectedItemId(R.id.nav_students);
+        }
+    }
+
     private void setupBottomNavigation() {
         bottomNavigation.setSelectedItemId(R.id.nav_students);
         bottomNavigation.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
             if (itemId == R.id.nav_students) {
                 return true;
-            } else if (itemId == R.id.nav_more) {
-                startActivity(new Intent(this, ProfileActivity.class));
+            } else if (itemId == R.id.nav_unassigned) {
+                Intent intent = new Intent(this, UnassignedActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                startActivity(intent);
                 return true;
+            } else if (itemId == R.id.nav_more) {
+                MoreBottomSheetDialogFragment sheet = new MoreBottomSheetDialogFragment();
+                sheet.show(getSupportFragmentManager(), MoreBottomSheetDialogFragment.TAG);
+                return false;
             }
             return false;
         });
@@ -251,9 +315,10 @@ public class RosterActivity extends AppCompatActivity {
     private void setupFab() {
         if (sessionManager.isLecturer()) {
             fabAdd.setVisibility(View.VISIBLE);
-            fabAdd.setOnClickListener(v ->
-                    Toast.makeText(RosterActivity.this, "Add Student Dialog", Toast.LENGTH_SHORT).show()
-            );
+            fabAdd.setOnClickListener(v -> {
+                AddStudentDialogFragment dialog = new AddStudentDialogFragment();
+                dialog.show(getSupportFragmentManager(), AddStudentDialogFragment.TAG);
+            });
         } else {
             fabAdd.setVisibility(View.GONE);
         }
@@ -288,7 +353,6 @@ public class RosterActivity extends AppCompatActivity {
             resultCount.setText(getResources().getQuantityString(R.plurals.roster_count_found, studentCount, studentCount));
         });
 
-        // Combined filter state observer to update active filters card and filter the cached student list
         Runnable applyFiltersRunnable = this::applyFiltersAndFilterList;
 
         viewModel.getSearchQuery().observe(this, query -> applyFiltersRunnable.run());
@@ -376,8 +440,43 @@ public class RosterActivity extends AppCompatActivity {
             @Override
             public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
                 loadingIndicator.setVisibility(View.GONE);
-                if (response.isSuccessful()) {
+                if (response.isSuccessful() && response.body() != null
+                        && Boolean.TRUE.equals(response.body().get("success"))) {
                     offlineBanner.setVisibility(View.GONE);
+
+                    List<?> dataList = (List<?>) response.body().get("data");
+                    if (dataList != null) {
+                        List<StudentEntity> remoteStudents = new ArrayList<>();
+                        long currentAccountId = sessionManager.getAccountId();
+
+                        for (Object item : dataList) {
+                            if (item instanceof Map) {
+                                Map<?, ?> map = (Map<?, ?>) item;
+                                StudentEntity student = new StudentEntity();
+                                student.localId = 0;
+                                student.serverId = map.get("student_id") instanceof Number ?
+                                        ((Number) map.get("student_id")).longValue() : null;
+                                student.accountId = currentAccountId;
+                                student.studentNumber = map.get("student_number") != null ? map.get("student_number").toString() : "";
+                                student.name = map.get("student_name") != null ? map.get("student_name").toString() : "";
+                                student.programme = map.get("programme_code") != null ? map.get("programme_code").toString() :
+                                        (map.get("programme_name") != null ? map.get("programme_name").toString() : "CS");
+                                student.labGroup = map.get("group_code") != null ? map.get("group_code").toString() : null;
+                                student.syncStatus = StudentEntity.STATUS_SYNCED;
+                                student.baseVersion = map.get("version") instanceof Number ?
+                                        ((Number) map.get("version")).intValue() : 1;
+                                student.isDeleted = false;
+
+                                remoteStudents.add(student);
+                            }
+                        }
+
+                        cachedAccountStudents = remoteStudents;
+                        applyFiltersAndFilterList();
+                        saveRemoteStudentsToLocalDb(remoteStudents);
+                    }
+                } else if (response.code() == 401 || response.code() == 403) {
+                    new SessionExpiredDialogFragment().show(getSupportFragmentManager(), SessionExpiredDialogFragment.TAG);
                 } else {
                     offlineBanner.setVisibility(View.VISIBLE);
                 }
@@ -389,6 +488,65 @@ public class RosterActivity extends AppCompatActivity {
                 offlineBanner.setVisibility(View.VISIBLE);
             }
         });
+    }
+
+    private void saveRemoteStudentsToLocalDb(List<StudentEntity> remoteStudents) {
+        if (remoteStudents == null || remoteStudents.isEmpty()) return;
+        long accountId = sessionManager.getAccountId();
+        Executors.newSingleThreadExecutor().execute(() -> {
+            for (StudentEntity remote : remoteStudents) {
+                if (remote.serverId != null && remote.serverId > 0) {
+                    StudentEntity existing = db.studentDao().findByServerId(remote.serverId);
+                    if (existing != null) {
+                        remote.localId = existing.localId;
+                        if (StudentEntity.STATUS_PENDING.equals(existing.syncStatus)) {
+                            remote.labGroup = existing.labGroup;
+                            remote.name = existing.name;
+                            remote.syncStatus = existing.syncStatus;
+                        }
+                    }
+                }
+                remote.accountId = accountId;
+                db.studentDao().insert(remote);
+            }
+        });
+    }
+
+    private void shareSanitizedGroupSummary() {
+        int g01Count = 0;
+        int g02Count = 0;
+        int g03Count = 0;
+        int g04Count = 0;
+        int unassignedCount = 0;
+
+        for (StudentEntity student : cachedAccountStudents) {
+            if (student == null) continue;
+            String group = student.labGroup;
+            if ("G01".equalsIgnoreCase(group)) g01Count++;
+            else if ("G02".equalsIgnoreCase(group)) g02Count++;
+            else if ("G03".equalsIgnoreCase(group)) g03Count++;
+            else if ("G04".equalsIgnoreCase(group)) g04Count++;
+            else unassignedCount++;
+        }
+
+        int totalEnrolled = cachedAccountStudents.size();
+
+        StringBuilder summary = new StringBuilder();
+        summary.append("CohortHub Lab Group Summary\n");
+        summary.append("Total Enrolled Students: ").append(totalEnrolled).append("\n\n");
+        summary.append("Group Capacity Breakdown (Max 15 per group):\n");
+        summary.append("• Lab Group G01: ").append(g01Count).append("/15 places filled\n");
+        summary.append("• Lab Group G02: ").append(g02Count).append("/15 places filled\n");
+        summary.append("• Lab Group G03: ").append(g03Count).append("/15 places filled\n");
+        summary.append("• Lab Group G04: ").append(g04Count).append("/15 places filled\n");
+        summary.append("• Unassigned Students: ").append(unassignedCount);
+
+        Intent shareIntent = new Intent(Intent.ACTION_SEND);
+        shareIntent.setType("text/plain");
+        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "CohortHub Lab Group Summary");
+        shareIntent.putExtra(Intent.EXTRA_TEXT, summary.toString());
+
+        startActivity(Intent.createChooser(shareIntent, "Share Group Summary"));
     }
 
     @Override

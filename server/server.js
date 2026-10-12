@@ -13,7 +13,11 @@ app.use('/api/v1/students', studentRoutes);
 app.use('/api/v1/groups', groupRoutes);
 app.use('/api/v1/sync', syncRoutes);
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`CohortHub backend running on port ${PORT}`);
-});
+module.exports = app;
+
+if (require.main === module) {
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => {
+        console.log(`CohortHub backend running on port ${PORT}`);
+    });
+}

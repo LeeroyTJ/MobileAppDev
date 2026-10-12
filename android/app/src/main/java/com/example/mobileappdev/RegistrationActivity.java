@@ -3,11 +3,13 @@ package com.example.mobileappdev;
 import android.content.Intent;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.view.View;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mobileappdev.data.remote.ApiClient;
@@ -28,12 +30,12 @@ public class RegistrationActivity extends AppCompatActivity {
     private TextInputEditText etFullName;
     private TextInputEditText etStudentNumber;
     private TextInputEditText etPassword;
+    private TextInputEditText etClaimCode;
     private AutoCompleteTextView actProgramme;
     private AutoCompleteTextView actLabGroup;
     private MaterialButton btnSaveRegistration;
-    private TextView tvSignIn;
 
-    // Programme code -> database id, matched against database schema
+    // Programme code -> database id
     private static final Map<String, Integer> PROGRAMME_IDS = new LinkedHashMap<>();
 
     static {
@@ -47,30 +49,41 @@ public class RegistrationActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_registration);
 
-        if (SessionManager.getInstance(this).isLoggedIn()) {
-            startActivity(new Intent(this, ProfileActivity.class));
+        SessionManager sessionManager = SessionManager.getInstance(this);
+        if (sessionManager.isLoggedIn()) {
+            Class<?> target = sessionManager.isLecturer() ? RosterActivity.class : ProfileActivity.class;
+            Intent intent = new Intent(this, target);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
             finish();
             return;
         }
 
+        setContentView(R.layout.activity_registration);
         bindViews();
         setupProgrammeDropdown();
-
-        btnSaveRegistration.setOnClickListener(v -> attemptRegistration());
-        tvSignIn.setOnClickListener(v ->
-                startActivity(new Intent(this, SignInActivity.class)));
     }
 
     private void bindViews() {
+        View btnBack = findViewById(R.id.btnBack);
+        if (btnBack != null) {
+            btnBack.setOnClickListener(v -> navigateToSignIn());
+        }
+
         etFullName = findViewById(R.id.etFullName);
         etStudentNumber = findViewById(R.id.etStudentNumber);
         etPassword = findViewById(R.id.etPassword);
+        etClaimCode = findViewById(R.id.etClaimCode);
         actProgramme = findViewById(R.id.actProgramme);
         actLabGroup = findViewById(R.id.actLabGroup);
         btnSaveRegistration = findViewById(R.id.btnSaveRegistration);
-        tvSignIn = findViewById(R.id.tvSignIn);
+        TextView tvSignIn = findViewById(R.id.tvSignIn);
+
+        btnSaveRegistration.setOnClickListener(v -> attemptRegistration());
+        if (tvSignIn != null) {
+            tvSignIn.setOnClickListener(v -> navigateToSignIn());
+        }
     }
 
     private void setupProgrammeDropdown() {
@@ -93,6 +106,7 @@ public class RegistrationActivity extends AppCompatActivity {
         String name = safeText(etFullName);
         String studentNumber = safeText(etStudentNumber);
         String password = safeText(etPassword);
+        String claimCode = safeText(etClaimCode);
 
         if (TextUtils.isEmpty(name) || TextUtils.isEmpty(studentNumber) || TextUtils.isEmpty(password)) {
             Toast.makeText(this, "Please fill in all required fields", Toast.LENGTH_SHORT).show();
@@ -114,10 +128,13 @@ public class RegistrationActivity extends AppCompatActivity {
         body.put("name", name);
         body.put("password", password);
         body.put("programmeId", selectedProgrammeId);
+        if (!TextUtils.isEmpty(claimCode)) {
+            body.put("claimCode", claimCode);
+        }
 
-        ApiClient.getAuthService(this).register(body).enqueue(new Callback<Map<String, Object>>() {
+        ApiClient.getAuthService(this).register(body).enqueue(new Callback<>() {
             @Override
-            public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+            public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
                 btnSaveRegistration.setEnabled(true);
 
                 if (response.isSuccessful() && response.body() != null
@@ -126,8 +143,7 @@ public class RegistrationActivity extends AppCompatActivity {
                     Toast.makeText(RegistrationActivity.this,
                             "Registration successful — please sign in", Toast.LENGTH_LONG).show();
 
-                    startActivity(new Intent(RegistrationActivity.this, SignInActivity.class));
-                    finish();
+                    navigateToSignIn();
                 } else {
                     Toast.makeText(RegistrationActivity.this,
                             extractErrorMessage(response), Toast.LENGTH_LONG).show();
@@ -135,12 +151,18 @@ public class RegistrationActivity extends AppCompatActivity {
             }
 
             @Override
-            public void onFailure(Call<Map<String, Object>> call, Throwable t) {
+            public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
                 btnSaveRegistration.setEnabled(true);
                 Toast.makeText(RegistrationActivity.this,
                         "Couldn't reach the server — check your connection", Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    private void navigateToSignIn() {
+        Intent intent = new Intent(this, SignInActivity.class);
+        startActivity(intent);
+        finish();
     }
 
     private String extractErrorMessage(Response<Map<String, Object>> response) {
@@ -157,6 +179,6 @@ public class RegistrationActivity extends AppCompatActivity {
     }
 
     private String safeText(TextInputEditText field) {
-        return field.getText() != null ? field.getText().toString().trim() : "";
+        return field != null && field.getText() != null ? field.getText().toString().trim() : "";
     }
 }

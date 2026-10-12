@@ -136,7 +136,7 @@ router.post('/:groupId/assign', authenticateToken, async (req, res) => {
         }
 
         await connection.query(
-            'UPDATE students SET group_id = ? WHERE student_id = ?',
+            'UPDATE students SET group_id = ?, version = version + 1 WHERE student_id = ?',
             [groupId, studentId]
         );
 
@@ -214,7 +214,7 @@ router.post('/:groupId/transfer', authenticateToken, async (req, res) => {
         }
 
         await connection.query(
-            'UPDATE students SET group_id = ? WHERE student_id = ?',
+            'UPDATE students SET group_id = ?, version = version + 1 WHERE student_id = ?',
             [groupId, studentId]
         );
 

@@ -141,6 +141,7 @@
                         style="@style/Widget.Material3.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:minHeight="48dp"
                         android:text="@string/programme_cs" />
 
                     <com.google.android.material.chip.Chip
@@ -148,6 +149,7 @@
                         style="@style/Widget.Material3.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:minHeight="48dp"
                         android:text="@string/programme_it" />
 
                     <com.google.android.material.chip.Chip
@@ -155,6 +157,7 @@
                         style="@style/Widget.Material3.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:minHeight="48dp"
                         android:text="@string/programme_ds" />
 
                 </com.google.android.material.chip.ChipGroup>
@@ -185,6 +188,7 @@
                         style="@style/Widget.Material3.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:minHeight="48dp"
                         android:text="@string/group_g01" />
 
                     <com.google.android.material.chip.Chip
@@ -192,6 +196,7 @@
                         style="@style/Widget.Material3.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:minHeight="48dp"
                         android:text="@string/group_g02" />
 
                     <com.google.android.material.chip.Chip
@@ -199,6 +204,7 @@
                         style="@style/Widget.Material3.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:minHeight="48dp"
                         android:text="@string/group_g03" />
 
                     <com.google.android.material.chip.Chip
@@ -206,6 +212,7 @@
                         style="@style/Widget.Material3.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:minHeight="48dp"
                         android:text="@string/group_g04" />
 
                     <com.google.android.material.chip.Chip
@@ -213,6 +220,7 @@
                         style="@style/Widget.Material3.Chip.Filter"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:minHeight="48dp"
                         android:text="@string/group_unassigned" />
 
                 </com.google.android.material.chip.ChipGroup>
@@ -258,6 +266,7 @@
                         android:id="@+id/active_filters_count"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:accessibilityLiveRegion="polite"
                         android:textAppearance="?attr/textAppearanceLabelLarge"
                         tools:text="2 filters active" />
 

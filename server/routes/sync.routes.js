@@ -2,6 +2,10 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
+const {
+    isValidStudentNumber,
+    isValidName
+} = require('../utils/validators');
 
 /**
  * POST /api/v1/sync
@@ -10,6 +14,7 @@ const { authenticateToken } = require('../middleware/auth');
 router.post('/', authenticateToken, async (req, res) => {
     const { operations } = req.body;
     const userId = req.user.id;
+    const userRole = req.user.role;
 
     if (!Array.isArray(operations)) {
         return res.status(400).json({
@@ -59,10 +64,15 @@ router.post('/', authenticateToken, async (req, res) => {
 
             if (existing.length > 0) {
                 let cachedPayload = {};
-                try {
-                    cachedPayload = JSON.parse(existing[0].response_payload || '{}');
-                } catch (parseError) {
-                    cachedPayload = {};
+                const rawPayload = existing[0].response_payload;
+                if (typeof rawPayload === 'string') {
+                    try {
+                        cachedPayload = JSON.parse(rawPayload || '{}');
+                    } catch (parseError) {
+                        cachedPayload = {};
+                    }
+                } else if (typeof rawPayload === 'object' && rawPayload !== null) {
+                    cachedPayload = rawPayload;
                 }
 
                 results.push({
@@ -91,7 +101,6 @@ router.post('/', authenticateToken, async (req, res) => {
                     const rawStudentNumber = payload?.studentNumber;
                     const rawStudentName = payload?.name || payload?.studentName;
 
-                    // TASK 12.3: Input Sanitization & Regex Validation
                     const studentNumber = typeof rawStudentNumber === 'string'
                         ? rawStudentNumber.trim()
                         : rawStudentNumber;
@@ -113,27 +122,44 @@ router.post('/', authenticateToken, async (req, res) => {
                             message: 'Student name must be between 2 and 100 characters'
                         };
                     } else {
-                        const [result] = await connection.execute(
-                            `INSERT INTO students (
-                                account_id,
-                                programme_id,
-                                student_number,
-                                student_name,
-                                version
-                            ) VALUES (?, ?, ?, ?, 1)`,
-                            [
-                                userId,
-                                payload.programmeId || 1,
-                                studentNumber,
-                                studentName
-                            ]
+                        // Pre-check for duplicate student number
+                        const [existingStudent] = await connection.execute(
+                            `SELECT student_id FROM students WHERE student_number = ?`,
+                            [studentNumber]
                         );
 
-                        responsePayload = {
-                            id: result.insertId,
-                            entityId: result.insertId,
-                            version: 1
-                        };
+                        if (existingStudent.length > 0) {
+                            opStatus = 'REJECTED';
+                            responsePayload = {
+                                code: 'DUPLICATE_STUDENT_NUMBER',
+                                message: 'A student with this student number already exists'
+                            };
+                        } else {
+                            // Lecturer-created student has account_id = NULL
+                            const accountIdForStudent = userRole === 'LECTURER' ? null : userId;
+
+                            const [result] = await connection.execute(
+                                `INSERT INTO students (
+                                    account_id,
+                                    programme_id,
+                                    student_number,
+                                    student_name,
+                                    version
+                                ) VALUES (?, ?, ?, ?, 1)`,
+                                [
+                                    accountIdForStudent,
+                                    payload.programmeId || 1,
+                                    studentNumber,
+                                    studentName
+                                ]
+                            );
+
+                            responsePayload = {
+                                id: result.insertId,
+                                entityId: result.insertId,
+                                version: 1
+                            };
+                        }
                     }
                 }
 
@@ -144,7 +170,6 @@ router.post('/', authenticateToken, async (req, res) => {
                     const studentId = payload?.id || op.entityId;
                     const rawStudentName = payload?.name || payload?.studentName;
 
-                    // TASK 12.3: Input Sanitization & Regex Validation
                     const studentName = typeof rawStudentName === 'string'
                         ? rawStudentName.trim()
                         : rawStudentName;
@@ -163,7 +188,7 @@ router.post('/', authenticateToken, async (req, res) => {
                         };
                     } else {
                         const [current] = await connection.execute(
-                            `SELECT version FROM students WHERE student_id = ? AND deleted_at IS NULL`,
+                            `SELECT account_id, version FROM students WHERE student_id = ? AND deleted_at IS NULL`,
                             [studentId]
                         );
 
@@ -172,6 +197,12 @@ router.post('/', authenticateToken, async (req, res) => {
                             responsePayload = {
                                 code: 'STUDENT_NOT_FOUND',
                                 message: 'Student not found'
+                            };
+                        } else if (userRole !== 'LECTURER' && current[0].account_id !== userId) {
+                            opStatus = 'REJECTED';
+                            responsePayload = {
+                                code: 'FORBIDDEN',
+                                message: 'Access denied: Cannot edit records belonging to other users'
                             };
                         } else if (baseVersion !== undefined && baseVersion !== null && current[0].version !== baseVersion) {
                             opStatus = 'CONFLICT';
@@ -203,7 +234,13 @@ router.post('/', authenticateToken, async (req, res) => {
                 else if (type === 'DELETE_STUDENT') {
                     const studentId = payload?.id || op.entityId;
 
-                    if (!studentId) {
+                    if (userRole !== 'LECTURER') {
+                        opStatus = 'REJECTED';
+                        responsePayload = {
+                            code: 'FORBIDDEN',
+                            message: 'Lecturer access required for deletion'
+                        };
+                    } else if (!studentId) {
                         opStatus = 'REJECTED';
                         responsePayload = {
                             code: 'INVALID_OPERATION',
@@ -299,11 +336,33 @@ router.post('/', authenticateToken, async (req, res) => {
             await connection.rollback();
             console.error(`Error processing operation ${operationId}:`, error);
 
-            results.push({
-                operationId,
-                status: 'ERROR',
-                message: error.message
-            });
+            if (error.code === 'ER_DUP_ENTRY') {
+                const dupPayload = {
+                    code: 'DUPLICATE_STUDENT_NUMBER',
+                    message: 'A student with this student number already exists'
+                };
+                try {
+                    await pool.execute(
+                        `INSERT INTO sync_operations (
+                            operation_id, account_id, operation_type, entity_type, status, response_payload
+                        ) VALUES (?, ?, ?, ?, 'REJECTED', ?)`,
+                        [operationId, userId, type, entity, JSON.stringify(dupPayload)]
+                    );
+                } catch (ignored) {}
+
+                results.push({
+                    operationId,
+                    status: 'REJECTED',
+                    message: 'A student with this student number already exists',
+                    data: dupPayload
+                });
+            } else {
+                results.push({
+                    operationId,
+                    status: 'ERROR',
+                    message: error.message
+                });
+            }
         } finally {
             connection.release();
         }
@@ -316,6 +375,48 @@ router.post('/', authenticateToken, async (req, res) => {
         },
         results
     });
+});
+
+/**
+ * GET /api/v1/sync/changes?since=...
+ * Returns incremental delta changes updated since timestamp
+ */
+router.get('/changes', authenticateToken, async (req, res) => {
+    const { since } = req.query;
+    try {
+        let query = `SELECT s.*, p.code as programme_code, g.group_code
+                     FROM students s
+                     JOIN programmes p ON s.programme_id = p.programme_id
+                     LEFT JOIN lab_groups g ON s.group_id = g.group_id`;
+        const params = [];
+
+        if (since) {
+            let dateVal;
+            if (/^\d+$/.test(since)) {
+                dateVal = new Date(Number(since));
+            } else {
+                dateVal = new Date(since);
+            }
+            if (!isNaN(dateVal.getTime())) {
+                query += ` WHERE s.updated_at >= ?`;
+                params.push(dateVal);
+            }
+        }
+
+        query += ` ORDER BY s.updated_at ASC`;
+        const [rows] = await pool.query(query, params);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                changes: rows,
+                serverTime: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error('Sync changes error:', error);
+        return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
+    }
 });
 
 module.exports = router;

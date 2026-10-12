@@ -73,7 +73,8 @@ public class SyncWorker extends Worker {
             dto.entityId = op.entityId;
             dto.accountId = op.accountId;
             dto.baseVersion = op.baseVersion;
-            dto.payload = gson.fromJson(op.payloadJson, java.util.Map.class);
+            java.lang.reflect.Type mapType = new com.google.gson.reflect.TypeToken<java.util.Map<String, Object>>() {}.getType();
+            dto.payload = gson.fromJson(op.payloadJson, mapType);
             operations.add(dto);
         }
 
@@ -93,6 +94,7 @@ public class SyncWorker extends Worker {
                         result.entityId,
                         result.version);
             }
+            SessionManager.getInstance(getApplicationContext()).saveLastSyncedTime(System.currentTimeMillis());
             return Result.success();
         } catch (Exception e) {
             markAllFailed(db, queue);
