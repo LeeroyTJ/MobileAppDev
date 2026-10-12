@@ -88,11 +88,11 @@ public class PendingOperationAdapter extends RecyclerView.Adapter<PendingOperati
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
-            iconOpType = itemView.findViewById(R.id.iconOpType);
+            iconOpType = itemView.findViewById(R.id.ivOpIcon);
             tvOpType = itemView.findViewById(R.id.tvOpType);
-            tvStudentInfo = itemView.findViewById(R.id.tvStudentInfo);
-            tvStatus = itemView.findViewById(R.id.tvStatus);
-            tvTimestamp = itemView.findViewById(R.id.tvTimestamp);
+            tvStudentInfo = itemView.findViewById(R.id.tvOpDetails);
+            tvStatus = itemView.findViewById(R.id.tvOpStatus);
+            tvTimestamp = itemView.findViewById(R.id.tvOpTime);
         }
     }
 
