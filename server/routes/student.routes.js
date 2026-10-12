@@ -294,6 +294,81 @@ router.patch('/:id/student-number', authenticateToken, async (req, res) => {
 });
 
 /**
+ * POST /api/v1/students/:id/group-requests — student requests group change with locking
+ */
+router.post('/:id/group-requests', authenticateToken, async (req, res) => {
+    const studentId = req.params.id;
+    const { targetGroupId } = req.body;
+
+    if (!isPositiveInt(studentId) || !isValidGroupId(targetGroupId)) {
+        return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'Valid student id and targetGroupId are required' } });
+    }
+
+    let connection;
+    try {
+        connection = await pool.getConnection();
+        await connection.beginTransaction();
+
+        const [groupRows] = await connection.query(
+            'SELECT * FROM lab_groups WHERE group_id = ? AND is_active = TRUE FOR UPDATE',
+            [targetGroupId]
+        );
+        if (groupRows.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: { code: 'GROUP_NOT_FOUND', message: 'Group not found' } });
+        }
+        const group = groupRows[0];
+
+        const [studentRows] = await connection.query(
+            'SELECT student_id, account_id, group_id FROM students WHERE student_id = ? AND deleted_at IS NULL',
+            [studentId]
+        );
+        if (studentRows.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: { code: 'STUDENT_NOT_FOUND', message: 'Student not found' } });
+        }
+        const student = studentRows[0];
+
+        if (req.user.role !== 'LECTURER' && student.account_id !== req.user.id) {
+            await connection.rollback();
+            return res.status(403).json({ success: false, error: { code: 'FORBIDDEN', message: 'Access denied' } });
+        }
+        if (student.group_id === Number(targetGroupId)) {
+            await connection.rollback();
+            return res.status(409).json({ success: false, error: { code: 'ALREADY_IN_GROUP', message: 'Student is already in this group' } });
+        }
+
+        const [[{ count }]] = await connection.query(
+            'SELECT COUNT(*) AS count FROM students WHERE group_id = ? AND deleted_at IS NULL',
+            [targetGroupId]
+        );
+        if (count >= group.capacity) {
+            await connection.rollback();
+            return res.status(409).json({ success: false, error: { code: 'GROUP_FULL', message: 'This group is full' } });
+        }
+
+        const operationId = crypto.randomUUID();
+        await connection.query(
+            `INSERT INTO sync_operations
+                (operation_id, account_id, operation_type, entity_type, entity_id, status, response_payload)
+             VALUES (?, ?, 'GROUP_REQUEST', 'student', ?, 'PROCESSING', ?)`,
+            [operationId, req.user.id, student.student_id,
+             JSON.stringify({ targetGroupId: Number(targetGroupId), placesRemaining: group.capacity - count })]
+        );
+
+        await connection.commit();
+        return res.status(202).json({ success: true, data: { operationId, status: 'PROCESSING' } });
+
+    } catch (error) {
+        if (connection) await connection.rollback();
+        console.error('Group request error:', error);
+        return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
+    } finally {
+        if (connection) connection.release();
+    }
+});
+
+/**
  * PUT /api/v1/students/:id — update student with optimistic concurrency & strict ownership checks
  */
 router.put('/:id', authenticateToken, async (req, res) => {
