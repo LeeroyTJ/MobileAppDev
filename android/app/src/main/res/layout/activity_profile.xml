@@ -159,33 +159,36 @@
 
                 <TextView
                     android:id="@+id/tvLabGroupCardTitle"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:text="@string/lab_group_card_title"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toTopOf="parent" />
 
                 <TextView
                     android:id="@+id/tvLabGroupValue"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="6dp"
                     android:fontFamily="sans-serif-medium"
                     android:textColor="@color/text_primary"
                     android:textSize="22sp"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tvLabGroupCardTitle"
                     tools:text="G02" />
 
                 <TextView
                     android:id="@+id/tvLabGroupCapacity"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:textColor="@color/text_secondary"
                     android:textSize="13sp"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tvLabGroupValue"
                     tools:text="11 / 15" />
@@ -207,7 +210,7 @@
                 <!-- Remaining Places Pill -->
                 <TextView
                     android:id="@+id/tvPlacesRemaining"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:background="@drawable/bg_pill"
@@ -218,6 +221,7 @@
                     android:paddingBottom="4dp"
                     android:textColor="@color/primary_dark"
                     android:textSize="12sp"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/progressLabGroup"
                     tools:text="4 places remaining" />
@@ -258,7 +262,7 @@
 
                 <TextView
                     android:id="@+id/tvSyncedLabel"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="6dp"
                     android:fontFamily="sans-serif-medium"
@@ -266,32 +270,43 @@
                     android:textColor="@color/text_primary"
                     android:textSize="16sp"
                     app:layout_constraintBottom_toBottomOf="@id/ivSyncCheck"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toEndOf="@id/ivSyncCheck"
                     app:layout_constraintTop_toTopOf="@id/ivSyncCheck" />
 
                 <TextView
                     android:id="@+id/tvLastUpdatedLabel"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="10dp"
                     android:text="@string/last_updated_label"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/ivSyncCheck" />
 
                 <TextView
                     android:id="@+id/tvLastUpdatedValue"
-                    android:layout_width="wrap_content"
+                    android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginTop="2dp"
                     android:textColor="@color/text_secondary"
                     android:textSize="12sp"
+                    app:layout_constraintEnd_toEndOf="parent"
                     app:layout_constraintStart_toStartOf="parent"
                     app:layout_constraintTop_toBottomOf="@id/tvLastUpdatedLabel"
                     tools:text="Today, 09:24" />
 
             </androidx.constraintlayout.widget.ConstraintLayout>
+
+            <!-- Barrier to prevent cardQuickActions from colliding with either card -->
+            <androidx.constraintlayout.widget.Barrier
+                android:id="@+id/barrierCards"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                app:barrierDirection="bottom"
+                app:constraint_referenced_ids="cardLabGroup,cardSyncStatus" />
 
             <!-- Quick Actions card -->
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -307,7 +322,7 @@
                 android:paddingBottom="4dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/cardLabGroup">
+                app:layout_constraintTop_toBottomOf="@id/barrierCards">
 
                 <TextView
                     android:id="@+id/tvQuickActionsTitle"

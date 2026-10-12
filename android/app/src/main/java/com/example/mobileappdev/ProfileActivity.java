@@ -1,12 +1,15 @@
 package com.example.mobileappdev;
 
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -20,12 +23,16 @@ import com.example.mobileappdev.data.local.AppDatabase;
 import com.example.mobileappdev.data.local.entity.PendingOperationEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
 import com.example.mobileappdev.session.SessionManager;
+import com.example.mobileappdev.ui.GroupPickerBottomSheetDialogFragment;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
 
 import org.json.JSONObject;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
@@ -37,11 +44,16 @@ import retrofit2.Response;
 
 public class ProfileActivity extends AppCompatActivity {
 
+    private static final String PREF_LAST_UPDATED = "profile_last_updated_time";
+
     private TextView tvAvatarInitials;
     private TextView tvProfileName;
     private TextView tvProfileStudentNumber;
     private TextView tvProfileProgramme;
     private TextView tvLabGroupValue;
+    private TextView tvSyncedLabel;
+    private TextView tvLastUpdatedValue;
+    private ImageView ivSyncCheck;
 
     private long myStudentId = 0;
     private int myBaseVersion = 0;
@@ -71,6 +83,8 @@ public class ProfileActivity extends AppCompatActivity {
         setContentView(R.layout.activity_profile);
         bindViews();
         setupBottomNav();
+        loadCachedLastUpdatedTime();
+        observePendingQueue();
         loadProfile();
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
@@ -125,6 +139,10 @@ public class ProfileActivity extends AppCompatActivity {
         tvProfileStudentNumber = findViewById(R.id.tvProfileStudentNumber);
         tvProfileProgramme = findViewById(R.id.tvProfileProgramme);
         tvLabGroupValue = findViewById(R.id.tvLabGroupValue);
+        tvSyncedLabel = findViewById(R.id.tvSyncedLabel);
+        tvLastUpdatedValue = findViewById(R.id.tvLastUpdatedValue);
+        ivSyncCheck = findViewById(R.id.ivSyncCheck);
+
         MaterialButton btnLogout = findViewById(R.id.btnLogout);
 
         if (btnLogout != null) {
@@ -151,7 +169,33 @@ public class ProfileActivity extends AppCompatActivity {
 
                 GroupPickerBottomSheetDialogFragment dialog =
                         GroupPickerBottomSheetDialogFragment.newInstance(myStudentId);
-                dialog.setOnGroupSelectedListener(groupCode -> tvLabGroupValue.setText(groupCode));
+                dialog.setOnGroupSelectedListener(groupCode -> {
+                    if (tvLabGroupValue != null) tvLabGroupValue.setText(groupCode);
+                    Map<String, Object> body = new HashMap<>();
+                    body.put("targetGroup", groupCode);
+                    body.put("reason", "Student requested group change from profile");
+                    ApiClient.getStudentService(this).requestGroupChange(myStudentId, body)
+                            .enqueue(new Callback<>() {
+                                @Override
+                                public void onResponse(@NonNull Call<Map<String, Object>> call,
+                                                       @NonNull Response<Map<String, Object>> response) {
+                                    if (response.isSuccessful()) {
+                                        Toast.makeText(ProfileActivity.this,
+                                                "Group change request submitted", Toast.LENGTH_SHORT).show();
+                                    } else {
+                                        Toast.makeText(ProfileActivity.this,
+                                                "Request submitted for sync", Toast.LENGTH_SHORT).show();
+                                    }
+                                }
+
+                                @Override
+                                public void onFailure(@NonNull Call<Map<String, Object>> call,
+                                                      @NonNull Throwable t) {
+                                    Toast.makeText(ProfileActivity.this,
+                                            "Request queued for sync when online", Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                });
                 dialog.show(getSupportFragmentManager(), GroupPickerBottomSheetDialogFragment.TAG);
             });
         }
@@ -160,6 +204,22 @@ public class ProfileActivity extends AppCompatActivity {
         if (rowRequestNumberCorrection != null) {
             rowRequestNumberCorrection.setOnClickListener(v -> showNumberCorrectionDialog());
         }
+    }
+
+    private void observePendingQueue() {
+        long accountId = SessionManager.getInstance(this).getAccountId();
+        AppDatabase.getInstance(this)
+                .pendingOperationDao()
+                .observeQueueForAccount(accountId)
+                .observe(this, queue -> {
+                    if (queue != null && !queue.isEmpty()) {
+                        if (tvSyncedLabel != null) tvSyncedLabel.setText(R.string.sync_pending);
+                        if (ivSyncCheck != null) ivSyncCheck.setImageResource(R.drawable.ic_status_pending);
+                    } else {
+                        if (tvSyncedLabel != null) tvSyncedLabel.setText(R.string.sync_status_synced);
+                        if (ivSyncCheck != null) ivSyncCheck.setImageResource(R.drawable.ic_check_circle);
+                    }
+                });
     }
 
     private void loadProfile() {
@@ -194,6 +254,8 @@ public class ProfileActivity extends AppCompatActivity {
                 tvProfileProgramme.setText(programmeName);
                 tvLabGroupValue.setText(groupCode);
                 tvAvatarInitials.setText(initialsOf(name));
+
+                saveAndDisplayLastUpdatedTime(System.currentTimeMillis());
             }
 
             @Override
@@ -202,6 +264,32 @@ public class ProfileActivity extends AppCompatActivity {
                         "Couldn't reach the server — check your connection", Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    private void saveAndDisplayLastUpdatedTime(long millis) {
+        SharedPreferences prefs = getSharedPreferences("cohorthub_session", Context.MODE_PRIVATE);
+        prefs.edit().putLong(PREF_LAST_UPDATED, millis).apply();
+        displayFormattedLastUpdated(millis);
+    }
+
+    private void loadCachedLastUpdatedTime() {
+        SharedPreferences prefs = getSharedPreferences("cohorthub_session", Context.MODE_PRIVATE);
+        long cachedMillis = prefs.getLong(PREF_LAST_UPDATED, -1);
+        if (cachedMillis > 0) {
+            displayFormattedLastUpdated(cachedMillis);
+        } else {
+            if (tvLastUpdatedValue != null) {
+                tvLastUpdatedValue.setText(new SimpleDateFormat("MMM d, HH:mm", Locale.getDefault()).format(new Date()));
+            }
+        }
+    }
+
+    private void displayFormattedLastUpdated(long millis) {
+        SimpleDateFormat sdf = new SimpleDateFormat("MMM d, HH:mm", Locale.getDefault());
+        String formatted = sdf.format(new Date(millis));
+        if (tvLastUpdatedValue != null) {
+            tvLastUpdatedValue.setText(formatted);
+        }
     }
 
     private void handleFailure(int code) {
