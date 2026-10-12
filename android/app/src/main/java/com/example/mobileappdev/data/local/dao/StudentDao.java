@@ -27,6 +27,12 @@ public interface StudentDao {
     @Query("SELECT * FROM students WHERE accountId = :accountId AND isDeleted = 0")
     LiveData<List<StudentEntity>> observeAllForAccount(long accountId);
 
+    @Query("SELECT * FROM students WHERE accountId = :accountId AND isDeleted = 0 " +
+            "AND (:programme = '' OR programme = :programme) " +
+            "AND (:group = '' OR labGroup = :group OR (:group = 'Unassigned' AND labGroup IS NULL)) " +
+            "AND (:search = '' OR name LIKE '%' || :search || '%' OR studentNumber LIKE '%' || :search || '%')")
+    LiveData<List<StudentEntity>> observeFilteredForAccount(long accountId, String search, String programme, String group);
+
     @Query("SELECT * FROM students WHERE serverId = :serverId LIMIT 1")
     StudentEntity findByServerId(long serverId);
 
