@@ -11,6 +11,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.mobileappdev.StudentAdapter;
+import com.example.mobileappdev.data.remote.ApiClient;
+import com.example.mobileappdev.model.Student;
+import com.example.mobileappdev.session.SessionManager;
+import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.button.MaterialButton;
+import com.google.android.material.progressindicator.CircularProgressIndicator;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.example.mobileappdev.adapter.StudentAdapter;
 import com.example.mobileappdev.data.local.entity.StudentEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
@@ -64,6 +72,22 @@ public class StudentGroupActivity extends AppCompatActivity {
         }
 
         bindViews();
+        setupNavigation();
+        loadGroupData();
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                navigateToParentProfile();
+            }
+        });
+    }
+
+    private void navigateToParentProfile() {
+        Intent intent = new Intent(this, ProfileActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(intent);
+        finish();
         setupRecyclerView();
         loadGroupDetails();
     }
@@ -88,10 +112,26 @@ public class StudentGroupActivity extends AppCompatActivity {
         }
     }
 
-    private void setupRecyclerView() {
-        rvGroupMembers.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new StudentAdapter(this::onStudentClicked);
-        rvGroupMembers.setAdapter(adapter);
+    private void setupNavigation() {
+        BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
+        if (bottomNav != null) {
+            bottomNav.setSelectedItemId(R.id.navGroup);
+            bottomNav.setOnItemSelectedListener(item -> {
+                int id = item.getItemId();
+                if (id == R.id.navHome) {
+                    startActivity(new Intent(this, ProfileActivity.class));
+                    finish();
+                    return true;
+                } else if (id == R.id.navGroup) {
+                    return true;
+                } else if (id == R.id.navSync) {
+                    startActivity(new Intent(this, SyncActivity.class));
+                    finish();
+                    return true;
+                }
+                return false;
+            });
+        }
     }
 
     private void loadGroupDetails() {
@@ -124,6 +164,25 @@ public class StudentGroupActivity extends AppCompatActivity {
                 showError();
             }
         });
+        // Populate members list
+        List<StudentEntity> membersList = new ArrayList<>();
+        List<?> membersData = (List<?>) data.get("members");
+        if (membersData != null) {
+            for (Object obj : membersData) {
+                if (obj instanceof Map) {
+                    Map<?, ?> map = (Map<?, ?>) obj;
+                    StudentEntity student = new StudentEntity();
+                    student.serverId = map.get("student_id") instanceof Number ? ((Number) map.get("student_id")).longValue() : 0;
+                    student.studentNumber = map.get("student_number") != null ? map.get("student_number").toString() : "";
+                    student.name = map.get("student_name") != null ? map.get("student_name").toString() : "";
+                    student.programme = map.get("programme_code") != null ? map.get("programme_code").toString() :
+                            (map.get("programme_name") != null ? map.get("programme_name").toString() : "");
+                    student.labGroup = groupCode;
+                    membersList.add(student);
+                }
+            }
+        }
+        adapter.submitList(membersList);
     }
 
     private void updateGroupUi(Map<?, ?> data) {
@@ -204,20 +263,20 @@ public class StudentGroupActivity extends AppCompatActivity {
                     formattedLines.add(formatFullProgrammeName(item.toString()));
                 }
             }
-        } else {
-            Map<?, ?> countsMap = (Map<?, ?>) data.get("programmeCounts");
-            if (countsMap != null) {
-                countsMap.forEach((key, value) -> {
-                    String prog = key != null ? key.toString() : "Other";
-                    formattedLines.add(getFullProgrammeName(prog) + ": " + value);
-                });
-            }
+        });
         }
 
         if (formattedLines.isEmpty()) {
             tvProgrammeBreakdown.setText("No programme breakdown available");
         } else {
-            tvProgrammeBreakdown.setText(String.join("\n", formattedLines));
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < formattedLines.size(); i++) {
+                sb.append(formattedLines.get(i));
+                if (i < formattedLines.size() - 1) {
+                    sb.append("\n");
+                }
+            }
+            tvProgrammeBreakdown.setText(sb.toString());
         }
     }
 
