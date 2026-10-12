@@ -15,6 +15,7 @@ public class SessionManager {
     private static final String KEY_TOKEN = "access_token";
     private static final String KEY_ACCOUNT_ID = "account_id";
     private static final String KEY_ROLE = "role";
+    private static final String KEY_LAST_SYNCED = "last_synced_timestamp";
 
     private static volatile SessionManager INSTANCE;
 
@@ -89,6 +90,14 @@ public class SessionManager {
 
     public boolean isLecturer() {
         return "LECTURER".equals(getRole());
+    }
+
+    public void saveLastSyncedTime(long timestamp) {
+        prefs.edit().putLong(KEY_LAST_SYNCED, timestamp).apply();
+    }
+
+    public long getLastSyncedTime() {
+        return prefs.getLong(KEY_LAST_SYNCED, 0L);
     }
 
     public void clearSession() {
