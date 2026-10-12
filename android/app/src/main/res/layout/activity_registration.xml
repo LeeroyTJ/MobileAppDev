@@ -104,7 +104,7 @@
                     android:id="@+id/etFullName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/hint_full_name"
+
                     android:inputType="textPersonName"
                     android:maxLines="1"
                     android:textColor="@color/text_primary"
@@ -131,7 +131,7 @@
                     android:id="@+id/etStudentNumber"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/hint_student_number"
+
                     android:inputType="number"
                     android:maxLength="9"
                     android:maxLines="1"
@@ -159,7 +159,7 @@
                     android:id="@+id/etPassword"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/hint_password"
+
                     android:inputType="textPassword"
                     android:maxLines="1"
                     android:textColor="@color/text_primary"
@@ -185,7 +185,7 @@
                     android:id="@+id/actProgramme"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/hint_programme"
+
                     android:inputType="none"
                     android:textColor="@color/text_primary"
                     android:textSize="16sp"
@@ -210,7 +210,7 @@
                     android:id="@+id/actLabGroup"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/hint_lab_group"
+
                     android:inputType="none"
                     android:textColor="@color/text_primary"
                     android:textSize="16sp"
@@ -235,7 +235,7 @@
                     android:id="@+id/etClaimCode"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/hint_claim_code"
+
                     android:inputType="textCapCharacters"
                     android:maxLines="1"
                     android:textColor="@color/text_primary"

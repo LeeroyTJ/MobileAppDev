@@ -83,6 +83,29 @@
     <string name="nav_profile">Profile</string>
     <string name="nav_sync">Sync</string>
 
+    <!-- Group and capacity strings (Section 2.1) -->
+    <string name="group_title">My Lab Group</string>
+    <string name="capacity_format">%1$d / %2$d students</string>
+    <string name="capacity_full">Full</string>
+    <plurals name="places_remaining">
+        <item quantity="one">%d place remaining</item>
+        <item quantity="other">%d places remaining</item>
+    </plurals>
+    <plurals name="capacity_near_full">
+        <item quantity="one">Near full · %d place left</item>
+        <item quantity="other">Near full · %d places left</item>
+    </plurals>
+    <string name="programme_breakdown_title">Programme Breakdown</string>
+    <string name="group_members_title">Group Members</string>
+    <string name="group_load_failed">Couldn\'t load your group</string>
+    <string name="group_none_yet">You\'re not in a lab group yet</string>
+    <string name="group_request_pending_format">Requested %1$s · pending</string>
+    <string name="group_request_sent">Group change request sent</string>
+    <string name="group_request_full">That group is full. You keep your current group.</string>
+    <string name="group_request_failed">Couldn\'t send the request. Try again.</string>
+    <string name="saved_offline_will_send">Saved. It will be sent when you\'re back online.</string>
+    <string name="error_student_number_format">Student number must be exactly 9 digits</string>
+
     <!-- Dropdown data -->
     <string-array name="programme_options">
         <item>BSc Computer Science</item>
