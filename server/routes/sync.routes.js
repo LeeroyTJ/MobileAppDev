@@ -377,4 +377,46 @@ router.post('/', authenticateToken, async (req, res) => {
     });
 });
 
+/**
+ * GET /api/v1/sync/changes?since=...
+ * Returns incremental delta changes updated since timestamp
+ */
+router.get('/changes', authenticateToken, async (req, res) => {
+    const { since } = req.query;
+    try {
+        let query = `SELECT s.*, p.code as programme_code, g.group_code
+                     FROM students s
+                     JOIN programmes p ON s.programme_id = p.programme_id
+                     LEFT JOIN lab_groups g ON s.group_id = g.group_id`;
+        const params = [];
+
+        if (since) {
+            let dateVal;
+            if (/^\d+$/.test(since)) {
+                dateVal = new Date(Number(since));
+            } else {
+                dateVal = new Date(since);
+            }
+            if (!isNaN(dateVal.getTime())) {
+                query += ` WHERE s.updated_at >= ?`;
+                params.push(dateVal);
+            }
+        }
+
+        query += ` ORDER BY s.updated_at ASC`;
+        const [rows] = await pool.query(query, params);
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                changes: rows,
+                serverTime: new Date().toISOString()
+            }
+        });
+    } catch (error) {
+        console.error('Sync changes error:', error);
+        return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
+    }
+});
+
 module.exports = router;
