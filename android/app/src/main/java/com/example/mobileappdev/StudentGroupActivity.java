@@ -3,30 +3,27 @@ package com.example.mobileappdev;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mobileappdev.adapter.StudentAdapter;
+import com.example.mobileappdev.data.local.entity.StudentEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
-import com.example.mobileappdev.model.Student;
 import com.example.mobileappdev.session.SessionManager;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
-import com.example.mobileappdev.data.local.entity.StudentEntity;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -45,7 +42,6 @@ public class StudentGroupActivity extends AppCompatActivity {
     private RecyclerView rvGroupMembers;
     private CircularProgressIndicator loadingIndicator;
     private View errorState;
-    private MaterialButton btnRetry;
 
     private StudentAdapter adapter;
     private long groupId = 1;
@@ -82,9 +78,11 @@ public class StudentGroupActivity extends AppCompatActivity {
         rvGroupMembers = findViewById(R.id.rvGroupMembers);
         loadingIndicator = findViewById(R.id.loading_indicator);
         errorState = findViewById(R.id.error_state);
-        btnRetry = findViewById(R.id.btnRetry);
+        MaterialButton btnRetry = findViewById(R.id.btnRetry);
 
-        toolbar.setNavigationOnClickListener(v -> finish());
+        if (toolbar != null) {
+            toolbar.setNavigationOnClickListener(v -> finish());
+        }
         if (btnRetry != null) {
             btnRetry.setOnClickListener(v -> loadGroupDetails());
         }
@@ -100,15 +98,13 @@ public class StudentGroupActivity extends AppCompatActivity {
         showLoading(true);
         hideError();
 
-        // Fix 3B: Use GroupApiService.getGroup(groupId) instead of getRoster()
         ApiClient.getGroupService(this).getGroup(groupId).enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
                 showLoading(false);
 
                 if (!response.isSuccessful() || response.body() == null
-                        || !Boolean.TRUE.equals(response.body().get("success"))) {
-                    // Fix 3B: Removed hardcoded "G02" fallback. Show error state on API failure.
+                        || !Objects.equals(response.body().get("success"), Boolean.TRUE)) {
                     showError();
                     return;
                 }
@@ -125,43 +121,73 @@ public class StudentGroupActivity extends AppCompatActivity {
             @Override
             public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
                 showLoading(false);
-                // Fix 3B: Removed hardcoded "G02" fallback. Show error state on failure.
                 showError();
             }
         });
     }
 
     private void updateGroupUi(Map<?, ?> data) {
-        String groupCode = data.get("groupCode") != null ? data.get("groupCode").toString() :
-                (data.get("group_code") != null ? data.get("group_code").toString() : "Group " + groupId);
-        String groupName = data.get("name") != null ? data.get("name").toString() : "";
+        Object gcObj = data.get("groupCode");
+        if (gcObj == null) {
+            gcObj = data.get("group_code");
+        }
+        String groupCode = gcObj != null ? gcObj.toString() : "Group " + groupId;
 
-        int capacity = data.get("capacity") instanceof Number ? ((Number) data.get("capacity")).intValue() : 15;
-        int occupied = data.get("occupied") instanceof Number ? ((Number) data.get("occupied")).intValue() : 0;
-        int placesRemaining = data.get("placesRemaining") instanceof Number ?
-                ((Number) data.get("placesRemaining")).intValue() : Math.max(0, capacity - occupied);
+        Object nameObj = data.get("name");
+        String groupName = nameObj != null ? nameObj.toString() : "";
 
-        // Populate header title & capacity metrics
+        Object capObj = data.get("capacity");
+        int capacity = capObj instanceof Number ? ((Number) capObj).intValue() : 15;
+
+        Object occObj = data.get("occupied");
+        int occupied = occObj instanceof Number ? ((Number) occObj).intValue() : 0;
+
+        Object remObj = data.get("placesRemaining");
+        int placesRemaining = remObj instanceof Number ?
+                ((Number) remObj).intValue() : Math.max(0, capacity - occupied);
+
         String title = "Lab Group " + groupCode + (groupName.isEmpty() ? "" : " - " + groupName);
         tvGroupTitle.setText(title);
         toolbar.setTitle(groupCode + " Details");
 
-        tvCapacityRatio.setText(occupied + " / " + capacity + " Students");
-        tvPlacesRemainingPill.setText(placesRemaining + " places remaining");
+        String capacityRatioText = occupied + " / " + capacity + " Students";
+        tvCapacityRatio.setText(capacityRatioText);
+
+        String placesRemainingText = placesRemaining + " places remaining";
+        tvPlacesRemainingPill.setText(placesRemainingText);
 
         progressCapacity.setMax(capacity);
         progressCapacity.setProgress(occupied);
 
-        // Format programme breakdown with full names
         formatProgrammeBreakdown(data);
 
-        // Populate members list
-        List<Student> membersList = new ArrayList<>();
+        List<StudentEntity> membersList = new ArrayList<>();
         List<?> membersData = (List<?>) data.get("members");
         if (membersData != null) {
             for (Object obj : membersData) {
                 if (obj instanceof Map) {
-                    membersList.add(Student.fromMap((Map<?, ?>) obj));
+                    Map<?, ?> map = (Map<?, ?>) obj;
+                    Object sIdObj = map.get("student_id");
+                    long serverId = sIdObj instanceof Number ? ((Number) sIdObj).longValue() : 0;
+
+                    Object sNumObj = map.get("student_number");
+                    String sNum = sNumObj != null ? sNumObj.toString() : "";
+
+                    Object sNameObj = map.get("student_name");
+                    if (sNameObj == null) sNameObj = map.get("name");
+                    String sName = sNameObj != null ? sNameObj.toString() : "";
+
+                    Object progCodeObj = map.get("programme_code");
+                    if (progCodeObj == null) progCodeObj = map.get("programme_name");
+                    String prog = progCodeObj != null ? progCodeObj.toString() : "CS";
+
+                    StudentEntity student = new StudentEntity();
+                    student.serverId = serverId;
+                    student.studentNumber = sNum;
+                    student.name = sName;
+                    student.programme = prog;
+                    student.labGroup = groupCode;
+                    membersList.add(student);
                 }
             }
         }
@@ -175,32 +201,23 @@ public class StudentGroupActivity extends AppCompatActivity {
         if (breakdownList != null && !breakdownList.isEmpty()) {
             for (Object item : breakdownList) {
                 if (item != null) {
-                    String line = item.toString();
-                    formattedLines.add(formatFullProgrammeName(line));
+                    formattedLines.add(formatFullProgrammeName(item.toString()));
                 }
             }
         } else {
             Map<?, ?> countsMap = (Map<?, ?>) data.get("programmeCounts");
             if (countsMap != null) {
-                for (Map.Entry<?, ?> entry : countsMap.entrySet()) {
-                    String prog = entry.getKey() != null ? entry.getKey().toString() : "Other";
-                    String fullName = getFullProgrammeName(prog);
-                    formattedLines.add(fullName + ": " + entry.getValue());
-                }
+                countsMap.forEach((key, value) -> {
+                    String prog = key != null ? key.toString() : "Other";
+                    formattedLines.add(getFullProgrammeName(prog) + ": " + value);
+                });
             }
         }
 
         if (formattedLines.isEmpty()) {
             tvProgrammeBreakdown.setText("No programme breakdown available");
         } else {
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < formattedLines.size(); i++) {
-                sb.append(formattedLines.get(i));
-                if (i < formattedLines.size() - 1) {
-                    sb.append("\n");
-                }
-            }
-            tvProgrammeBreakdown.setText(sb.toString());
+            tvProgrammeBreakdown.setText(String.join("\n", formattedLines));
         }
     }
 
@@ -229,8 +246,8 @@ public class StudentGroupActivity extends AppCompatActivity {
         return code;
     }
 
-    private void onStudentClicked(Student student) {
-        Toast.makeText(this, student.getName() + " (" + student.getStudentNumber() + ")", Toast.LENGTH_SHORT).show();
+    private void onStudentClicked(StudentEntity student) {
+        Toast.makeText(this, student.name + " (" + student.studentNumber + ")", Toast.LENGTH_SHORT).show();
     }
 
     private void showLoading(boolean loading) {

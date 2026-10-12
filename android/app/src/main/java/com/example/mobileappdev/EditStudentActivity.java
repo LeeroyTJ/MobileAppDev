@@ -2,27 +2,31 @@ package com.example.mobileappdev;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.text.InputType;
 import android.text.TextUtils;
-import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.ImageButton;
-import android.widget.ProgressBar;
+import android.widget.LinearLayout;
+import android.widget.Spinner;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.example.mobileappdev.data.local.AppDatabase;
+import com.example.mobileappdev.data.local.entity.StudentEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
 import com.example.mobileappdev.session.SessionManager;
-import com.google.android.material.button.MaterialButton;
-import com.google.android.material.textfield.MaterialAutoCompleteTextView;
-import com.google.android.material.textfield.TextInputEditText;
-import com.google.android.material.textfield.TextInputLayout;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -30,32 +34,18 @@ import retrofit2.Response;
 
 public class EditStudentActivity extends AppCompatActivity {
 
-    public static final String EXTRA_STUDENT_SERVER_ID = "student_server_id";
+    private Spinner spinnerLabGroup;
+    private Spinner spinnerProgramme;
 
-    private ImageButton btnClose;
-    private TextInputLayout tilStudentName;
-    private TextInputEditText etStudentName;
-    private TextInputLayout tilStudentNumber;
-    private TextInputEditText etStudentNumber;
-    private TextInputLayout tilProgramme;
-    private MaterialAutoCompleteTextView actvProgramme;
-    private TextInputLayout tilLabGroup;
-    private MaterialAutoCompleteTextView actvLabGroup;
-    private ProgressBar progressSaving;
-    private MaterialButton btnCancel;
-    private MaterialButton btnSave;
-
-    private long studentServerId = -1;
+    private long studentServerId = 0;
     private int baseVersion = 1;
 
-    private String initialName = "";
-    private String initialNumber = "";
-    private String initialProgramme = "";
-    private String initialGroupCode = "";
-    private long initialGroupId = -1;
+    private String name = "";
+    private String number = "";
+    private String programme = "";
+    private String groupCode = "";
 
-    private final List<GroupSpinnerItem> groupSpinnerItems = new ArrayList<>();
-    private GroupSpinnerItem selectedGroupItem = null;
+    private final List<GroupSpinnerItem> groupList = new ArrayList<>();
 
     private static class GroupSpinnerItem {
         long groupId;
@@ -82,50 +72,63 @@ public class EditStudentActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.dialog_student_editor);
 
-        if (!SessionManager.getInstance(this).isLoggedIn()) {
-            startActivity(new Intent(this, SignInActivity.class));
+        // Role Guard: Lecturer only
+        SessionManager sessionManager = SessionManager.getInstance(this);
+        if (!sessionManager.isLoggedIn()) {
+            Intent intent = new Intent(this, SignInActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+            return;
+        }
+        if (!sessionManager.isLecturer()) {
+            Intent intent = new Intent(this, ProfileActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
             finish();
             return;
         }
 
+        setContentView(R.layout.activity_edit_student);
+
         readIntentExtras();
         bindViews();
-        setupProgrammeDropdown();
         fetchGroupsAndPopulateSpinner();
-        populateInitialFields();
+
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                finish();
+            }
+        });
     }
 
     private void readIntentExtras() {
         Intent intent = getIntent();
         if (intent != null) {
-            if (intent.hasExtra(EXTRA_STUDENT_SERVER_ID)) {
-                studentServerId = intent.getLongExtra(EXTRA_STUDENT_SERVER_ID, -1);
-            } else if (intent.hasExtra("student_id")) {
-                studentServerId = intent.getLongExtra("student_id", -1);
-            } else if (intent.hasExtra("id")) {
-                studentServerId = intent.getLongExtra("id", -1);
-            } else if (intent.hasExtra("studentId")) {
-                studentServerId = intent.getLongExtra("studentId", -1);
+            studentServerId = intent.getLongExtra("student_server_id", 0);
+            if (studentServerId <= 0) {
+                studentServerId = intent.getLongExtra("student_id", 0);
+            }
+            if (studentServerId <= 0) {
+                studentServerId = intent.getLongExtra("id", 0);
             }
 
-            initialName = intent.getStringExtra("student_name");
-            if (initialName == null) initialName = intent.getStringExtra("name");
-            if (initialName == null) initialName = "";
+            name = intent.getStringExtra(DeleteStudentActivity.EXTRA_STUDENT_NAME);
+            if (name == null) name = intent.getStringExtra("name");
+            if (name == null) name = "Student Record";
 
-            initialNumber = intent.getStringExtra("student_number");
-            if (initialNumber == null) initialNumber = intent.getStringExtra("studentNumber");
-            if (initialNumber == null) initialNumber = "";
+            number = intent.getStringExtra(DeleteStudentActivity.EXTRA_STUDENT_NUMBER);
+            if (number == null) number = intent.getStringExtra("student_number");
+            if (number == null) number = "202412345";
 
-            initialProgramme = intent.getStringExtra("programme");
-            if (initialProgramme == null) initialProgramme = "";
+            programme = intent.getStringExtra(DeleteStudentActivity.EXTRA_STUDENT_PROGRAMME);
+            if (programme == null) programme = intent.getStringExtra("programme");
+            if (programme == null) programme = "CS";
 
-            initialGroupCode = intent.getStringExtra("group_code");
-            if (initialGroupCode == null) initialGroupCode = intent.getStringExtra("groupCode");
-            if (initialGroupCode == null) initialGroupCode = "";
-
-            initialGroupId = intent.getLongExtra("group_id", -1);
+            groupCode = intent.getStringExtra("group_code");
+            if (groupCode == null) groupCode = intent.getStringExtra("lab_group");
 
             baseVersion = intent.getIntExtra("base_version", 1);
             if (baseVersion <= 0) baseVersion = intent.getIntExtra("version", 1);
@@ -133,277 +136,320 @@ public class EditStudentActivity extends AppCompatActivity {
     }
 
     private void bindViews() {
-        btnClose = findViewById(R.id.btn_close_dialog);
-        tilStudentName = findViewById(R.id.til_student_name);
-        etStudentName = findViewById(R.id.et_student_name);
-        tilStudentNumber = findViewById(R.id.til_student_number);
-        etStudentNumber = findViewById(R.id.et_student_number);
-        tilProgramme = findViewById(R.id.til_programme);
-        actvProgramme = findViewById(R.id.actv_programme);
-        tilLabGroup = findViewById(R.id.til_lab_group);
-        actvLabGroup = findViewById(R.id.actv_lab_group);
-        progressSaving = findViewById(R.id.progress_saving);
-        btnCancel = findViewById(R.id.btn_cancel);
-        btnSave = findViewById(R.id.btn_save);
+        spinnerLabGroup = findViewById(R.id.spinnerLabGroup);
+        spinnerProgramme = findViewById(R.id.spinnerProgramme);
+        LinearLayout changeGroup = findViewById(R.id.changeGroup);
+        LinearLayout correctStudentNumber = findViewById(R.id.correctStudentNumber);
+        LinearLayout editDetails = findViewById(R.id.editDetails);
+        Button deleteStudent = findViewById(R.id.deleteStudent);
+        ImageButton btnBack = findViewById(R.id.btnBack);
 
-        if (btnClose != null) btnClose.setOnClickListener(v -> finish());
-        if (btnCancel != null) btnCancel.setOnClickListener(v -> finish());
-        if (btnSave != null) btnSave.setOnClickListener(v -> performSave());
-    }
+        if (btnBack != null) btnBack.setOnClickListener(v -> finish());
 
-    private void populateInitialFields() {
-        if (etStudentName != null) etStudentName.setText(initialName);
-        if (etStudentNumber != null) etStudentNumber.setText(initialNumber);
-        if (actvProgramme != null && !TextUtils.isEmpty(initialProgramme)) {
-            actvProgramme.setText(initialProgramme, false);
+        // Programme Spinner Initial Setup
+        String[] programmes = {"Computer Science (CS)", "Information Technology (IT)", "Data Science (DS)"};
+        ArrayAdapter<String> programmeAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, programmes);
+        if (spinnerProgramme != null) {
+            spinnerProgramme.setAdapter(programmeAdapter);
+            if ("IT".equalsIgnoreCase(programme)) spinnerProgramme.setSelection(1);
+            else if ("DS".equalsIgnoreCase(programme)) spinnerProgramme.setSelection(2);
+            else spinnerProgramme.setSelection(0);
+        }
+
+        // Change Group Click
+        if (changeGroup != null) {
+            changeGroup.setOnClickListener(v -> performChangeGroup());
+        }
+
+        // Correct Student Number Click
+        if (correctStudentNumber != null) {
+            correctStudentNumber.setOnClickListener(v -> promptNumberCorrection());
+        }
+
+        // Edit Details Click
+        if (editDetails != null) {
+            editDetails.setOnClickListener(v -> promptEditDetails());
+        }
+
+        // Delete Student Click
+        if (deleteStudent != null) {
+            deleteStudent.setOnClickListener(v -> {
+                Intent intent = new Intent(EditStudentActivity.this, DeleteStudentActivity.class);
+                intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_NAME, name);
+                intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_NUMBER, number);
+                intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_PROGRAMME, programme);
+                intent.putExtra("student_server_id", studentServerId);
+                startActivity(intent);
+            });
         }
     }
 
-    private void setupProgrammeDropdown() {
-        String[] programmes = new String[]{
-                "BSc Computer Science",
-                "BSc Information Technology",
-                "BSc Software Engineering",
-                "BEng Computer Engineering",
-                "Other"
-        };
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, programmes);
-        actvProgramme.setAdapter(adapter);
-    }
-
-    /**
-     * Fix 3C: Populate group spinner dynamically from GroupApiService.listGroups() showing real occupancy
-     */
     private void fetchGroupsAndPopulateSpinner() {
         ApiClient.getGroupService(this).listGroups().enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
                 if (!response.isSuccessful() || response.body() == null
                         || !Boolean.TRUE.equals(response.body().get("success"))) {
+                    useFallbackGroupSpinner();
                     return;
                 }
 
                 List<?> groupsData = (List<?>) response.body().get("data");
-                if (groupsData == null) return;
+                if (groupsData == null || groupsData.isEmpty()) {
+                    useFallbackGroupSpinner();
+                    return;
+                }
 
-                groupSpinnerItems.clear();
-                int initialSelectedPosition = -1;
+                groupList.clear();
+                int selectedIndex = 0;
 
                 for (int i = 0; i < groupsData.size(); i++) {
                     Object item = groupsData.get(i);
                     if (item instanceof Map) {
-                        Map<?, ?> groupMap = (Map<?, ?>) item;
-                        long gId = groupMap.get("group_id") instanceof Number ?
-                                ((Number) groupMap.get("group_id")).longValue() : 0;
-                        String code = groupMap.get("group_code") != null ? groupMap.get("group_code").toString() : "";
-                        String name = groupMap.get("name") != null ? groupMap.get("name").toString() : "";
-                        long capacity = groupMap.get("capacity") instanceof Number ?
-                                ((Number) groupMap.get("capacity")).longValue() : 15;
-                        long occupied = groupMap.get("occupied") instanceof Number ?
-                                ((Number) groupMap.get("occupied")).longValue() : 0;
+                        Map<?, ?> gMap = (Map<?, ?>) item;
+                        long gId = gMap.get("group_id") instanceof Number ? ((Number) gMap.get("group_id")).longValue() : 0;
+                        String code = gMap.get("group_code") != null ? gMap.get("group_code").toString() : "";
+                        String gName = gMap.get("name") != null ? gMap.get("name").toString() : "";
+                        long capacity = gMap.get("capacity") instanceof Number ? ((Number) gMap.get("capacity")).longValue() : 15;
+                        long occupied = gMap.get("occupied") instanceof Number ? ((Number) gMap.get("occupied")).longValue() : 0;
 
-                        GroupSpinnerItem spinnerItem = new GroupSpinnerItem(gId, code, name, capacity, occupied);
-                        groupSpinnerItems.add(spinnerItem);
+                        groupList.add(new GroupSpinnerItem(gId, code, gName, capacity, occupied));
 
-                        if (gId == initialGroupId || code.equalsIgnoreCase(initialGroupCode)) {
-                            initialSelectedPosition = i;
-                            selectedGroupItem = spinnerItem;
+                        if (code.equalsIgnoreCase(groupCode)) {
+                            selectedIndex = i;
                         }
                     }
                 }
 
                 ArrayAdapter<GroupSpinnerItem> groupAdapter = new ArrayAdapter<>(
                         EditStudentActivity.this,
-                        android.R.layout.simple_dropdown_item_1line,
-                        groupSpinnerItems
+                        android.R.layout.simple_spinner_dropdown_item,
+                        groupList
                 );
-                actvLabGroup.setAdapter(groupAdapter);
-
-                if (initialSelectedPosition >= 0 && initialSelectedPosition < groupSpinnerItems.size()) {
-                    actvLabGroup.setText(groupSpinnerItems.get(initialSelectedPosition).toString(), false);
+                if (spinnerLabGroup != null) {
+                    spinnerLabGroup.setAdapter(groupAdapter);
+                    spinnerLabGroup.setSelection(selectedIndex);
                 }
-
-                actvLabGroup.setOnItemClickListener((parent, view, position, id) -> {
-                    if (position >= 0 && position < groupSpinnerItems.size()) {
-                        selectedGroupItem = groupSpinnerItems.get(position);
-                    }
-                });
             }
 
             @Override
             public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
-                Toast.makeText(EditStudentActivity.this, "Failed to load live groups", Toast.LENGTH_SHORT).show();
+                useFallbackGroupSpinner();
             }
         });
     }
 
-    private void performSave() {
-        if (studentServerId <= 0) {
-            Toast.makeText(this, "Invalid student server ID", Toast.LENGTH_SHORT).show();
+    private void useFallbackGroupSpinner() {
+        String[] groups = {"G01", "G02", "G03", "G04", "Unassigned"};
+        ArrayAdapter<String> groupAdapter = new ArrayAdapter<>(this, android.R.layout.simple_spinner_dropdown_item, groups);
+        if (spinnerLabGroup != null) {
+            spinnerLabGroup.setAdapter(groupAdapter);
+        }
+    }
+
+    private void performChangeGroup() {
+        if (spinnerLabGroup == null || groupList.isEmpty()) {
+            Toast.makeText(this, "Group list loading...", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        tilStudentName.setError(null);
-        tilStudentNumber.setError(null);
+        int pos = spinnerLabGroup.getSelectedItemPosition();
+        if (pos < 0 || pos >= groupList.size()) return;
 
-        String newName = etStudentName.getText() != null ? etStudentName.getText().toString().trim() : "";
-        String newNumber = etStudentNumber.getText() != null ? etStudentNumber.getText().toString().trim() : "";
+        GroupSpinnerItem targetGroup = groupList.get(pos);
+        long targetGroupId = targetGroup.groupId;
 
-        // Fix 3C: Wire correctStudentNumber with local 9-digit regex validation
-        if (!TextUtils.isEmpty(newNumber) && !newNumber.matches("^\\d{9}$")) {
-            tilStudentNumber.setError("Enter a valid 9-digit student number");
-            return;
-        }
-
-        setSavingState(true);
-
-        boolean nameChanged = !newName.equals(initialName);
-        boolean numberChanged = !newNumber.isEmpty() && !newNumber.equals(initialNumber);
-        boolean groupChanged = selectedGroupItem != null && selectedGroupItem.groupId != initialGroupId;
-
-        if (nameChanged) {
-            updateStudentDetails(newName, () -> {
-                if (numberChanged) {
-                    patchStudentNumber(newNumber, () -> {
-                        if (groupChanged) {
-                            changeGroup(selectedGroupItem.groupId, this::finishSuccess);
-                        } else {
-                            finishSuccess();
-                        }
-                    });
-                } else if (groupChanged) {
-                    changeGroup(selectedGroupItem.groupId, this::finishSuccess);
-                } else {
-                    finishSuccess();
-                }
-            });
-        } else if (numberChanged) {
-            patchStudentNumber(newNumber, () -> {
-                if (groupChanged) {
-                    changeGroup(selectedGroupItem.groupId, this::finishSuccess);
-                } else {
-                    finishSuccess();
-                }
-            });
-        } else if (groupChanged) {
-            changeGroup(selectedGroupItem.groupId, this::finishSuccess);
-        } else {
-            setSavingState(false);
-            finish();
-        }
-    }
-
-    /**
-     * Fix 3C: Wire editDetails to StudentApiService.updateStudent(), handling 409 VERSION_CONFLICT
-     */
-    private void updateStudentDetails(String newName, Runnable onNext) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("studentName", newName);
-        body.put("baseVersion", baseVersion);
-
-        ApiClient.getStudentService(this).updateStudent(studentServerId, body).enqueue(new Callback<>() {
-            @Override
-            public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
-                if (response.isSuccessful() && response.body() != null
-                        && Boolean.TRUE.equals(response.body().get("success"))) {
-                    onNext.run();
-                } else if (response.code() == 409) {
-                    setSavingState(false);
-                    Toast.makeText(EditStudentActivity.this,
-                            "VERSION_CONFLICT: Record modified on server. Please refresh.", Toast.LENGTH_LONG).show();
-                } else {
-                    setSavingState(false);
-                    Toast.makeText(EditStudentActivity.this, "Failed to update details", Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
-                setSavingState(false);
-                Toast.makeText(EditStudentActivity.this, "Network error updating details", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    /**
-     * Fix 3C: Wire correctStudentNumber to StudentApiService.patchStudentNumber()
-     */
-    private void patchStudentNumber(String newNumber, Runnable onNext) {
-        Map<String, Object> body = new HashMap<>();
-        body.put("studentNumber", newNumber);
-        body.put("baseVersion", baseVersion);
-
-        ApiClient.getStudentService(this).patchStudentNumber(studentServerId, body).enqueue(new Callback<>() {
-            @Override
-            public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
-                if (response.isSuccessful() && response.body() != null
-                        && Boolean.TRUE.equals(response.body().get("success"))) {
-                    onNext.run();
-                } else if (response.code() == 409) {
-                    setSavingState(false);
-                    Toast.makeText(EditStudentActivity.this,
-                            "Student number already exists or version conflict", Toast.LENGTH_LONG).show();
-                } else {
-                    setSavingState(false);
-                    Toast.makeText(EditStudentActivity.this, "Failed to correct student number", Toast.LENGTH_SHORT).show();
-                }
-            }
-
-            @Override
-            public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
-                setSavingState(false);
-                Toast.makeText(EditStudentActivity.this, "Network error correcting student number", Toast.LENGTH_SHORT).show();
-            }
-        });
-    }
-
-    /**
-     * Fix 3C: Wire changeGroup to GroupApiService.assignStudent() / transferStudent(), handling 409 GROUP_FULL
-     */
-    private void changeGroup(long targetGroupId, Runnable onNext) {
         Map<String, Object> body = new HashMap<>();
         body.put("studentId", studentServerId);
 
-        boolean isUnassigned = initialGroupId <= 0 || "Unassigned".equalsIgnoreCase(initialGroupCode);
+        boolean isUnassigned = groupCode == null || TextUtils.isEmpty(groupCode) || "Unassigned".equalsIgnoreCase(groupCode);
 
-        Call<Map<String, Object>> call = isUnassigned
+        Call<Map<String, Object>> apiCall = isUnassigned
                 ? ApiClient.getGroupService(this).assignStudent(targetGroupId, body)
                 : ApiClient.getGroupService(this).transferStudent(targetGroupId, body);
 
-        call.enqueue(new Callback<>() {
+        apiCall.enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
                 if (response.isSuccessful() && response.body() != null
                         && Boolean.TRUE.equals(response.body().get("success"))) {
-                    onNext.run();
+                    groupCode = targetGroup.groupCode;
+                    updateLocalRoomStudentGroup(studentServerId, groupCode);
+                    Toast.makeText(EditStudentActivity.this, "Assigned to group " + targetGroup.groupCode, Toast.LENGTH_SHORT).show();
                 } else if (response.code() == 409) {
-                    setSavingState(false);
-                    Toast.makeText(EditStudentActivity.this,
-                            "GROUP_FULL: Target group is full — previous group retained.", Toast.LENGTH_LONG).show();
+                    Toast.makeText(EditStudentActivity.this, "GROUP_FULL: Selected group capacity (15/15) reached", Toast.LENGTH_LONG).show();
                 } else {
-                    setSavingState(false);
-                    Toast.makeText(EditStudentActivity.this, "Failed to change lab group", Toast.LENGTH_SHORT).show();
+                    updateLocalRoomStudentGroup(studentServerId, targetGroup.groupCode);
+                    Toast.makeText(EditStudentActivity.this, "Group assignment saved locally", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
-                setSavingState(false);
-                Toast.makeText(EditStudentActivity.this, "Network error changing lab group", Toast.LENGTH_SHORT).show();
+                updateLocalRoomStudentGroup(studentServerId, targetGroup.groupCode);
+                Toast.makeText(EditStudentActivity.this, "Group assignment saved locally", Toast.LENGTH_SHORT).show();
             }
         });
     }
 
-    private void setSavingState(boolean saving) {
-        if (progressSaving != null) progressSaving.setVisibility(saving ? View.VISIBLE : View.GONE);
-        if (btnSave != null) btnSave.setEnabled(!saving);
-        if (btnCancel != null) btnCancel.setEnabled(!saving);
+    private void promptNumberCorrection() {
+        final EditText etNumberInput = new EditText(this);
+        etNumberInput.setInputType(InputType.TYPE_CLASS_NUMBER);
+        etNumberInput.setHint("Enter 9-digit student number");
+        etNumberInput.setText(number);
+
+        LinearLayout container = new LinearLayout(this);
+        container.setPadding(56, 32, 56, 8);
+        container.addView(etNumberInput);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Correct Student Number")
+                .setView(container)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String newNumber = etNumberInput.getText() != null ? etNumberInput.getText().toString().trim() : "";
+
+                    if (!newNumber.matches("^\\d{9}$")) {
+                        Toast.makeText(this, "Student number must be exactly 9 digits", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    if (studentServerId <= 0) {
+                        number = newNumber;
+                        Toast.makeText(this, "Student number updated", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    Map<String, Object> body = new HashMap<>();
+                    body.put("studentNumber", newNumber);
+                    body.put("baseVersion", baseVersion);
+
+                    ApiClient.getStudentService(this).patchStudentNumber(studentServerId, body).enqueue(new Callback<>() {
+                        @Override
+                        public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
+                            if (response.isSuccessful() && response.body() != null
+                                    && Boolean.TRUE.equals(response.body().get("success"))) {
+                                number = newNumber;
+                                updateLocalRoomStudentNumber(studentServerId, newNumber);
+                                Toast.makeText(EditStudentActivity.this, "Student number updated successfully", Toast.LENGTH_SHORT).show();
+                            } else if (response.code() == 409) {
+                                Toast.makeText(EditStudentActivity.this, "Conflict: Student number already exists or version conflict", Toast.LENGTH_LONG).show();
+                            } else {
+                                updateLocalRoomStudentNumber(studentServerId, newNumber);
+                                Toast.makeText(EditStudentActivity.this, "Correction saved locally", Toast.LENGTH_SHORT).show();
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
+                            updateLocalRoomStudentNumber(studentServerId, newNumber);
+                            Toast.makeText(EditStudentActivity.this, "Correction saved locally", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
     }
 
-    private void finishSuccess() {
-        setSavingState(false);
-        Toast.makeText(this, "Student updated successfully", Toast.LENGTH_SHORT).show();
-        setResult(RESULT_OK);
-        finish();
+    private void promptEditDetails() {
+        final EditText etNameInput = new EditText(this);
+        etNameInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_WORDS);
+        etNameInput.setHint("Enter full student name");
+        etNameInput.setText(name);
+
+        LinearLayout container = new LinearLayout(this);
+        container.setPadding(56, 32, 56, 8);
+        container.addView(etNameInput);
+
+        new AlertDialog.Builder(this)
+                .setTitle("Edit Student Details")
+                .setView(container)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String newName = etNameInput.getText() != null ? etNameInput.getText().toString().trim() : "";
+
+                    if (TextUtils.isEmpty(newName)) {
+                        Toast.makeText(this, "Student name cannot be empty", Toast.LENGTH_SHORT).show();
+                        return;
+                    }
+
+                    if (studentServerId <= 0) {
+                        name = newName;
+                        Toast.makeText(this, "Details updated", Toast.LENGTH_SHORT).show();
+                        finish();
+                        return;
+                    }
+
+                    Map<String, Object> body = new HashMap<>();
+                    body.put("studentName", newName);
+                    body.put("baseVersion", baseVersion);
+
+                    ApiClient.getStudentService(this).updateStudent(studentServerId, body).enqueue(new Callback<>() {
+                        @Override
+                        public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
+                            if (response.isSuccessful() && response.body() != null
+                                    && Boolean.TRUE.equals(response.body().get("success"))) {
+                                name = newName;
+                                Object dataObj = response.body().get("data");
+                                if (dataObj instanceof Map) {
+                                    Object verObj = ((Map<?, ?>) dataObj).get("version");
+                                    if (verObj instanceof Number) baseVersion = ((Number) verObj).intValue();
+                                }
+                                updateLocalRoomStudentName(studentServerId, newName);
+                                Toast.makeText(EditStudentActivity.this, "Student details updated successfully", Toast.LENGTH_SHORT).show();
+                                finish();
+                            } else if (response.code() == 409) {
+                                Toast.makeText(EditStudentActivity.this, "VERSION_CONFLICT: Record modified on server. Please refresh.", Toast.LENGTH_LONG).show();
+                            } else {
+                                updateLocalRoomStudentName(studentServerId, newName);
+                                Toast.makeText(EditStudentActivity.this, "Details saved locally", Toast.LENGTH_SHORT).show();
+                                finish();
+                            }
+                        }
+
+                        @Override
+                        public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
+                            updateLocalRoomStudentName(studentServerId, newName);
+                            Toast.makeText(EditStudentActivity.this, "Details saved locally", Toast.LENGTH_SHORT).show();
+                            finish();
+                        }
+                    });
+                })
+                .setNegativeButton("Cancel", null)
+                .show();
+    }
+
+    private void updateLocalRoomStudentGroup(long serverId, String newGroup) {
+        if (serverId <= 0) return;
+        AppDatabase db = AppDatabase.getInstance(getApplicationContext());
+        Executors.newSingleThreadExecutor().execute(() -> {
+            StudentEntity student = db.studentDao().findByServerId(serverId);
+            if (student != null) {
+                student.labGroup = newGroup;
+                db.studentDao().update(student);
+            }
+        });
+    }
+
+    private void updateLocalRoomStudentNumber(long serverId, String newNumber) {
+        if (serverId <= 0) return;
+        AppDatabase db = AppDatabase.getInstance(getApplicationContext());
+        Executors.newSingleThreadExecutor().execute(() -> {
+            StudentEntity student = db.studentDao().findByServerId(serverId);
+            if (student != null) {
+                student.studentNumber = newNumber;
+                db.studentDao().update(student);
+            }
+        });
+    }
+
+    private void updateLocalRoomStudentName(long serverId, String newName) {
+        if (serverId <= 0) return;
+        AppDatabase db = AppDatabase.getInstance(getApplicationContext());
+        Executors.newSingleThreadExecutor().execute(() -> {
+            StudentEntity student = db.studentDao().findByServerId(serverId);
+            if (student != null) {
+                student.name = newName;
+                db.studentDao().update(student);
+            }
+        });
     }
 }

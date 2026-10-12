@@ -12,6 +12,7 @@
     <!-- Status & Error -->
     <color name="error_red">#B3261E</color>
     <color name="green_complete">#2E7D32</color>
+
     <!-- Supporting colours -->
     <color name="dark_gray">#555555</color>
     <color name="light_gray">#E5E5E5</color>
@@ -21,7 +22,6 @@
     <color name="text_primary">#1A1C1E</color>
     <color name="text_secondary">#6C757D</color>
     <color name="text_hint">#A0A0A0</color>
-    <color name="error_red">#D32F2F</color>
     <color name="surface">#FFFFFF</color>
     <color name="surface_alt">#F8F9FA</color>
     <color name="outline">#E0E0E0</color>
