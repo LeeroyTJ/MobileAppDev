@@ -43,6 +43,10 @@
         <activity
             android:name=".StudentGroupActivity"
             android:exported="false" />
+        <activity
+            android:name=".EditStudentActivity"
+            android:exported="false"
+            android:windowSoftInputMode="adjustResize" />
     </application>
 
 </manifest>

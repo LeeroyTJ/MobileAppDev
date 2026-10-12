@@ -6,6 +6,7 @@ import retrofit2.Call;
 import retrofit2.http.Body;
 import retrofit2.http.DELETE;
 import retrofit2.http.GET;
+import retrofit2.http.PATCH;
 import retrofit2.http.PUT;
 import retrofit2.http.Path;
 import retrofit2.http.Query;
@@ -24,6 +25,9 @@ public interface StudentApiService {
 
     @PUT("api/v1/students/{id}")
     Call<Map<String, Object>> updateStudent(@Path("id") long id, @Body Map<String, Object> body);
+
+    @PATCH("api/v1/students/{id}/student-number")
+    Call<Map<String, Object>> patchStudentNumber(@Path("id") long id, @Body Map<String, Object> body);
 
     @DELETE("api/v1/students/{id}")
     Call<Map<String, Object>> deleteStudent(@Path("id") long id);

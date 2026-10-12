@@ -4,6 +4,7 @@ const pool = require('../db');
 const { authenticateToken, verifyRole } = require('../middleware/auth');
 const {
     isValidName,
+    isValidStudentNumber,
     isValidBaseVersion,
     isValidProgrammeId,
     isPositiveInt,
@@ -129,6 +130,92 @@ router.get('/me/profile', authenticateToken, async (req, res) => {
         return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
     }
 });
+
+/**
+ * PATCH /api/v1/students/:id/student-number (and /number) — Lecturer corrects student number
+ */
+const handlePatchStudentNumber = async (req, res) => {
+    const studentId = req.params.id;
+    const { studentNumber, baseVersion } = req.body;
+
+    if (!isPositiveInt(studentId)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_STUDENT_ID', message: 'Invalid student id' }
+        });
+    }
+
+    const trimmedNumber = typeof studentNumber === 'string' ? studentNumber.trim() : studentNumber;
+    if (!isValidStudentNumber(trimmedNumber)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_STUDENT_NUMBER', message: 'Student number must be exactly 9 digits' }
+        });
+    }
+
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        const [rows] = await connection.query(
+            'SELECT * FROM students WHERE student_id = ? AND deleted_at IS NULL',
+            [studentId]
+        );
+        if (rows.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({
+                success: false,
+                error: { code: 'STUDENT_NOT_FOUND', message: 'Student not found' }
+            });
+        }
+        const student = rows[0];
+
+        if (baseVersion !== undefined && student.version !== Number(baseVersion)) {
+            await connection.rollback();
+            return res.status(409).json({
+                success: false,
+                error: { code: 'VERSION_CONFLICT', message: 'Record was modified on the server' },
+                data: { currentVersion: student.version }
+            });
+        }
+
+        const [existing] = await connection.query(
+            'SELECT student_id FROM students WHERE student_number = ? AND student_id != ? AND deleted_at IS NULL',
+            [trimmedNumber, studentId]
+        );
+        if (existing.length > 0) {
+            await connection.rollback();
+            return res.status(409).json({
+                success: false,
+                error: { code: 'STUDENT_NUMBER_EXISTS', message: 'Student number is already in use' }
+            });
+        }
+
+        await connection.query(
+            'UPDATE students SET student_number = ?, version = version + 1 WHERE student_id = ? AND deleted_at IS NULL',
+            [trimmedNumber, studentId]
+        );
+
+        await connection.commit();
+        return res.status(200).json({
+            success: true,
+            data: { studentId: Number(studentId), studentNumber: trimmedNumber, version: student.version + 1 }
+        });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Student number patch error:', error);
+        return res.status(500).json({
+            success: false,
+            error: { code: 'INTERNAL_ERROR', message: 'Server error' }
+        });
+    } finally {
+        connection.release();
+    }
+};
+
+router.patch('/:id/student-number', authenticateToken, verifyRole('LECTURER'), handlePatchStudentNumber);
+router.patch('/:id/number', authenticateToken, verifyRole('LECTURER'), handlePatchStudentNumber);
 
 /**
  * PUT /api/v1/students/:id — update student with optimistic concurrency & strict ownership checks
