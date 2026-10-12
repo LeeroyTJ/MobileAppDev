@@ -34,6 +34,9 @@ public interface StudentApiService {
     Call<Map<String, Object>> updateStudent(@Path("id") long id, @Body Map<String, Object> body);
 
     @PATCH("api/v1/students/{id}/student-number")
+    Call<Map<String, Object>> patchStudentNumber(@Path("id") long id, @Body Map<String, Object> body);
+
+  
     Call<Map<String, Object>> updateStudentNumber(@Path("id") long id, @Body Map<String, Object> body);
 
     @POST("api/v1/students/{id}/group-requests")
@@ -44,7 +47,4 @@ public interface StudentApiService {
 
     @POST("api/v1/students/{id}/group-requests")
     Call<Map<String, Object>> requestGroupChange(@Path("id") long id, @Body Map<String, Object> body);
-
-    @PATCH("api/v1/students/{id}/student-number")
-    Call<Map<String, Object>> patchStudentNumber(@Path("id") long id, @Body Map<String, Object> body);
 }

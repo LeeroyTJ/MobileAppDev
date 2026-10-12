@@ -4,9 +4,11 @@ const pool = require('../db');
 const { authenticateToken } = require('../middleware/auth');
 const { isPositiveInt } = require('../utils/validators');
 
-// GET /api/v1/groups/:groupId — return group capacity, member list, and programme code breakdown
+// GET /api/v1/groups/:groupId
+// Returns group capacity, member list, and programme breakdown
 router.get('/:groupId', authenticateToken, async (req, res) => {
     const { groupId } = req.params;
+
     if (!isPositiveInt(groupId)) {
         return res.status(400).json({
             success: false,
@@ -26,12 +28,18 @@ router.get('/:groupId', authenticateToken, async (req, res) => {
         );
 
         if (groupRows.length === 0) {
-            return res.status(404).json({ success: false, error: { code: 'GROUP_NOT_FOUND', message: 'Group not found' } });
+            return res.status(404).json({
+                success: false,
+                error: { code: 'GROUP_NOT_FOUND', message: 'Group not found' }
+            });
         }
+
         const group = groupRows[0];
 
+        // Fetch members
         const [members] = await pool.query(
-            `SELECT s.student_id, s.student_number, s.student_name, s.version, p.code AS programme_code
+            `SELECT s.student_id, s.student_number, s.student_name, s.version,
+                    p.code AS programme_code, p.name AS programme_name
              FROM students s
              JOIN programmes p ON s.programme_id = p.programme_id
              WHERE s.group_id = ? AND s.deleted_at IS NULL
@@ -39,26 +47,36 @@ router.get('/:groupId', authenticateToken, async (req, res) => {
             [groupId]
         );
 
-        const [programmeBreakdown] = await pool.query(
-            `SELECT p.code, COUNT(*) AS count
-             FROM students s
-             JOIN programmes p ON s.programme_id = p.programme_id
-             WHERE s.group_id = ? AND s.deleted_at IS NULL
-             GROUP BY p.code`,
-            [groupId]
-        );
+        // Programme counts with full names
+        const programmeCounts = {};
+        for (const m of members) {
+            const progName = m.programme_name || m.programme_code || 'Other';
+            programmeCounts[progName] = (programmeCounts[progName] || 0) + 1;
+        }
+
+        const programmeBreakdown = Object.entries(programmeCounts).map(([prog, count]) => `${prog}: ${count}`);
 
         return res.status(200).json({
             success: true,
             data: {
-                ...group,
+                groupId: group.group_id,
+                groupCode: group.group_code,
+                name: group.name,
+                capacity: group.capacity,
+                occupied: Number(group.occupied),
+                placesRemaining: Math.max(0, group.capacity - Number(group.occupied)),
                 members,
-                programmeBreakdown
+                programmeBreakdown,
+                programmeCounts
             }
         });
+
     } catch (error) {
-        console.error('Get group details error:', error);
-        return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
+        console.error('Group detail fetch error:', error);
+        return res.status(500).json({
+            success: false,
+            error: { code: 'INTERNAL_ERROR', message: 'Server error' }
+        });
     }
 });
 
