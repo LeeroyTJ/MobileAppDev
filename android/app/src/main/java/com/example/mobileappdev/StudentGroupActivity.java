@@ -16,14 +16,15 @@ import com.example.mobileappdev.adapter.StudentAdapter;
 import com.example.mobileappdev.data.local.entity.StudentEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
 import com.example.mobileappdev.session.SessionManager;
-import com.google.android.material.appbar.MaterialToolbar;
+import com.example.mobileappdev.util.CapacityFormatter;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.button.MaterialButton;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -34,101 +35,113 @@ import retrofit2.Response;
 public class StudentGroupActivity extends AppCompatActivity {
 
     public static final String EXTRA_GROUP_ID = "extra_group_id";
+    private static final String[] PROGRAMME_ORDER = {"CS", "IT", "DS"};
 
-    private MaterialToolbar toolbar;
-    private TextView tvGroupTitle;
-    private TextView tvCapacityRatio;
-    private TextView tvPlacesRemainingPill;
+    private TextView tvGroupTitle, tvCapacityRatio, tvPlacesRemainingPill,
+            tvProgrammeBreakdown, tvMembersTitle, tvErrorTitle, tvTitle;
     private LinearProgressIndicator progressCapacity;
-    private TextView tvProgrammeBreakdown;
     private RecyclerView rvGroupMembers;
     private CircularProgressIndicator loadingIndicator;
-    private View errorState;
-
+    private View errorState, btnRetry, btnBack;
     private StudentAdapter adapter;
-    private long groupId = 1;
+
+    private long groupId = -1;          // -1 means "the signed-in student's own group"
+    private boolean drilledIn = false;  // opened from another screen with an explicit group
+    private boolean isLecturer = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        SessionManager sessionManager = SessionManager.getInstance(this);
-        if (!sessionManager.isLoggedIn()) {
-            startActivity(new Intent(this, SignInActivity.class));
+        SessionManager session = SessionManager.getInstance(this);
+        if (!session.isLoggedIn()) {
+            Intent i = new Intent(this, SignInActivity.class);
+            i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(i);
             finish();
             return;
         }
+        isLecturer = session.isLecturer();
 
-        if (getIntent() != null && getIntent().hasExtra(EXTRA_GROUP_ID)) {
-            groupId = getIntent().getLongExtra(EXTRA_GROUP_ID, 1);
-        } else if (getIntent() != null && getIntent().hasExtra("groupId")) {
-            groupId = getIntent().getLongExtra("groupId", 1);
-        }
+        long extra = getIntent().getLongExtra(EXTRA_GROUP_ID, -1);
+        if (extra <= 0) extra = getIntent().getLongExtra("groupId", -1);
+        groupId = extra;
+        drilledIn = extra > 0;
+
+        // A lecturer should only arrive here from the Groups overview, with a group chosen.
+        if (isLecturer && !drilledIn) { finish(); return; }
 
         setContentView(R.layout.activity_group_detail);
-
         bindViews();
         setupBottomNav();
         setupRecyclerView();
-        loadGroupData();
+        load();
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
-            @Override
-            public void handleOnBackPressed() {
-                finish();
-            }
+            @Override public void handleOnBackPressed() { finish(); }
         });
     }
 
     private void bindViews() {
-        toolbar = findViewById(R.id.toolbar);
+        tvTitle = findViewById(R.id.tvTitle);
         tvGroupTitle = findViewById(R.id.tvGroupTitle);
         tvCapacityRatio = findViewById(R.id.tvCapacityRatio);
         tvPlacesRemainingPill = findViewById(R.id.tvPlacesRemainingPill);
         progressCapacity = findViewById(R.id.progressCapacity);
         tvProgrammeBreakdown = findViewById(R.id.tvProgrammeBreakdown);
+        tvMembersTitle = findViewById(R.id.tvMembersTitle);
         rvGroupMembers = findViewById(R.id.rvGroupMembers);
         loadingIndicator = findViewById(R.id.loading_indicator);
         errorState = findViewById(R.id.error_state);
-        MaterialButton btnRetry = findViewById(R.id.btnRetry);
+        tvErrorTitle = findViewById(R.id.tvErrorTitle);
+        btnRetry = findViewById(R.id.btnRetry);
+        btnBack = findViewById(R.id.btnBack);
 
-        if (toolbar != null) {
-            toolbar.setNavigationOnClickListener(v -> finish());
+        if (tvTitle != null) {
+            tvTitle.setText(R.string.group_title);
+        }
+
+        if (drilledIn) {                       // tabs never show a back arrow; drill-ins do
+            if (btnBack != null) {
+                btnBack.setVisibility(View.VISIBLE);
+                btnBack.setOnClickListener(v -> finish());
+            }
+        }
+        if (isLecturer) {                      // the member list is for lecturers only
+            if (tvMembersTitle != null) tvMembersTitle.setVisibility(View.VISIBLE);
+            if (rvGroupMembers != null) rvGroupMembers.setVisibility(View.VISIBLE);
         }
         if (btnRetry != null) {
-            btnRetry.setOnClickListener(v -> loadGroupData());
+            btnRetry.setOnClickListener(v -> load());
         }
     }
 
     private void setupBottomNav() {
-        BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
-        if (bottomNav != null) {
-            bottomNav.setSelectedItemId(R.id.navGroup);
-            bottomNav.setOnItemSelectedListener(item -> {
-                int id = item.getItemId();
-                if (id == R.id.navHome) {
-                    Intent intent = new Intent(this, ProfileActivity.class);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                    startActivity(intent);
-                    return true;
-                } else if (id == R.id.navGroup) {
-                    return true;
-                } else if (id == R.id.navSync) {
-                    Intent intent = new Intent(this, SyncActivity.class);
-                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                    startActivity(intent);
-                    return true;
-                }
-                return false;
-            });
-        }
+        BottomNavigationView nav = findViewById(R.id.bottomNav);
+        if (nav == null) return;
+        if (isLecturer) { nav.setVisibility(View.GONE); return; }
+
+        nav.getMenu().clear();
+        nav.inflateMenu(R.menu.bottom_nav_student);
+        nav.setSelectedItemId(R.id.navGroup);
+        nav.setOnItemSelectedListener(item -> {
+            int id = item.getItemId();
+            Class<?> target = id == R.id.navHome ? ProfileActivity.class
+                    : id == R.id.navSync ? SyncActivity.class : null;
+            if (target != null) {
+                Intent i = new Intent(this, target);
+                i.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                startActivity(i);
+            }
+            return true;
+        });
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
-        if (bottomNav != null) {
+        if (bottomNav != null && !isLecturer) {
             bottomNav.setSelectedItemId(R.id.navGroup);
         }
     }
@@ -136,35 +149,48 @@ public class StudentGroupActivity extends AppCompatActivity {
     private void setupRecyclerView() {
         if (rvGroupMembers != null) {
             rvGroupMembers.setLayoutManager(new LinearLayoutManager(this));
-            adapter = new StudentAdapter(this::onStudentClicked);
+            adapter = new StudentAdapter(student ->
+                    Toast.makeText(this, student.name, Toast.LENGTH_SHORT).show());
             rvGroupMembers.setAdapter(adapter);
         }
     }
 
-    private void loadGroupData() {
-        showLoading(true);
+    // ----- loading -----
+
+    private void load() {
         hideError();
+        showLoading(true);
+        if (groupId > 0) loadGroupData(); else resolveOwnGroup();
+    }
 
-        ApiClient.getGroupService(this).getGroup(groupId).enqueue(new Callback<>() {
+    /** The Group tab has no extra, so first ask the server which group THIS student is in. */
+    private void resolveOwnGroup() {
+        ApiClient.getStudentService(this).getMyProfile().enqueue(new Callback<>() {
             @Override
-            public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
-                showLoading(false);
-
+            public void onResponse(@NonNull Call<Map<String, Object>> call,
+                                   @NonNull Response<Map<String, Object>> response) {
+                if (response.code() == 401 || response.code() == 403) {
+                    showLoading(false);
+                    new SessionExpiredDialogFragment()
+                            .show(getSupportFragmentManager(), SessionExpiredDialogFragment.TAG);
+                    return;
+                }
                 if (!response.isSuccessful() || response.body() == null
-                        || !Objects.equals(response.body().get("success"), Boolean.TRUE)) {
+                        || !(response.body().get("data") instanceof Map)) {
+                    showLoading(false);
                     showError();
                     return;
                 }
-
                 Map<?, ?> data = (Map<?, ?>) response.body().get("data");
-                if (data == null) {
-                    showError();
-                    return;
+                Object gid = data.get("group_id");
+                if (gid instanceof Number) {
+                    groupId = ((Number) gid).longValue();
+                    loadGroupData();
+                } else {
+                    showLoading(false);
+                    showNoGroup();            // unassigned student
                 }
-
-                updateGroupUi(data);
             }
-
             @Override
             public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
                 showLoading(false);
@@ -173,134 +199,123 @@ public class StudentGroupActivity extends AppCompatActivity {
         });
     }
 
-    private void updateGroupUi(Map<?, ?> data) {
-        Object gcObj = data.get("groupCode");
-        if (gcObj == null) {
-            gcObj = data.get("group_code");
-        }
-        String groupCode = gcObj != null ? gcObj.toString() : "Group " + groupId;
-
-        Object nameObj = data.get("name");
-        String groupName = nameObj != null ? nameObj.toString() : "";
-
-        Object capObj = data.get("capacity");
-        int capacity = capObj instanceof Number ? ((Number) capObj).intValue() : 15;
-
-        Object occObj = data.get("occupied");
-        int occupied = occObj instanceof Number ? ((Number) occObj).intValue() : 0;
-
-        Object remObj = data.get("placesRemaining");
-        int placesRemaining = remObj instanceof Number ?
-                ((Number) remObj).intValue() : Math.max(0, capacity - occupied);
-
-        String title = "Lab Group " + groupCode + (groupName.isEmpty() ? "" : " - " + groupName);
-        if (tvGroupTitle != null) tvGroupTitle.setText(title);
-        if (toolbar != null) toolbar.setTitle(groupCode + " Details");
-
-        String capacityRatioText = occupied + " / " + capacity + " Students";
-        if (tvCapacityRatio != null) tvCapacityRatio.setText(capacityRatioText);
-
-        String placesRemainingText = placesRemaining + " places remaining";
-        if (tvPlacesRemainingPill != null) tvPlacesRemainingPill.setText(placesRemainingText);
-
-        if (progressCapacity != null) {
-            progressCapacity.setMax(capacity);
-            progressCapacity.setProgress(occupied);
-        }
-
-        formatProgrammeBreakdown(data);
-
-        List<StudentEntity> membersList = new ArrayList<>();
-        List<?> membersData = (List<?>) data.get("members");
-        if (membersData != null) {
-            for (Object obj : membersData) {
-                if (obj instanceof Map) {
-                    Map<?, ?> map = (Map<?, ?>) obj;
-                    Object sIdObj = map.get("student_id");
-                    long serverId = sIdObj instanceof Number ? ((Number) sIdObj).longValue() : 0;
-
-                    Object sNumObj = map.get("student_number");
-                    String sNum = sNumObj != null ? sNumObj.toString() : "";
-
-                    Object sNameObj = map.get("student_name");
-                    if (sNameObj == null) sNameObj = map.get("name");
-                    String sName = sNameObj != null ? sNameObj.toString() : "";
-
-                    Object progCodeObj = map.get("programme_code");
-                    if (progCodeObj == null) progCodeObj = map.get("programme_name");
-                    String prog = progCodeObj != null ? progCodeObj.toString() : "CS";
-
-                    StudentEntity student = new StudentEntity();
-                    student.serverId = serverId;
-                    student.studentNumber = sNum;
-                    student.name = sName;
-                    student.programme = prog;
-                    student.labGroup = groupCode;
-                    membersList.add(student);
+    private void loadGroupData() {
+        ApiClient.getGroupService(this).getGroup(groupId).enqueue(new Callback<>() {
+            @Override
+            public void onResponse(@NonNull Call<Map<String, Object>> call,
+                                   @NonNull Response<Map<String, Object>> response) {
+                showLoading(false);
+                if (!response.isSuccessful() || response.body() == null
+                        || !Objects.equals(response.body().get("success"), Boolean.TRUE)
+                        || !(response.body().get("data") instanceof Map)) {
+                    showError();
+                    return;
                 }
+                updateGroupUi((Map<?, ?>) response.body().get("data"));
+            }
+            @Override
+            public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
+                showLoading(false);
+                showError();
+            }
+        });
+    }
+
+    // ----- rendering -----
+
+    private void updateGroupUi(Map<?, ?> data) {
+        Object code = data.get("groupCode") != null ? data.get("groupCode") : data.get("group_code");
+        String groupCode = code != null ? code.toString() : "G" + groupId;
+
+        if (tvGroupTitle != null) {
+            tvGroupTitle.setText(groupCode);   // just "G01": the label above already says "Lab Group"
+        }
+
+        int capacity = intOf(data.get("capacity"), 15);
+        int occupied = intOf(data.get("occupied"), 0);
+        CapacityFormatter.bind(this, occupied, capacity,
+                tvCapacityRatio, tvPlacesRemainingPill, progressCapacity);
+
+        showProgrammeBreakdown(data);
+        if (isLecturer) showMembers(data, groupCode);
+    }
+
+    private void showProgrammeBreakdown(Map<?, ?> data) {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+        Object list = data.get("programmeBreakdown");
+        Object map = data.get("programmeCounts");
+
+        if (list instanceof List) {
+            for (Object item : (List<?>) list) {
+                if (item == null) continue;
+                String[] parts = item.toString().split(":", 2);
+                if (parts.length == 2) counts.put(codeOf(parts[0]), intOf(parts[1].trim(), 0));
+            }
+        } else if (map instanceof Map) {
+            for (Map.Entry<?, ?> e : ((Map<?, ?>) map).entrySet()) {
+                counts.put(codeOf(String.valueOf(e.getKey())), intOf(e.getValue(), 0));
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+        for (String code : PROGRAMME_ORDER) {          // fixed order, always all three
+            if (sb.length() > 0) sb.append('\n');
+            Integer n = counts.get(code);
+            sb.append(fullName(code)).append(": ").append(n != null ? n : 0);
+        }
+        if (tvProgrammeBreakdown != null) {
+            tvProgrammeBreakdown.setText(sb.toString());
+        }
+    }
+
+    private void showMembers(Map<?, ?> data, String groupCode) {
+        List<StudentEntity> members = new ArrayList<>();
+        Object raw = data.get("members");
+        if (raw instanceof List) {
+            for (Object o : (List<?>) raw) {
+                if (!(o instanceof Map)) continue;
+                Map<?, ?> m = (Map<?, ?>) o;
+                StudentEntity s = new StudentEntity();
+                Object sIdObj = m.get("student_id");
+                s.serverId = sIdObj instanceof Number ? ((Number) sIdObj).longValue() : 0;
+                Object sNumObj = m.get("student_number");
+                s.studentNumber = sNumObj != null ? sNumObj.toString() : "";
+                Object name = m.get("student_name") != null ? m.get("student_name") : m.get("name");
+                s.name = name != null ? name.toString() : "";
+                Object prog = m.get("programme_code") != null ? m.get("programme_code") : m.get("programme_name");
+                s.programme = prog != null ? prog.toString() : "";
+                s.labGroup = groupCode;
+                members.add(s);
             }
         }
         if (adapter != null) {
-            adapter.setStudents(membersList);
+            adapter.setStudents(members);
         }
     }
 
-    private void formatProgrammeBreakdown(Map<?, ?> data) {
-        List<String> formattedLines = new ArrayList<>();
+    // ----- helpers -----
 
-        List<?> breakdownList = (List<?>) data.get("programmeBreakdown");
-        if (breakdownList != null && !breakdownList.isEmpty()) {
-            for (Object item : breakdownList) {
-                if (item != null) {
-                    formattedLines.add(formatFullProgrammeName(item.toString()));
-                }
-            }
-        } else {
-            Map<?, ?> countsMap = (Map<?, ?>) data.get("programmeCounts");
-            if (countsMap != null) {
-                countsMap.forEach((key, value) -> {
-                    String prog = key != null ? key.toString() : "Other";
-                    formattedLines.add(getFullProgrammeName(prog) + ": " + value);
-                });
-            }
-        }
-
-        if (tvProgrammeBreakdown != null) {
-            if (formattedLines.isEmpty()) {
-                tvProgrammeBreakdown.setText("No programme breakdown available");
-            } else {
-                tvProgrammeBreakdown.setText(String.join("\n", formattedLines));
-            }
-        }
+    private static int intOf(Object o, int fallback) {
+        if (o instanceof Number) return ((Number) o).intValue();
+        try { return Integer.parseInt(String.valueOf(o).trim()); }
+        catch (Exception e) { return fallback; }
     }
 
-    private String formatFullProgrammeName(String line) {
-        if (line.contains(":")) {
-            String[] parts = line.split(":", 2);
-            String prog = parts[0].trim();
-            String count = parts[1].trim();
-            return getFullProgrammeName(prog) + ": " + count;
-        }
-        return line;
+    private static String codeOf(String raw) {
+        String s = raw.trim().toLowerCase(Locale.ROOT);
+        if (s.equals("cs") || s.contains("computer science")) return "CS";
+        if (s.equals("it") || s.contains("information technology")) return "IT";
+        if (s.equals("ds") || s.contains("data science")) return "DS";
+        return raw.trim().toUpperCase(Locale.ROOT);
     }
 
-    private String getFullProgrammeName(String code) {
-        if ("CS".equalsIgnoreCase(code) || "Computer Science".equalsIgnoreCase(code) || code.toLowerCase().contains("computer science")) {
-            return "Computer Science";
-        } else if ("IT".equalsIgnoreCase(code) || "Information Technology".equalsIgnoreCase(code) || code.toLowerCase().contains("information technology")) {
-            return "Information Technology";
-        } else if ("DS".equalsIgnoreCase(code) || "Data Science".equalsIgnoreCase(code) || code.toLowerCase().contains("data science")) {
-            return "Data Science";
-        } else if ("SE".equalsIgnoreCase(code) || "Software Engineering".equalsIgnoreCase(code)) {
-            return "Software Engineering";
-        } else if ("CE".equalsIgnoreCase(code) || "Computer Engineering".equalsIgnoreCase(code)) {
-            return "Computer Engineering";
+    private String fullName(String code) {
+        switch (code) {
+            case "CS": return getString(R.string.programme_cs);
+            case "IT": return getString(R.string.programme_it);
+            case "DS": return getString(R.string.programme_ds);
+            default:   return code;
         }
-        return code;
-    }
-
-    private void onStudentClicked(StudentEntity student) {
-        Toast.makeText(this, student.name + " (" + student.studentNumber + ")", Toast.LENGTH_SHORT).show();
     }
 
     private void showLoading(boolean loading) {
@@ -310,9 +325,15 @@ public class StudentGroupActivity extends AppCompatActivity {
     }
 
     private void showError() {
-        if (errorState != null) {
-            errorState.setVisibility(View.VISIBLE);
-        }
+        if (tvErrorTitle != null) tvErrorTitle.setText(R.string.group_load_failed);
+        if (btnRetry != null) btnRetry.setVisibility(View.VISIBLE);
+        if (errorState != null) errorState.setVisibility(View.VISIBLE);
+    }
+
+    private void showNoGroup() {
+        if (tvErrorTitle != null) tvErrorTitle.setText(R.string.group_none_yet);
+        if (btnRetry != null) btnRetry.setVisibility(View.GONE);
+        if (errorState != null) errorState.setVisibility(View.VISIBLE);
     }
 
     private void hideError() {

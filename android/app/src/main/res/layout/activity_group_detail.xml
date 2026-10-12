@@ -6,112 +6,123 @@
     android:id="@+id/group_detail_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="?attr/colorSurface"
+    android:background="@color/white"
     android:fitsSystemWindows="true"
     tools:context=".StudentGroupActivity">
-
-    <!-- Top Toolbar -->
-    <com.google.android.material.appbar.MaterialToolbar
-        android:id="@+id/toolbar"
-        android:layout_width="0dp"
-        android:layout_height="?attr/actionBarSize"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        app:navigationIcon="@drawable/ic_arrow_back"
-        app:title="Lab Group Detail"
-        app:titleTextAppearance="?attr/textAppearanceTitleLarge" />
 
     <androidx.core.widget.NestedScrollView
         android:id="@+id/content_scroll_view"
         android:layout_width="0dp"
         android:layout_height="0dp"
+        android:clipToPadding="false"
         android:fillViewport="true"
-        app:layout_constraintBottom_toBottomOf="parent"
+        android:paddingBottom="16dp"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar">
+        app:layout_constraintTop_toTopOf="parent">
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="vertical"
-            android:padding="16dp">
+            android:paddingStart="@dimen/screen_padding_horizontal"
+            android:paddingEnd="@dimen/screen_padding_horizontal">
 
-            <!-- Group Header Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/card_group_header"
+            <!-- Header -->
+            <LinearLayout
+                android:id="@+id/screenHeader"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="2dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="?attr/colorOutlineVariant">
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:minHeight="48dp"
+                android:orientation="horizontal">
+
+                <ImageButton
+                    android:id="@+id/btnBack"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="@string/cd_back"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_arrowback"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/tvTitle"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:accessibilityHeading="true"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="@string/group_title"
+                    android:textColor="@color/text_primary"
+                    android:textSize="20sp"
+                    tools:targetApi="28" />
+            </LinearLayout>
+
+            <!-- Group card: same structure as the Lab Group card on Profile -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/card_group_header"
+                style="@style/Widget.CohortHub.Card"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:padding="16dp">
+                    android:padding="14dp">
+
+                    <TextView
+                        style="@style/Text.CardLabel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/lab_group_card_title" />
 
                     <TextView
                         android:id="@+id/tvGroupTitle"
+                        style="@style/Text.CardValue"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:textAppearance="?attr/textAppearanceHeadlineSmall"
-                        android:textColor="?attr/colorOnSurface"
-                        android:textStyle="bold"
-                        tools:text="Lab Group G01" />
+                        android:layout_marginTop="6dp"
+                        tools:text="G01" />
 
-                    <LinearLayout
-                        android:layout_width="match_parent"
+                    <TextView
+                        android:id="@+id/tvCapacityRatio"
+                        style="@style/Text.CardBody"
+                        android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_marginTop="12dp"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:id="@+id/tvCapacityRatio"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:textAppearance="?attr/textAppearanceBodyLarge"
-                            android:textColor="?attr/colorOnSurfaceVariant"
-                            tools:text="12 / 15 Students" />
-
-                        <TextView
-                            android:id="@+id/tvPlacesRemainingPill"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:background="@drawable/bg_pill"
-                            android:paddingHorizontal="12dp"
-                            android:paddingVertical="6dp"
-                            android:textAppearance="?attr/textAppearanceLabelMedium"
-                            android:textColor="?attr/colorOnSecondaryContainer"
-                            tools:text="3 places remaining" />
-                    </LinearLayout>
+                        android:layout_marginTop="4dp"
+                        android:textSize="13sp"
+                        tools:text="13 / 15 students" />
 
                     <com.google.android.material.progressindicator.LinearProgressIndicator
                         android:id="@+id/progressCapacity"
+                        style="@style/Widget.CohortHub.CapacityBar"
                         android:layout_width="match_parent"
-                        android:layout_height="8dp"
-                        android:layout_marginTop="12dp"
-                        app:trackCornerRadius="4dp"
-                        tools:progress="80" />
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        tools:progress="87" />
 
+                    <TextView
+                        android:id="@+id/tvPlacesRemainingPill"
+                        style="@style/Widget.CohortHub.Pill"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        tools:text="Near full · 2 places left" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Programme Breakdown Card -->
+            <!-- Programme breakdown -->
             <com.google.android.material.card.MaterialCardView
                 android:id="@+id/card_programme_breakdown"
+                style="@style/Widget.CohortHub.Card"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                app:cardCornerRadius="16dp"
-                app:cardElevation="1dp"
-                app:strokeWidth="1dp"
-                app:strokeColor="?attr/colorOutlineVariant">
+                android:layout_marginTop="@dimen/field_spacing">
 
                 <LinearLayout
                     android:layout_width="match_parent"
@@ -120,59 +131,54 @@
                     android:padding="16dp">
 
                     <TextView
+                        style="@style/Text.CardTitle"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Programme Breakdown"
-                        android:textAppearance="?attr/textAppearanceTitleMedium"
-                        android:textColor="?attr/colorOnSurface" />
+                        android:text="@string/programme_breakdown_title" />
 
                     <TextView
                         android:id="@+id/tvProgrammeBreakdown"
+                        style="@style/Text.CardBody"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="8dp"
                         android:lineSpacingExtra="4dp"
-                        android:textAppearance="?attr/textAppearanceBodyMedium"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        tools:text="Computer Science: 5\nInformation Technology: 4\nData Science: 2" />
-
+                        tools:text="Computer Science: 5\nInformation Technology: 5\nData Science: 3" />
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Group Members Section -->
+            <!-- Lecturer-only: member list (hidden for students) -->
             <TextView
+                android:id="@+id/tvMembersTitle"
+                style="@style/Text.CardTitle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="20dp"
                 android:layout_marginBottom="8dp"
-                android:text="Group Members"
-                android:textAppearance="?attr/textAppearanceTitleMedium"
-                android:textColor="?attr/colorOnSurface" />
+                android:text="@string/group_members_title"
+                android:visibility="gone" />
 
             <androidx.recyclerview.widget.RecyclerView
                 android:id="@+id/rvGroupMembers"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:nestedScrollingEnabled="false"
-                tools:itemCount="3"
+                android:visibility="gone"
                 tools:listitem="@layout/item_student" />
-
         </LinearLayout>
     </androidx.core.widget.NestedScrollView>
 
-    <!-- Loading Indicator -->
     <com.google.android.material.progressindicator.CircularProgressIndicator
         android:id="@+id/loading_indicator"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:indeterminate="true"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar" />
+        app:layout_constraintTop_toTopOf="parent" />
 
-    <!-- Error State -->
     <LinearLayout
         android:id="@+id/error_state"
         android:layout_width="wrap_content"
@@ -181,24 +187,34 @@
         android:orientation="vertical"
         android:padding="32dp"
         android:visibility="gone"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/bottomNav"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/toolbar">
+        app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:id="@+id/tvErrorTitle"
+            style="@style/Text.CardTitle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Failed to load group details"
-            android:textAppearance="?attr/textAppearanceTitleMedium" />
+            android:gravity="center"
+            android:text="@string/group_load_failed" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btnRetry"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:text="Retry" />
+            android:minHeight="48dp"
+            android:text="@string/action_retry" />
     </LinearLayout>
 
+    <com.google.android.material.bottomnavigation.BottomNavigationView
+        android:id="@+id/bottomNav"
+        style="@style/Widget.CohortHub.BottomNav"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
 </androidx.constraintlayout.widget.ConstraintLayout>

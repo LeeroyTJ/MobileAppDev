@@ -1,8 +1,6 @@
 package com.example.mobileappdev;
 
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.InputType;
 import android.text.TextUtils;
@@ -42,8 +40,6 @@ import retrofit2.Callback;
 import retrofit2.Response;
 
 public class ProfileActivity extends AppCompatActivity {
-
-    private static final String PREF_LAST_UPDATED = "profile_last_updated_time";
 
     private TextView tvAvatarInitials;
     private TextView tvProfileName;
@@ -106,6 +102,8 @@ public class ProfileActivity extends AppCompatActivity {
     private void setupBottomNav() {
         BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
         if (bottomNav != null) {
+            bottomNav.getMenu().clear();
+            bottomNav.inflateMenu(R.menu.bottom_nav_student);
             bottomNav.setSelectedItemId(R.id.navHome);
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
@@ -130,7 +128,7 @@ public class ProfileActivity extends AppCompatActivity {
     private void bindViews() {
         View btnBack = findViewById(R.id.btnBack);
         if (btnBack != null) {
-            btnBack.setOnClickListener(v -> handleBackPress());
+            btnBack.setVisibility(View.VISIBLE);
         }
 
         tvAvatarInitials = findViewById(R.id.tvAvatarInitials);
@@ -266,14 +264,12 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void saveAndDisplayLastUpdatedTime(long millis) {
-        SharedPreferences prefs = getSharedPreferences("cohorthub_session", Context.MODE_PRIVATE);
-        prefs.edit().putLong(PREF_LAST_UPDATED, millis).apply();
+        SessionManager.getInstance(this).saveLastSyncedTime(millis);
         displayFormattedLastUpdated(millis);
     }
 
     private void loadCachedLastUpdatedTime() {
-        SharedPreferences prefs = getSharedPreferences("cohorthub_session", Context.MODE_PRIVATE);
-        long cachedMillis = prefs.getLong(PREF_LAST_UPDATED, -1);
+        long cachedMillis = SessionManager.getInstance(this).getLastSyncedTime();
         if (cachedMillis > 0) {
             displayFormattedLastUpdated(cachedMillis);
         } else {
