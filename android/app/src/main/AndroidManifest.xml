@@ -40,6 +40,9 @@
             android:name=".RosterActivity"
             android:exported="false"
             android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".StudentGroupActivity"
+            android:exported="false" />
     </application>
 
 </manifest>
