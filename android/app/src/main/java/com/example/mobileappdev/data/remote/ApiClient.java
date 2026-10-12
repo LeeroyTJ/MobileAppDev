@@ -13,8 +13,8 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class ApiClient {
 
-    // Physical device testing via mobile hotspot / LAN IP:
-    private static final String BASE_URL = "http://10.0.2.2:3000/";
+    // Physical device testing via Wi-Fi network IP:
+    private static final String BASE_URL = "http://10.0.2.2:3000:3000/";
 
     private static volatile Retrofit retrofit;
 
