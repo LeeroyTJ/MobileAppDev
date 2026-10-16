@@ -279,6 +279,109 @@ router.post('/', authenticateToken, async (req, res) => {
                 }
 
                 // -----------------------------------------------------
+                // REQUEST GROUP CHANGE
+                // -----------------------------------------------------
+                else if (type === 'REQUEST_GROUP_CHANGE') {
+                    const studentId = payload?.studentId || op.entityId;
+                    const requestedGroupCode = payload?.requestedGroup;
+
+                    if (userRole !== 'STUDENT' && userRole !== 'LECTURER') {
+                        opStatus = 'REJECTED';
+                        responsePayload = {
+                            code: 'FORBIDDEN',
+                            message: 'Only students can request a group change'
+                        };
+                    } else if (!studentId || !requestedGroupCode) {
+                        opStatus = 'REJECTED';
+                        responsePayload = {
+                            code: 'INVALID_OPERATION',
+                            message: 'studentId and requestedGroup are required'
+                        };
+                    } else {
+                        // Resolve the target group code (G01..G04) to its id, under the pool.
+                        const [targetGroupRows] = await connection.execute(
+                            'SELECT group_id, group_code, capacity FROM lab_groups WHERE group_code = ?',
+                            [requestedGroupCode]
+                        );
+
+                        if (targetGroupRows.length === 0) {
+                            opStatus = 'REJECTED';
+                            responsePayload = {
+                                code: 'GROUP_NOT_FOUND',
+                                message: `No group with code ${requestedGroupCode}`
+                            };
+                        } else {
+                            const targetGroupId = targetGroupRows[0].group_id;
+
+                            // Confirm the student exists and, if a student, that they own the record.
+                            const [studentRows] = await connection.execute(
+                                'SELECT student_id, account_id, group_id, version FROM students WHERE student_id = ? AND deleted_at IS NULL',
+                                [studentId]
+                            );
+
+                            if (studentRows.length === 0) {
+                                opStatus = 'NOT_FOUND';
+                                responsePayload = {
+                                    code: 'STUDENT_NOT_FOUND',
+                                    message: 'Student not found'
+                                };
+                            } else if (userRole !== 'LECTURER' && studentRows[0].account_id !== userId) {
+                                opStatus = 'REJECTED';
+                                responsePayload = {
+                                    code: 'FORBIDDEN',
+                                    message: 'Access denied'
+                                };
+                            } else if (studentRows[0].group_id === targetGroupId) {
+                                // Already in that group — treat as a no-op success.
+                                opStatus = 'APPLIED';
+                                responsePayload = {
+                                    id: studentId,
+                                    entityId: studentId,
+                                    groupId: targetGroupId,
+                                    groupCode: requestedGroupCode,
+                                    version: studentRows[0].version,
+                                    noop: true
+                                };
+                            } else {
+                                // Lock the target group row and count current occupancy.
+                                const [lockRows] = await connection.execute(
+                                    'SELECT capacity FROM lab_groups WHERE group_id = ? FOR UPDATE',
+                                    [targetGroupId]
+                                );
+                                const capacity = lockRows[0].capacity;
+
+                                const [[{ count }]] = await connection.execute(
+                                    'SELECT COUNT(*) AS count FROM students WHERE group_id = ? AND deleted_at IS NULL',
+                                    [targetGroupId]
+                                );
+
+                                if (count >= capacity) {
+                                    opStatus = 'REJECTED';
+                                    responsePayload = {
+                                        code: 'GROUP_FULL',
+                                        message: `${requestedGroupCode} is full (${count}/${capacity})`
+                                    };
+                                } else {
+                                    await connection.execute(
+                                        'UPDATE students SET group_id = ?, version = version + 1 WHERE student_id = ?',
+                                        [targetGroupId, studentId]
+                                    );
+
+                                    opStatus = 'APPLIED';
+                                    responsePayload = {
+                                        id: studentId,
+                                        entityId: studentId,
+                                        groupId: targetGroupId,
+                                        groupCode: requestedGroupCode,
+                                        version: studentRows[0].version + 1
+                                    };
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // -----------------------------------------------------
                 // UNKNOWN STUDENT OPERATION
                 // -----------------------------------------------------
                 else {
