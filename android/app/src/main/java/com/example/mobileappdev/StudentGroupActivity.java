@@ -75,7 +75,6 @@ public class StudentGroupActivity extends AppCompatActivity {
         bindViews();
         setupBottomNav();
         setupRecyclerView();
-        load();
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override public void handleOnBackPressed() { finish(); }
@@ -144,6 +143,7 @@ public class StudentGroupActivity extends AppCompatActivity {
         if (bottomNav != null && !isLecturer) {
             bottomNav.setSelectedItemId(R.id.navGroup);
         }
+        load();
     }
 
     private void setupRecyclerView() {
@@ -160,7 +160,16 @@ public class StudentGroupActivity extends AppCompatActivity {
     private void load() {
         hideError();
         showLoading(true);
-        if (groupId > 0) loadGroupData(); else resolveOwnGroup();
+
+        // If we were opened with an explicit group id (lecturer drill-in from the
+        // Groups overview), load that group directly. Otherwise this is the student's
+        // Group tab: always re-resolve the student's CURRENT group from the server,
+        // so a group change applied elsewhere (e.g. via sync) is reflected here.
+        if (drilledIn && groupId > 0) {
+            loadGroupData();
+        } else {
+            resolveOwnGroup();
+        }
     }
 
     /** The Group tab has no extra, so first ask the server which group THIS student is in. */

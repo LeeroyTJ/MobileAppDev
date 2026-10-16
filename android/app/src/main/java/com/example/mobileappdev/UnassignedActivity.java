@@ -66,7 +66,6 @@ public class UnassignedActivity extends AppCompatActivity {
         bindViews();
         setupNavigation();
         setupRecyclerView();
-        loadUnassignedStudents();
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -103,6 +102,7 @@ public class UnassignedActivity extends AppCompatActivity {
         if (bottomNav != null) {
             bottomNav.setSelectedItemId(R.id.nav_unassigned);
         }
+        loadUnassignedStudents();
     }
 
     private void setupNavigation() {

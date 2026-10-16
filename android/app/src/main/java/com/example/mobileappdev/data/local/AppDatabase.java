@@ -16,7 +16,7 @@ import com.example.mobileappdev.data.local.entity.StudentEntity;
 @Database(
         entities = {StudentEntity.class, PendingOperationEntity.class},
         version = 2,
-        exportSchema = true
+        exportSchema = false
 )
 public abstract class AppDatabase extends RoomDatabase {
 
