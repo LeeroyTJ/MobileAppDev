@@ -16,14 +16,8 @@ import com.example.mobileappdev.adapter.StudentAdapter;
 import com.example.mobileappdev.data.local.entity.StudentEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
 import com.example.mobileappdev.session.SessionManager;
-joe-bugfix
-import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.button.MaterialButton;
-
 import com.example.mobileappdev.util.CapacityFormatter;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
- main
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
@@ -32,7 +26,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -79,11 +72,6 @@ public class StudentGroupActivity extends AppCompatActivity {
 
         setContentView(R.layout.activity_group_detail);
         bindViews();
-        joe-bugfix
-        setupRecyclerView();
-        setupNavigation();
-        loadGroupDetails();
-
         setupBottomNav();
         setupRecyclerView();
 
@@ -92,24 +80,6 @@ public class StudentGroupActivity extends AppCompatActivity {
         });
     }
 
-    joe-bugfix
-    private void navigateToParentProfile() {
-        Intent intent = new Intent(this, ProfileActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
-        startActivity(intent);
-        finish();
-    }
-
-    private void setupRecyclerView() {
-        adapter = new StudentAdapter();
-        if (rvGroupMembers != null) {
-            rvGroupMembers.setLayoutManager(new LinearLayoutManager(this));
-            rvGroupMembers.setAdapter(adapter);
-        }
-    }
-
-
-  main
     private void bindViews() {
         tvTitle = findViewById(R.id.tvTitle);
         tvGroupTitle = findViewById(R.id.tvGroupTitle);
@@ -125,10 +95,6 @@ public class StudentGroupActivity extends AppCompatActivity {
         btnRetry = findViewById(R.id.btnRetry);
         btnBack = findViewById(R.id.btnBack);
 
-        joe-bugfix
-        if (toolbar != null) {
-            toolbar.setNavigationOnClickListener(v -> navigateToParentProfile());
-
         if (tvTitle != null) {
             tvTitle.setText(R.string.group_title);
         }
@@ -142,7 +108,6 @@ public class StudentGroupActivity extends AppCompatActivity {
         if (isLecturer) {                      // the member list is for lecturers only
             if (tvMembersTitle != null) tvMembersTitle.setVisibility(View.VISIBLE);
             if (rvGroupMembers != null) rvGroupMembers.setVisibility(View.VISIBLE);
-        main
         }
         if (btnRetry != null) {
             btnRetry.setOnClickListener(v -> load());
@@ -180,28 +145,6 @@ public class StudentGroupActivity extends AppCompatActivity {
         load();
     }
 
-        joe-bugfix
-    private void showLoading(boolean show) {
-        if (loadingIndicator != null) {
-            loadingIndicator.setVisibility(show ? View.VISIBLE : View.GONE);
-        }
-    }
-
-    private void hideError() {
-        if (errorState != null) {
-            errorState.setVisibility(View.GONE);
-        }
-    }
-
-    private void showError() {
-        if (errorState != null) {
-            errorState.setVisibility(View.VISIBLE);
-        }
-    }
-
-    private void loadGroupDetails() {
-        showLoading(true);
-
     private void setupRecyclerView() {
         if (rvGroupMembers != null) {
             rvGroupMembers.setLayoutManager(new LinearLayoutManager(this));
@@ -214,14 +157,9 @@ public class StudentGroupActivity extends AppCompatActivity {
     // ----- loading -----
 
     private void load() {
-        main
         hideError();
         showLoading(true);
 
-        // If we were opened with an explicit group id (lecturer drill-in from the
-        // Groups overview), load that group directly. Otherwise this is the student's
-        // Group tab: always re-resolve the student's CURRENT group from the server,
-        // so a group change applied elsewhere (e.g. via sync) is reflected here.
         if (drilledIn && groupId > 0) {
             loadGroupData();
         } else {
@@ -235,12 +173,6 @@ public class StudentGroupActivity extends AppCompatActivity {
             @Override
             public void onResponse(@NonNull Call<Map<String, Object>> call,
                                    @NonNull Response<Map<String, Object>> response) {
-                if (response.code() == 401 || response.code() == 403) {
-                    showLoading(false);
-                    new SessionExpiredDialogFragment()
-                            .show(getSupportFragmentManager(), SessionExpiredDialogFragment.TAG);
-                    return;
-                }
                 if (!response.isSuccessful() || response.body() == null
                         || !(response.body().get("data") instanceof Map)) {
                     showLoading(false);
@@ -263,46 +195,6 @@ public class StudentGroupActivity extends AppCompatActivity {
                 showError();
             }
         });
-        joe-bugfix
-    }
-
-    private void updateGroupUi(Map<?, ?> data) {
-        Object gcObj = data.get("groupCode");
-        if (gcObj == null) {
-            gcObj = data.get("group_code");
-        }
-        String groupCode = gcObj != null ? gcObj.toString() : "Group " + groupId;
-
-        Object nameObj = data.get("name");
-        String groupName = nameObj != null ? nameObj.toString() : "";
-
-        Object capObj = data.get("capacity");
-        int capacity = capObj instanceof Number ? ((Number) capObj).intValue() : 15;
-
-        Object occObj = data.get("occupied");
-        int occupied = occObj instanceof Number ? ((Number) occObj).intValue() : 0;
-
-        Object remObj = data.get("placesRemaining");
-        int placesRemaining = remObj instanceof Number ?
-                ((Number) remObj).intValue() : Math.max(0, capacity - occupied);
-
-        String title = "Lab Group " + groupCode + (groupName.isEmpty() ? "" : " - " + groupName);
-        if (tvGroupTitle != null) tvGroupTitle.setText(title);
-        if (toolbar != null) toolbar.setTitle(groupCode + " Details");
-
-        String capacityRatioText = occupied + " / " + capacity + " Students";
-        if (tvCapacityRatio != null) tvCapacityRatio.setText(capacityRatioText);
-
-        String placesRemainingText = placesRemaining + " places remaining";
-        if (tvPlacesRemainingPill != null) tvPlacesRemainingPill.setText(placesRemainingText);
-
-        if (progressCapacity != null) {
-            progressCapacity.setMax(capacity);
-            progressCapacity.setProgress(occupied);
-        }
-
-        formatProgrammeBreakdown(data);
-
     }
 
     private void loadGroupData() {
@@ -312,7 +204,6 @@ public class StudentGroupActivity extends AppCompatActivity {
                                    @NonNull Response<Map<String, Object>> response) {
                 showLoading(false);
                 if (!response.isSuccessful() || response.body() == null
-                        || !Objects.equals(response.body().get("success"), Boolean.TRUE)
                         || !(response.body().get("data") instanceof Map)) {
                     showError();
                     return;
@@ -328,14 +219,13 @@ public class StudentGroupActivity extends AppCompatActivity {
     }
 
     // ----- rendering -----
-        main
 
     private void updateGroupUi(Map<?, ?> data) {
         Object code = data.get("groupCode") != null ? data.get("groupCode") : data.get("group_code");
         String groupCode = code != null ? code.toString() : "G" + groupId;
 
         if (tvGroupTitle != null) {
-            tvGroupTitle.setText(groupCode);   // just "G01": the label above already says "Lab Group"
+            tvGroupTitle.setText(groupCode);
         }
 
         int capacity = intOf(data.get("capacity"), 15);
@@ -343,24 +233,8 @@ public class StudentGroupActivity extends AppCompatActivity {
         CapacityFormatter.bind(this, occupied, capacity,
                 tvCapacityRatio, tvPlacesRemainingPill, progressCapacity);
 
-        joe-bugfix
-                    StudentEntity student = new StudentEntity();
-                    student.serverId = serverId;
-                    student.studentNumber = sNum;
-                    student.name = sName;
-                    student.programme = prog;
-                    student.labGroup = groupCode;
-                    membersList.add(student);
-                }
-            }
-        }
-        if (adapter != null) {
-            adapter.setStudents(membersList);
-        }
-
         showProgrammeBreakdown(data);
         if (isLecturer) showMembers(data, groupCode);
-        main
     }
 
     private void showProgrammeBreakdown(Map<?, ?> data) {
@@ -378,26 +252,10 @@ public class StudentGroupActivity extends AppCompatActivity {
             for (Map.Entry<?, ?> e : ((Map<?, ?>) map).entrySet()) {
                 counts.put(codeOf(String.valueOf(e.getKey())), intOf(e.getValue(), 0));
             }
-        joe-bugfix
-        }
-        if (tvProgrammeBreakdown != null) {
-            tvProgrammeBreakdown.setText(String.join("\n", formattedLines));
-        }
-    }
-
-    private String formatFullProgrammeName(String code) {
-        if (code == null) return "";
-        switch (code.toUpperCase()) {
-            case "CS": return "Computer Science";
-            case "IT": return "Information Technology";
-            case "DS": return "Data Science";
-            case "SE": return "Software Engineering";
-            default: return code;
-
         }
 
         StringBuilder sb = new StringBuilder();
-        for (String code : PROGRAMME_ORDER) {          // fixed order, always all three
+        for (String code : PROGRAMME_ORDER) {
             if (sb.length() > 0) sb.append('\n');
             Integer n = counts.get(code);
             sb.append(fullName(code)).append(": ").append(n != null ? n : 0);
@@ -450,9 +308,9 @@ public class StudentGroupActivity extends AppCompatActivity {
 
     private String fullName(String code) {
         switch (code) {
-            case "CS": return getString(R.string.programme_cs);
-            case "IT": return getString(R.string.programme_it);
-            case "DS": return getString(R.string.programme_ds);
+            case "CS": return "Computer Science";
+            case "IT": return "Information Technology";
+            case "DS": return "Data Science";
             default:   return code;
         }
     }
@@ -478,7 +336,6 @@ public class StudentGroupActivity extends AppCompatActivity {
     private void hideError() {
         if (errorState != null) {
             errorState.setVisibility(View.GONE);
-        main
         }
     }
 }
