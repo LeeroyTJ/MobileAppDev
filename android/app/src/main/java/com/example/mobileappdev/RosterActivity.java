@@ -107,14 +107,13 @@ public class RosterActivity extends AppCompatActivity {
 
         bindViews();
         setupRecyclerView();
-        setupSearchDebounce(); // Task 4.2
-        setupChipFilters();    // Task 4.3
+        setupSearchDebounce();
+        setupChipFilters();
         setupClearFilters();
         setupBottomNavigation();
         setupFab();
         observeViewModel();
         loadLocalStudents();
-        fetchRemoteRoster();
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -290,6 +289,7 @@ public class RosterActivity extends AppCompatActivity {
         if (bottomNavigation != null) {
             bottomNavigation.setSelectedItemId(R.id.nav_students);
         }
+        fetchRemoteRoster();
     }
 
     private void setupBottomNavigation() {

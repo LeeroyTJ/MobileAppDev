@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-    LabNexa
-    Unassigned Students (wireframe slide 11)
+    CohortHub
+    Unassigned Students
 
     Lists students who have no lab group yet. Reuses item_student.xml, so rows
     look identical to the Roster. Tapping a row opens the student editor, where

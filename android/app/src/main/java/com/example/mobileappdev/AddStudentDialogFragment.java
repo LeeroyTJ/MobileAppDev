@@ -48,7 +48,6 @@ public class AddStudentDialogFragment extends DialogFragment {
     private TextInputEditText etStudentName;
     private TextInputEditText etStudentNumber;
     private AutoCompleteTextView actvProgramme;
-    private AutoCompleteTextView actvLabGroup;
     private ProgressBar progressSaving;
     private MaterialButton btnSave;
     private MaterialButton btnCancel;
@@ -99,21 +98,20 @@ public class AddStudentDialogFragment extends DialogFragment {
         etStudentName = view.findViewById(R.id.et_student_name);
         etStudentNumber = view.findViewById(R.id.et_student_number);
         actvProgramme = view.findViewById(R.id.actv_programme);
-        actvLabGroup = view.findViewById(R.id.actv_lab_group);
         progressSaving = view.findViewById(R.id.progress_saving);
         btnSave = view.findViewById(R.id.btn_save);
         btnCancel = view.findViewById(R.id.btn_cancel);
 
         if (btnSave != null) btnSave.setText("Add Student");
 
-        setupDropdowns();
+        setupProgrammeDropdowns();
 
         if (btnClose != null) btnClose.setOnClickListener(v -> dismiss());
         if (btnCancel != null) btnCancel.setOnClickListener(v -> dismiss());
         if (btnSave != null) btnSave.setOnClickListener(v -> attemptCreateStudent());
     }
 
-    private void setupDropdowns() {
+    private void setupProgrammeDropdowns() {
         if (actvProgramme != null) {
             String[] programmes = PROGRAMME_MAP.keySet().toArray(new String[0]);
             ArrayAdapter<String> progAdapter = new ArrayAdapter<>(
@@ -128,19 +126,11 @@ public class AddStudentDialogFragment extends DialogFragment {
                 }
             });
         }
-
-        if (actvLabGroup != null) {
-            String[] groups = {"G01", "G02", "G03", "G04", "Unassigned"};
-            ArrayAdapter<String> groupAdapter = new ArrayAdapter<>(
-                    requireContext(), android.R.layout.simple_list_item_1, groups);
-            actvLabGroup.setAdapter(groupAdapter);
-        }
     }
 
     private void attemptCreateStudent() {
         String name = safeText(etStudentName);
         String studentNumber = safeText(etStudentNumber);
-        String group = actvLabGroup != null ? safeText(actvLabGroup) : "";
 
         if (TextUtils.isEmpty(name) || TextUtils.isEmpty(studentNumber)) {
             Toast.makeText(requireContext(), "Please fill in all required fields", Toast.LENGTH_SHORT).show();
@@ -156,8 +146,6 @@ public class AddStudentDialogFragment extends DialogFragment {
             selectedProgrammeId = 1;
             selectedProgrammeCode = "CS";
         }
-
-        String finalGroup = ("Unassigned".equalsIgnoreCase(group) || TextUtils.isEmpty(group)) ? null : group;
 
         if (progressSaving != null) progressSaving.setVisibility(View.VISIBLE);
         if (btnSave != null) btnSave.setEnabled(false);
@@ -176,9 +164,6 @@ public class AddStudentDialogFragment extends DialogFragment {
         payload.put("studentNumber", studentNumber);
         payload.put("name", name);
         payload.put("programmeId", selectedProgrammeId);
-        if (finalGroup != null) {
-            payload.put("labGroup", finalGroup);
-        }
         op.payload = payload;
 
         SyncRequest syncRequest = new SyncRequest(Collections.singletonList(op));
@@ -196,7 +181,7 @@ public class AddStudentDialogFragment extends DialogFragment {
 
                     if ("APPLIED".equals(status) || "APPROVED".equals(status)) {
                         long serverId = result.entityId != null ? result.entityId : 0;
-                        saveStudentToRoom(name, studentNumber, selectedProgrammeCode, finalGroup, serverId, StudentEntity.STATUS_SYNCED, accountId);
+                        saveStudentToRoom(name, studentNumber, selectedProgrammeCode, null, serverId, StudentEntity.STATUS_SYNCED, accountId);
                         Toast.makeText(requireContext(), "Student added successfully", Toast.LENGTH_SHORT).show();
                         dismiss();
                         return;
@@ -218,7 +203,7 @@ public class AddStudentDialogFragment extends DialogFragment {
                     }
                 }
 
-                saveStudentOffline(name, studentNumber, selectedProgrammeCode, finalGroup, accountId, op);
+                saveStudentOffline(name, studentNumber, selectedProgrammeCode, null, accountId, op);
                 Toast.makeText(requireContext(), "Saved locally — will sync when online", Toast.LENGTH_LONG).show();
                 dismiss();
             }
@@ -226,7 +211,7 @@ public class AddStudentDialogFragment extends DialogFragment {
             @Override
             public void onFailure(@NonNull Call<SyncResponseEnvelope> call, @NonNull Throwable t) {
                 if (!isAdded()) return;
-                saveStudentOffline(name, studentNumber, selectedProgrammeCode, finalGroup, accountId, op);
+                saveStudentOffline(name, studentNumber, selectedProgrammeCode, null, accountId, op);
                 Toast.makeText(requireContext(), "Saved locally — will sync when online", Toast.LENGTH_LONG).show();
                 dismiss();
             }
@@ -272,10 +257,6 @@ public class AddStudentDialogFragment extends DialogFragment {
     }
 
     private String safeText(TextInputEditText field) {
-        return field.getText() != null ? field.getText().toString().trim() : "";
-    }
-
-    private String safeText(AutoCompleteTextView field) {
         return field.getText() != null ? field.getText().toString().trim() : "";
     }
 }

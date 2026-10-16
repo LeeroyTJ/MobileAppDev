@@ -88,7 +88,7 @@ public class StudentSheetBottomSheetDialogFragment extends BottomSheetDialogFrag
         if (changeGroup != null) {
             changeGroup.setOnClickListener(v -> {
                 dismiss();
-                GroupPickerBottomSheetDialogFragment dialog = GroupPickerBottomSheetDialogFragment.newInstance(studentServerId);
+                GroupPickerBottomSheetDialogFragment dialog = GroupPickerBottomSheetDialogFragment.newInstance(studentServerId, true);
                 dialog.show(getParentFragmentManager(), GroupPickerBottomSheetDialogFragment.TAG);
             });
         }
