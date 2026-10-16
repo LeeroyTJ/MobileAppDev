@@ -56,6 +56,9 @@
         <item quantity="other">%d filters active</item>
     </plurals>
 
+    <string name="roster_capacity_title">Lab Group Capacity</string>
+    <string name="roster_capacity_unassigned_format">%d unassigned</string>
+
     <!-- The five required sync states: use these exact labels app-wide -->
     <string name="sync_saved_locally">Saved locally</string>
     <string name="sync_pending">Pending</string>
