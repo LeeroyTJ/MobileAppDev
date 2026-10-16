@@ -17,6 +17,8 @@ import com.example.mobileappdev.data.local.entity.StudentEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
 import com.example.mobileappdev.session.SessionManager;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.example.mobileappdev.data.local.AppDatabase;
+import com.example.mobileappdev.data.repository.StudentSyncRepository;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
@@ -26,6 +28,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -313,16 +316,47 @@ public class UnassignedActivity extends AppCompatActivity {
                             Toast.makeText(UnassignedActivity.this,
                                     "Selected group is full", Toast.LENGTH_LONG).show();
                         } else {
+                            queueAssignOffline(student, groupId);
                             Toast.makeText(UnassignedActivity.this,
-                                    "Failed to assign student to group", Toast.LENGTH_SHORT).show();
+                                    "Assignment saved locally", Toast.LENGTH_SHORT).show();
+                            loadUnassignedStudents();
                         }
                     }
 
                     @Override
                     public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
+                        queueAssignOffline(student, groupId);
                         Toast.makeText(UnassignedActivity.this,
-                                "Network error during assignment", Toast.LENGTH_SHORT).show();
+                                "Assignment saved locally — will sync when online", Toast.LENGTH_LONG).show();
+                        loadUnassignedStudents();
                     }
                 });
+    }
+
+    private void queueAssignOffline(StudentEntity student, long groupId) {
+        if (student.serverId == null || student.serverId <= 0) return;
+        AppDatabase db = AppDatabase.getInstance(getApplicationContext());
+        long accountId = SessionManager.getInstance(this).getAccountId();
+
+        Executors.newSingleThreadExecutor().execute(() -> {
+            StudentEntity local = db.studentDao().findByServerId(student.serverId);
+            if (local == null) return;
+
+            String groupCode = groupCodeFor(groupId);
+
+            StudentSyncRepository repo = new StudentSyncRepository(db);
+            repo.submitGroupChange(local.localId, accountId, student.serverId,
+                    groupCode, null /* was unassigned */, local.baseVersion);
+        });
+    }
+
+    private String groupCodeFor(long groupId) {
+        switch ((int) groupId) {
+            case 1: return "G01";
+            case 2: return "G02";
+            case 3: return "G03";
+            case 4: return "G04";
+            default: return "";
+        }
     }
 }

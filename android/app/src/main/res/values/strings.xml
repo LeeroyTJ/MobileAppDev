@@ -4,8 +4,10 @@
 
     <!-- Accessibility Descriptions -->
     <string name="cd_app_logo">CohortHub logo</string>
+    <string name="cd_logo">CohortHub logo</string>
     <string name="cd_back">Navigate back</string>
     <string name="cd_edit_profile">Edit profile</string>
+    <string name="cd_close_dialog">Close dialog</string>
 
     <!-- Sign In Screen -->
     <string name="signin_title">Welcome back</string>
@@ -64,23 +66,14 @@
     <string name="action_request_group_change">Request Group Change</string>
     <string name="action_request_student_number_correction">Request Student Number Correction</string>
 
-        joe-bugfix
-    <!-- Programme Options -->
-
     <!-- Dialogs -->
     <string name="dialog_delete_title">Delete Student</string>
     <string name="dialog_delete_message">Are you sure you want to delete this student profile? This action cannot be undone.</string>
     <string name="btn_confirm_delete">Delete</string>
+    <string name="btn_cancel">Cancel</string>
     <string name="dialog_editor_title">Edit Student Profile</string>
-    <string name="cd_close_dialog">Close dialog</string>
     <string name="dialog_editor_subtitle">Update student information below.</string>
     <string name="btn_save_changes">Save changes</string>
-
-    <!-- Bottom navigation -->
-    <string name="nav_home">Home</string>
-    <string name="nav_group">Group</string>
-    <string name="nav_profile">Profile</string>
-    <string name="nav_sync">Sync</string>
 
     <!-- Group and capacity strings (Section 2.1) -->
     <string name="group_title">My Lab Group</string>
@@ -106,7 +99,6 @@
     <string name="error_student_number_format">Student number must be exactly 9 digits</string>
 
     <!-- Dropdown data -->
-        main
     <string-array name="programme_options">
         <item>BSc Computer Science</item>
         <item>BSc Information Technology</item>
@@ -121,19 +113,4 @@
         <item>G03</item>
         <item>G04</item>
     </string-array>
-        joe-bugfix
-    <string name="cd_logo">CohortHub logo</string>
-
-    <!-- Dialog Strings (Task 3.1) -->
-    <string name="cd_close_dialog">Close dialog</string>
-    <string name="dialog_editor_title">Edit Student</string>
-    <string name="dialog_editor_subtitle">Modify student details and group assignment below.</string>
-    <string name="btn_cancel">Cancel</string>
-    <string name="btn_save_changes">Save Changes</string>
-    <string name="dialog_delete_title">Delete Student</string>
-    <string name="dialog_delete_message">Are you sure you want to delete this student record? This action will disable their account and release their lab group slot.</string>
-    <string name="btn_confirm_delete">Delete Student</string>
-
-
-      main
 </resources>

@@ -20,6 +20,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.mobileappdev.data.local.AppDatabase;
 import com.example.mobileappdev.data.local.entity.StudentEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
+import com.example.mobileappdev.data.repository.StudentSyncRepository;
 import com.example.mobileappdev.session.SessionManager;
 
 import java.util.ArrayList;
@@ -279,15 +280,15 @@ public class EditStudentActivity extends AppCompatActivity {
                 } else if (response.code() == 409) {
                     Toast.makeText(EditStudentActivity.this, "GROUP_FULL: Selected group capacity (15/15) reached", Toast.LENGTH_LONG).show();
                 } else {
-                    updateLocalRoomStudentGroup(studentServerId, targetGroup.groupCode);
-                    Toast.makeText(EditStudentActivity.this, "Group assignment saved locally", Toast.LENGTH_SHORT).show();
+                    queueGroupChangeOffline(targetGroup.groupCode);
+                    Toast.makeText(EditStudentActivity.this, "Group change saved locally", Toast.LENGTH_SHORT).show();
                 }
             }
 
             @Override
             public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
-                updateLocalRoomStudentGroup(studentServerId, targetGroup.groupCode);
-                Toast.makeText(EditStudentActivity.this, "Group assignment saved locally", Toast.LENGTH_SHORT).show();
+                queueGroupChangeOffline(targetGroup.groupCode);
+                Toast.makeText(EditStudentActivity.this, "Group change saved locally", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -334,15 +335,15 @@ public class EditStudentActivity extends AppCompatActivity {
                             } else if (response.code() == 409) {
                                 Toast.makeText(EditStudentActivity.this, "Conflict: Student number already exists or version conflict", Toast.LENGTH_LONG).show();
                             } else {
-                                updateLocalRoomStudentNumber(studentServerId, newNumber);
+                                queueNumberCorrectionOffline(newNumber);
                                 Toast.makeText(EditStudentActivity.this, "Correction saved locally", Toast.LENGTH_SHORT).show();
                             }
                         }
 
                         @Override
                         public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
-                            updateLocalRoomStudentNumber(studentServerId, newNumber);
-                            Toast.makeText(EditStudentActivity.this, "Correction saved locally", Toast.LENGTH_SHORT).show();
+                            queueNumberCorrectionOffline(newNumber);
+                            Toast.makeText(EditStudentActivity.this, "Correction saved locally — will sync when online", Toast.LENGTH_SHORT).show();
                         }
                     });
                 })
@@ -399,7 +400,7 @@ public class EditStudentActivity extends AppCompatActivity {
                             } else if (response.code() == 409) {
                                 Toast.makeText(EditStudentActivity.this, "VERSION_CONFLICT: Record modified on server. Please refresh.", Toast.LENGTH_LONG).show();
                             } else {
-                                updateLocalRoomStudentName(studentServerId, newName);
+                                queueNameEditOffline(newName);
                                 Toast.makeText(EditStudentActivity.this, "Details saved locally", Toast.LENGTH_SHORT).show();
                                 finish();
                             }
@@ -407,7 +408,7 @@ public class EditStudentActivity extends AppCompatActivity {
 
                         @Override
                         public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
-                            updateLocalRoomStudentName(studentServerId, newName);
+                            queueNameEditOffline(newName);
                             Toast.makeText(EditStudentActivity.this, "Details saved locally", Toast.LENGTH_SHORT).show();
                             finish();
                         }
@@ -415,6 +416,42 @@ public class EditStudentActivity extends AppCompatActivity {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    private void queueNumberCorrectionOffline(String newNumber) {
+        AppDatabase db = AppDatabase.getInstance(getApplicationContext());
+        long accountId = SessionManager.getInstance(this).getAccountId();
+        Executors.newSingleThreadExecutor().execute(() -> {
+            StudentEntity student = db.studentDao().findByServerId(studentServerId);
+            if (student == null) return;
+            StudentSyncRepository repo = new StudentSyncRepository(db);
+            repo.submitNumberCorrection(student.localId, accountId, studentServerId, newNumber, baseVersion);
+        });
+    }
+
+    private void queueNameEditOffline(String newName) {
+        AppDatabase db = AppDatabase.getInstance(getApplicationContext());
+        long accountId = SessionManager.getInstance(this).getAccountId();
+        Executors.newSingleThreadExecutor().execute(() -> {
+            StudentEntity student = db.studentDao().findByServerId(studentServerId);
+            if (student == null) return;
+            StudentSyncRepository repo = new StudentSyncRepository(db);
+            repo.submitNameEdit(student.localId, accountId, newName, baseVersion);
+        });
+    }
+
+    private void queueGroupChangeOffline(String newGroup) {
+        AppDatabase db = AppDatabase.getInstance(getApplicationContext());
+        long accountId = SessionManager.getInstance(this).getAccountId();
+        String previous = groupCode; // capture the pre-change value
+        Executors.newSingleThreadExecutor().execute(() -> {
+            StudentEntity student = db.studentDao().findByServerId(studentServerId);
+            if (student == null) return;
+            StudentSyncRepository repo = new StudentSyncRepository(db);
+            repo.submitGroupChange(student.localId, accountId, studentServerId,
+                    newGroup, previous, baseVersion);
+        });
+        groupCode = newGroup;
     }
 
     private void updateLocalRoomStudentGroup(long serverId, String newGroup) {
