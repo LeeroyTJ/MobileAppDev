@@ -31,7 +31,6 @@ public class RegistrationActivity extends AppCompatActivity {
     private TextInputEditText etStudentNumber;
     private TextInputEditText etPassword;
     private AutoCompleteTextView actProgramme;
-    private AutoCompleteTextView actLabGroup;
     private MaterialButton btnSaveRegistration;
 
     // Programme code -> database id
@@ -74,7 +73,6 @@ public class RegistrationActivity extends AppCompatActivity {
         etStudentNumber = findViewById(R.id.etStudentNumber);
         etPassword = findViewById(R.id.etPassword);
         actProgramme = findViewById(R.id.actProgramme);
-        actLabGroup = findViewById(R.id.actLabGroup);
         btnSaveRegistration = findViewById(R.id.btnSaveRegistration);
         TextView tvSignIn = findViewById(R.id.tvSignIn);
 
@@ -95,9 +93,6 @@ public class RegistrationActivity extends AppCompatActivity {
                 selectedProgrammeId = PROGRAMME_IDS.get(selected.toString());
             }
         });
-
-        actLabGroup.setEnabled(false);
-        actLabGroup.setHint("Assign after registering");
     }
 
     private void attemptRegistration() {
