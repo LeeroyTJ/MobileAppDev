@@ -109,6 +109,8 @@ public class UnassignedActivity extends AppCompatActivity {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         if (bottomNav == null) return;
 
+        bottomNav.getMenu().clear();
+        bottomNav.inflateMenu(R.menu.bottom_nav_lecturer);
         bottomNav.setSelectedItemId(R.id.nav_unassigned);
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();

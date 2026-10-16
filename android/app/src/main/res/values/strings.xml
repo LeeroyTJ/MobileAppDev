@@ -64,7 +64,49 @@
     <string name="action_request_group_change">Request Group Change</string>
     <string name="action_request_student_number_correction">Request Student Number Correction</string>
 
+        joe-bugfix
     <!-- Programme Options -->
+
+    <!-- Dialogs -->
+    <string name="dialog_delete_title">Delete Student</string>
+    <string name="dialog_delete_message">Are you sure you want to delete this student profile? This action cannot be undone.</string>
+    <string name="btn_confirm_delete">Delete</string>
+    <string name="dialog_editor_title">Edit Student Profile</string>
+    <string name="cd_close_dialog">Close dialog</string>
+    <string name="dialog_editor_subtitle">Update student information below.</string>
+    <string name="btn_save_changes">Save changes</string>
+
+    <!-- Bottom navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_group">Group</string>
+    <string name="nav_profile">Profile</string>
+    <string name="nav_sync">Sync</string>
+
+    <!-- Group and capacity strings (Section 2.1) -->
+    <string name="group_title">My Lab Group</string>
+    <string name="capacity_format">%1$d / %2$d students</string>
+    <string name="capacity_full">Full</string>
+    <plurals name="places_remaining">
+        <item quantity="one">%d place remaining</item>
+        <item quantity="other">%d places remaining</item>
+    </plurals>
+    <plurals name="capacity_near_full">
+        <item quantity="one">Near full · %d place left</item>
+        <item quantity="other">Near full · %d places left</item>
+    </plurals>
+    <string name="programme_breakdown_title">Programme Breakdown</string>
+    <string name="group_members_title">Group Members</string>
+    <string name="group_load_failed">Couldn\'t load your group</string>
+    <string name="group_none_yet">You\'re not in a lab group yet</string>
+    <string name="group_request_pending_format">Requested %1$s · pending</string>
+    <string name="group_request_sent">Group change request sent</string>
+    <string name="group_request_full">That group is full. You keep your current group.</string>
+    <string name="group_request_failed">Couldn\'t send the request. Try again.</string>
+    <string name="saved_offline_will_send">Saved. It will be sent when you\'re back online.</string>
+    <string name="error_student_number_format">Student number must be exactly 9 digits</string>
+
+    <!-- Dropdown data -->
+        main
     <string-array name="programme_options">
         <item>BSc Computer Science</item>
         <item>BSc Information Technology</item>
@@ -79,6 +121,7 @@
         <item>G03</item>
         <item>G04</item>
     </string-array>
+        joe-bugfix
     <string name="cd_logo">CohortHub logo</string>
 
     <!-- Dialog Strings (Task 3.1) -->
@@ -90,4 +133,7 @@
     <string name="dialog_delete_title">Delete Student</string>
     <string name="dialog_delete_message">Are you sure you want to delete this student record? This action will disable their account and release their lab group slot.</string>
     <string name="btn_confirm_delete">Delete Student</string>
+
+
+      main
 </resources>

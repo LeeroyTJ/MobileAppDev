@@ -27,6 +27,72 @@
         <item name="android:windowAnimationStyle">@style/NoAnimationWindow</item>
     </style>
 
+    <!-- Base parent styles for dot notation -->
+    <style name="Text"/>
+    <style name="Widget"/>
+    <style name="Widget.CohortHub"/>
+
+    <!-- Card: same look as bg_card_outline -->
+    <style name="Widget.CohortHub.Card" parent="Widget.Material3.CardView.Outlined">
+        <item name="cardBackgroundColor">@color/white</item>
+        <item name="cardElevation">0dp</item>
+        <item name="cardCornerRadius">16dp</item>
+        <item name="strokeWidth">1dp</item>
+        <item name="strokeColor">@color/outline</item>
+    </style>
+
+    <!-- Text -->
+    <style name="Text.CardLabel" parent="Text">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textSize">13sp</item>
+    </style>
+    <style name="Text.CardValue" parent="Text">
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">22sp</item>
+    </style>
+    <style name="Text.CardTitle" parent="Text">
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textColor">@color/text_primary</item>
+        <item name="android:textSize">15sp</item>
+    </style>
+    <style name="Text.CardBody" parent="Text">
+        <item name="android:textColor">@color/text_secondary</item>
+        <item name="android:textSize">14sp</item>
+    </style>
+
+    <!-- Pill -->
+    <style name="Widget.CohortHub.Pill" parent="Widget.CohortHub">
+        <item name="android:background">@drawable/bg_pill</item>
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:paddingStart">10dp</item>
+        <item name="android:paddingEnd">10dp</item>
+        <item name="android:paddingTop">4dp</item>
+        <item name="android:paddingBottom">4dp</item>
+        <item name="android:textColor">@color/primary_dark</item>
+        <item name="android:textSize">12sp</item>
+    </style>
+
+    <!-- Capacity bar (Material progress indicator, used on BOTH screens) -->
+    <style name="Widget.CohortHub.CapacityBar" parent="Widget.Material3.LinearProgressIndicator">
+        <item name="trackThickness">8dp</item>
+        <item name="trackCornerRadius">4dp</item>
+        <item name="trackColor">@color/primary_light</item>
+        <item name="indicatorColor">@color/primary</item>
+    </style>
+
+    <!-- Bottom navigation -->
+    <style name="Widget.CohortHub.BottomNav" parent="Widget.Material3.BottomNavigationView">
+        <item name="backgroundTint">@color/white</item>
+        <item name="itemIconTint">@color/dodger_blue</item>
+        <item name="itemTextColor">@color/dodger_blue</item>
+        <item name="labelVisibilityMode">labeled</item>
+        <item name="itemActiveIndicatorStyle">@style/App.ActiveIndicator</item>
+    </style>
+    <style name="App.ActiveIndicator" parent="Widget.Material3.BottomNavigationView.ActiveIndicator">
+        <item name="android:color">@color/primary_light</item>
+    </style>
+
     <!-- Outlined TextInputLayout used for standard text form fields -->
     <style name="CohortHubTextInputLayout" parent="Widget.Material3.TextInputLayout.OutlinedBox">
         <item name="boxStrokeColor">@color/outline</item>

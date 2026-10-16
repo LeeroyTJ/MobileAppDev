@@ -293,23 +293,27 @@ public class RosterActivity extends AppCompatActivity {
     }
 
     private void setupBottomNavigation() {
-        bottomNavigation.setSelectedItemId(R.id.nav_students);
-        bottomNavigation.setOnItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.nav_students) {
-                return true;
-            } else if (itemId == R.id.nav_unassigned) {
-                Intent intent = new Intent(this, UnassignedActivity.class);
-                intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
-                startActivity(intent);
-                return true;
-            } else if (itemId == R.id.nav_more) {
-                MoreBottomSheetDialogFragment sheet = new MoreBottomSheetDialogFragment();
-                sheet.show(getSupportFragmentManager(), MoreBottomSheetDialogFragment.TAG);
+        if (bottomNavigation != null) {
+            bottomNavigation.getMenu().clear();
+            bottomNavigation.inflateMenu(R.menu.bottom_nav_lecturer);
+            bottomNavigation.setSelectedItemId(R.id.nav_students);
+            bottomNavigation.setOnItemSelectedListener(item -> {
+                int itemId = item.getItemId();
+                if (itemId == R.id.nav_students) {
+                    return true;
+                } else if (itemId == R.id.nav_unassigned) {
+                    Intent intent = new Intent(this, UnassignedActivity.class);
+                    intent.addFlags(Intent.FLAG_ACTIVITY_REORDER_TO_FRONT);
+                    startActivity(intent);
+                    return true;
+                } else if (itemId == R.id.nav_more) {
+                    MoreBottomSheetDialogFragment sheet = new MoreBottomSheetDialogFragment();
+                    sheet.show(getSupportFragmentManager(), MoreBottomSheetDialogFragment.TAG);
+                    return false;
+                }
                 return false;
-            }
-            return false;
-        });
+            });
+        }
     }
 
     private void setupFab() {
