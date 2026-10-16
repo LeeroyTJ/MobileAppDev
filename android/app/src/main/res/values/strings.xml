@@ -26,6 +26,8 @@
     <string name="register_title">Join your\nlab group</string>
     <string name="register_subtitle">Create your student profile to get started.</string>
     <string name="label_full_name">Full name</string>
+    <string name="hint_full_name">Enter full name</string>
+    <string name="hint_student_number">Enter student number</string>
     <string name="label_programme">Programme of study</string>
     <string name="hint_programme">Select programme</string>
     <string name="label_lab_group">Assign group</string>
@@ -38,6 +40,7 @@
     <!-- Bottom Navigation -->
     <string name="nav_home">Home</string>
     <string name="nav_group">Group</string>
+    <string name="nav_sync">Sync</string>
     <string name="nav_profile">Profile</string>
 
     <!-- Profile & Edit Student Strings -->

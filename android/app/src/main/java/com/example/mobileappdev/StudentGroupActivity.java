@@ -6,6 +6,7 @@ import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -16,6 +17,7 @@ import com.example.mobileappdev.data.local.entity.StudentEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
 import com.example.mobileappdev.session.SessionManager;
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
@@ -64,8 +66,9 @@ public class StudentGroupActivity extends AppCompatActivity {
         }
 
         bindViews();
+        setupRecyclerView();
         setupNavigation();
-        loadGroupData();
+        loadGroupDetails();
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -80,8 +83,14 @@ public class StudentGroupActivity extends AppCompatActivity {
         intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         startActivity(intent);
         finish();
-        setupRecyclerView();
-        loadGroupDetails();
+    }
+
+    private void setupRecyclerView() {
+        adapter = new StudentAdapter();
+        if (rvGroupMembers != null) {
+            rvGroupMembers.setLayoutManager(new LinearLayoutManager(this));
+            rvGroupMembers.setAdapter(adapter);
+        }
     }
 
     private void bindViews() {
@@ -97,7 +106,7 @@ public class StudentGroupActivity extends AppCompatActivity {
         MaterialButton btnRetry = findViewById(R.id.btnRetry);
 
         if (toolbar != null) {
-            toolbar.setNavigationOnClickListener(v -> finish());
+            toolbar.setNavigationOnClickListener(v -> navigateToParentProfile());
         }
         if (btnRetry != null) {
             btnRetry.setOnClickListener(v -> loadGroupDetails());
@@ -123,6 +132,24 @@ public class StudentGroupActivity extends AppCompatActivity {
                 }
                 return false;
             });
+        }
+    }
+
+    private void showLoading(boolean show) {
+        if (loadingIndicator != null) {
+            loadingIndicator.setVisibility(show ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    private void hideError() {
+        if (errorState != null) {
+            errorState.setVisibility(View.GONE);
+        }
+    }
+
+    private void showError() {
+        if (errorState != null) {
+            errorState.setVisibility(View.VISIBLE);
         }
     }
 
@@ -179,17 +206,19 @@ public class StudentGroupActivity extends AppCompatActivity {
                 ((Number) remObj).intValue() : Math.max(0, capacity - occupied);
 
         String title = "Lab Group " + groupCode + (groupName.isEmpty() ? "" : " - " + groupName);
-        tvGroupTitle.setText(title);
-        toolbar.setTitle(groupCode + " Details");
+        if (tvGroupTitle != null) tvGroupTitle.setText(title);
+        if (toolbar != null) toolbar.setTitle(groupCode + " Details");
 
         String capacityRatioText = occupied + " / " + capacity + " Students";
-        tvCapacityRatio.setText(capacityRatioText);
+        if (tvCapacityRatio != null) tvCapacityRatio.setText(capacityRatioText);
 
         String placesRemainingText = placesRemaining + " places remaining";
-        tvPlacesRemainingPill.setText(placesRemainingText);
+        if (tvPlacesRemainingPill != null) tvPlacesRemainingPill.setText(placesRemainingText);
 
-        progressCapacity.setMax(capacity);
-        progressCapacity.setProgress(occupied);
+        if (progressCapacity != null) {
+            progressCapacity.setMax(capacity);
+            progressCapacity.setProgress(occupied);
+        }
 
         formatProgrammeBreakdown(data);
 
@@ -223,7 +252,9 @@ public class StudentGroupActivity extends AppCompatActivity {
                 }
             }
         }
-        adapter.setStudents(membersList);
+        if (adapter != null) {
+            adapter.setStudents(membersList);
+        }
     }
 
     private void formatProgrammeBreakdown(Map<?, ?> data) {
@@ -236,6 +267,20 @@ public class StudentGroupActivity extends AppCompatActivity {
                     formattedLines.add(formatFullProgrammeName(item.toString()));
                 }
             }
-        });
+        }
+        if (tvProgrammeBreakdown != null) {
+            tvProgrammeBreakdown.setText(String.join("\n", formattedLines));
+        }
+    }
+
+    private String formatFullProgrammeName(String code) {
+        if (code == null) return "";
+        switch (code.toUpperCase()) {
+            case "CS": return "Computer Science";
+            case "IT": return "Information Technology";
+            case "DS": return "Data Science";
+            case "SE": return "Software Engineering";
+            default: return code;
+        }
     }
 }

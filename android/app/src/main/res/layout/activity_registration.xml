@@ -168,6 +168,32 @@
                     android:paddingBottom="14dp" />
             </com.google.android.material.textfield.TextInputLayout>
 
+            <!-- Claim Code (Optional) -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilClaimCode"
+                style="@style/CohortHubTextInputLayout"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/field_spacing"
+                android:hint="Claim code (optional, for pre-registered students)"
+                app:startIconDrawable="@drawable/ic_badge"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tilPassword">
+
+                <com.google.android.material.textfield.TextInputEditText
+                    android:id="@+id/etClaimCode"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:hint="Claim code (optional)"
+                    android:inputType="text"
+                    android:maxLines="1"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:paddingTop="20dp"
+                    android:paddingBottom="14dp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
             <!-- Programme of study (dropdown) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilProgramme"
@@ -179,7 +205,7 @@
                 app:startIconDrawable="@drawable/ic_book"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tilPassword">
+                app:layout_constraintTop_toBottomOf="@id/tilClaimCode">
 
                 <AutoCompleteTextView
                     android:id="@+id/actProgramme"
