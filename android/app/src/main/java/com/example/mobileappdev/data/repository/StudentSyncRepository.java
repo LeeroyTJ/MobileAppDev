@@ -6,6 +6,8 @@ import com.example.mobileappdev.data.local.dao.StudentDao;
 import com.example.mobileappdev.data.local.entity.PendingOperationEntity;
 import com.example.mobileappdev.data.local.entity.StudentEntity;
 
+import org.json.JSONObject;
+
 import java.util.List;
 import java.util.UUID;
 
@@ -94,6 +96,104 @@ public class StudentSyncRepository {
             op.entityId = student.serverId;
             pendingOperationDao.insert(op);
         });
+    }
+
+    /**
+     * Offline-safe queueing for group changes (ASSIGN or TRANSFER).
+     * Call from any Activity that changes a student's group.
+     */
+    public void submitGroupChange(long studentLocalId, long accountId, long serverId,
+                                  String newGroup, String currentGroup, int baseVersion) {
+        db.runInTransaction(() -> {
+            StudentEntity student = studentDao.findByLocalId(studentLocalId);
+            if (student == null) return;
+
+            // 1. Update local row immediately
+            student.labGroup = newGroup;
+            student.syncStatus = StudentEntity.STATUS_PENDING;
+            studentDao.update(student);
+
+            // 2. Queue the operation (collapse if one is already pending for this student)
+            PendingOperationEntity collapseTarget = findUnsyncedOp(studentLocalId, accountId,
+                    PendingOperationEntity.TYPE_ASSIGN_GROUP,
+                    PendingOperationEntity.TYPE_TRANSFER_GROUP);
+            if (collapseTarget != null) {
+                collapseTarget.payloadJson = buildGroupPayload(serverId, newGroup);
+                pendingOperationDao.update(collapseTarget);
+                return;
+            }
+
+            boolean wasUnassigned = currentGroup == null
+                    || currentGroup.isEmpty()
+                    || "Unassigned".equalsIgnoreCase(currentGroup);
+            String opType = wasUnassigned
+                    ? PendingOperationEntity.TYPE_ASSIGN_GROUP
+                    : PendingOperationEntity.TYPE_TRANSFER_GROUP;
+
+            PendingOperationEntity op = newOp(accountId, opType,
+                    buildGroupPayload(serverId, newGroup), baseVersion);
+            op.studentLocalId = studentLocalId;
+            op.entityId = serverId;
+            pendingOperationDao.insert(op);
+        });
+    }
+
+    /**
+     * Offline-safe queueing for student number corrections.
+     */
+    public void submitNumberCorrection(long studentLocalId, long accountId, long serverId,
+                                       String correctedNumber, int baseVersion) {
+        db.runInTransaction(() -> {
+            StudentEntity student = studentDao.findByLocalId(studentLocalId);
+            if (student == null) return;
+
+            student.studentNumber = correctedNumber;
+            student.syncStatus = StudentEntity.STATUS_PENDING;
+            studentDao.update(student);
+
+            PendingOperationEntity op = newOp(accountId,
+                    PendingOperationEntity.TYPE_CORRECT_STUDENT_NUMBER,
+                    buildNumberPayload(serverId, correctedNumber),
+                    baseVersion);
+            op.studentLocalId = studentLocalId;
+            op.entityId = serverId;
+            pendingOperationDao.insert(op);
+        });
+    }
+
+    /**
+     * Offline-safe queueing for name-only edits.
+     * Reuses submitEdit() since the payload shape is the same.
+     */
+    public void submitNameEdit(long studentLocalId, long accountId, String newName, int baseVersion) {
+        try {
+            JSONObject payload = new JSONObject();
+            payload.put("studentName", newName);
+            submitEdit(studentLocalId, accountId, payload.toString(), baseVersion);
+        } catch (Exception ignored) { }
+    }
+
+    private String buildGroupPayload(long serverId, String newGroup) {
+        try {
+            JSONObject payload = new JSONObject();
+            payload.put("studentId", serverId);
+            payload.put("labGroup", newGroup);
+            payload.put("targetGroup", newGroup);
+            return payload.toString();
+        } catch (Exception e) {
+            return "{\"labGroup\":\"" + newGroup + "\"}";
+        }
+    }
+
+    private String buildNumberPayload(long serverId, String correctedNumber) {
+        try {
+            JSONObject payload = new JSONObject();
+            payload.put("studentId", serverId);
+            payload.put("correctedStudentNumber", correctedNumber);
+            return payload.toString();
+        } catch (Exception e) {
+            return "{\"correctedStudentNumber\":\"" + correctedNumber + "\"}";
+        }
     }
 
     public void applySyncResult(String operationId, String resultStatus, String serverResultJson,

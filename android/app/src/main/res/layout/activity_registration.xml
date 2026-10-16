@@ -104,6 +104,7 @@
                     android:id="@+id/etFullName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:hint="@string/hint_full_name"
                     android:inputType="textPersonName"
                     android:maxLines="1"
                     android:textColor="@color/text_primary"
@@ -130,6 +131,7 @@
                     android:id="@+id/etStudentNumber"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:hint="@string/hint_student_number"
                     android:inputType="number"
                     android:maxLength="9"
                     android:maxLines="1"
@@ -157,6 +159,7 @@
                     android:id="@+id/etPassword"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:hint="@string/hint_password"
                     android:inputType="textPassword"
                     android:maxLines="1"
                     android:textColor="@color/text_primary"
@@ -182,6 +185,7 @@
                     android:id="@+id/actProgramme"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
+                    android:hint="@string/hint_programme"
                     android:inputType="none"
                     android:textColor="@color/text_primary"
                     android:textSize="16sp"
@@ -220,11 +224,11 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/field_spacing"
-                android:hint="@string/label_claim_code"
+                android:hint="Claim code (optional, for pre-registered students)"
                 app:startIconDrawable="@drawable/ic_key"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tilLabGroup">
+                app:layout_constraintTop_toBottomOf="@id/tilProgramme">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etClaimCode"
@@ -250,7 +254,7 @@
                 android:padding="14dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tilClaimCode">
+                app:layout_constraintTop_toBottomOf="@id/tilProgramme">
 
                 <ImageView
                     android:layout_width="20dp"
