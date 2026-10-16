@@ -6,6 +6,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/white"
+    android:fitsSystemWindows="true"
     tools:context=".ProfileActivity">
 
     <ScrollView
@@ -24,14 +25,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingStart="@dimen/screen_padding_horizontal"
-            android:paddingEnd="@dimen/screen_padding_horizontal">
+            android:paddingEnd="@dimen/screen_padding_horizontal"
+            android:paddingTop="48dp">
 
             <!-- Back button + title -->
             <ImageButton
                 android:id="@+id/btnBack"
                 android:layout_width="48dp"
                 android:layout_height="48dp"
-                android:layout_marginTop="12dp"
+                android:layout_marginTop="4dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:clickable="true"
                 android:focusable="true"
@@ -51,7 +53,7 @@
                 android:fontFamily="sans-serif-medium"
                 android:text="@string/profile_title"
                 android:textColor="@color/text_primary"
-                android:textSize="20sp"
+                android:textSize="22sp"
                 app:layout_constraintBottom_toBottomOf="@id/btnBack"
                 app:layout_constraintStart_toEndOf="@id/btnBack"
                 app:layout_constraintTop_toTopOf="@id/btnBack" />
@@ -61,7 +63,7 @@
                 android:id="@+id/cardProfileInfo"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="18dp"
+                android:layout_marginTop="16dp"
                 android:background="@drawable/bg_card_outline"
                 android:padding="16dp"
                 app:layout_constraintEnd_toEndOf="parent"
@@ -144,169 +146,157 @@
 
             </androidx.constraintlayout.widget.ConstraintLayout>
 
-            <!-- Lab Group card -->
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/cardLabGroup"
+            <!-- Row of two cards: Lab Group + Sync Status -->
+            <LinearLayout
+                android:id="@+id/rowCards"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/field_spacing"
-                android:background="@drawable/bg_card_outline"
-                android:padding="14dp"
-                app:layout_constraintEnd_toStartOf="@id/cardSyncStatus"
-                app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/cardProfileInfo"
-                app:layout_constraintWidth_percent="0.47">
-
-                <TextView
-                    android:id="@+id/tvLabGroupCardTitle"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:text="@string/lab_group_card_title"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
-
-                <TextView
-                    android:id="@+id/tvLabGroupValue"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:fontFamily="sans-serif-medium"
-                    android:textColor="@color/text_primary"
-                    android:textSize="22sp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tvLabGroupCardTitle"
-                    tools:text="G02" />
-
-                <TextView
-                    android:id="@+id/tvLabGroupCapacity"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tvLabGroupValue"
-                    tools:text="11 / 15" />
-
-                <ProgressBar
-                    android:id="@+id/progressLabGroup"
-                    style="@android:style/Widget.ProgressBar.Horizontal"
-                    android:layout_width="0dp"
-                    android:layout_height="8dp"
-                    android:layout_marginTop="10dp"
-                    android:max="15"
-                    android:progress="11"
-                    android:progressBackgroundTint="@color/primary_light"
-                    android:progressTint="@color/primary"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tvLabGroupCapacity" />
-
-                <!-- Remaining Places Pill -->
-                <TextView
-                    android:id="@+id/tvPlacesRemaining"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:background="@drawable/bg_pill"
-                    android:fontFamily="sans-serif-medium"
-                    android:paddingStart="10dp"
-                    android:paddingTop="4dp"
-                    android:paddingEnd="10dp"
-                    android:paddingBottom="4dp"
-                    android:textColor="@color/primary_dark"
-                    android:textSize="12sp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/progressLabGroup"
-                    tools:text="4 places remaining" />
-
-            </androidx.constraintlayout.widget.ConstraintLayout>
-
-            <!-- Sync Status card (Wrap content height for 200% font scale) -->
-            <androidx.constraintlayout.widget.ConstraintLayout
-                android:id="@+id/cardSyncStatus"
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_card_outline"
-                android:padding="14dp"
+                android:baselineAligned="false"
+                android:orientation="horizontal"
                 app:layout_constraintEnd_toEndOf="parent"
-                app:layout_constraintStart_toEndOf="@id/cardLabGroup"
-                app:layout_constraintTop_toTopOf="@id/cardLabGroup"
-                app:layout_constraintWidth_percent="0.47">
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/cardProfileInfo">
 
-                <TextView
-                    android:id="@+id/tvSyncStatusCardTitle"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="@string/sync_status_card_title"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="13sp"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toTopOf="parent" />
-
-                <ImageView
-                    android:id="@+id/ivSyncCheck"
-                    android:layout_width="18dp"
-                    android:layout_height="18dp"
-                    android:layout_marginTop="8dp"
-                    android:contentDescription="@null"
-                    android:src="@drawable/ic_check_circle"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tvSyncStatusCardTitle" />
-
-                <TextView
-                    android:id="@+id/tvSyncedLabel"
+                <!-- Lab Group card -->
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/cardLabGroup"
                     android:layout_width="0dp"
-                    android:layout_height="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
+                    android:layout_marginEnd="6dp"
+                    android:background="@drawable/bg_card_outline"
+                    android:padding="14dp">
+
+                    <TextView
+                        android:id="@+id/tvLabGroupValue"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="sans-serif-medium"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        tools:text="Lab Group G03" />
+
+                    <LinearLayout
+                        android:id="@+id/containerGroupMetrics"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/tvLabGroupValue">
+
+                        <TextView
+                            android:id="@+id/tvLabGroupCapacity"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:textColor="@color/text_secondary"
+                            android:textSize="12sp"
+                            tools:text="11 / 15 Students" />
+
+                        <TextView
+                            android:id="@+id/tvPlacesRemaining"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_pill"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="3dp"
+                            android:textColor="@color/primary_dark"
+                            android:textSize="11sp"
+                            tools:text="4 places remaining" />
+                    </LinearLayout>
+
+                    <com.google.android.material.progressindicator.LinearProgressIndicator
+                        android:id="@+id/progressCapacity"
+                        android:layout_width="0dp"
+                        android:layout_height="6dp"
+                        android:layout_marginTop="10dp"
+                        app:trackCornerRadius="3dp"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/containerGroupMetrics"
+                        tools:progress="73" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                <!-- Sync Status card -->
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:id="@+id/cardSyncStatus"
+                    android:layout_width="0dp"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1"
                     android:layout_marginStart="6dp"
-                    android:fontFamily="sans-serif-medium"
-                    android:text="@string/sync_status_synced"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp"
-                    app:layout_constraintBottom_toBottomOf="@id/ivSyncCheck"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toEndOf="@id/ivSyncCheck"
-                    app:layout_constraintTop_toTopOf="@id/ivSyncCheck" />
+                    android:background="@drawable/bg_card_outline"
+                    android:padding="14dp">
 
-                <TextView
-                    android:id="@+id/tvLastUpdatedLabel"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="10dp"
-                    android:text="@string/last_updated_label"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/ivSyncCheck" />
+                    <TextView
+                        android:id="@+id/tvSyncStatusCardTitle"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/sync_status_card_title"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="13sp"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent" />
 
-                <TextView
-                    android:id="@+id/tvLastUpdatedValue"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:textColor="@color/text_secondary"
-                    android:textSize="12sp"
-                    app:layout_constraintEnd_toEndOf="parent"
-                    app:layout_constraintStart_toStartOf="parent"
-                    app:layout_constraintTop_toBottomOf="@id/tvLastUpdatedLabel"
-                    tools:text="Today, 09:24" />
+                    <ImageView
+                        android:id="@+id/ivSyncCheck"
+                        android:layout_width="18dp"
+                        android:layout_height="18dp"
+                        android:layout_marginTop="8dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_check_circle"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/tvSyncStatusCardTitle" />
 
-            </androidx.constraintlayout.widget.ConstraintLayout>
+                    <TextView
+                        android:id="@+id/tvSyncedLabel"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:fontFamily="sans-serif-medium"
+                        android:text="@string/sync_status_synced"
+                        android:textColor="@color/text_primary"
+                        android:textSize="16sp"
+                        app:layout_constraintBottom_toBottomOf="@id/ivSyncCheck"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@id/ivSyncCheck"
+                        app:layout_constraintTop_toTopOf="@id/ivSyncCheck" />
 
-            <!-- Barrier to prevent cardQuickActions from colliding with either card -->
-            <androidx.constraintlayout.widget.Barrier
-                android:id="@+id/barrierCards"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                app:barrierDirection="bottom"
-                app:constraint_referenced_ids="cardLabGroup,cardSyncStatus" />
+                    <TextView
+                        android:id="@+id/tvLastUpdatedLabel"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/last_updated_label"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/ivSyncCheck" />
+
+                    <TextView
+                        android:id="@+id/tvLastUpdatedValue"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="2dp"
+                        android:textColor="@color/text_secondary"
+                        android:textSize="12sp"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@id/tvLastUpdatedLabel"
+                        tools:text="Today, 09:24" />
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+
+            </LinearLayout>
 
             <!-- Quick Actions card -->
             <androidx.constraintlayout.widget.ConstraintLayout
@@ -322,7 +312,7 @@
                 android:paddingBottom="4dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/barrierCards">
+                app:layout_constraintTop_toBottomOf="@id/rowCards">
 
                 <TextView
                     android:id="@+id/tvQuickActionsTitle"
@@ -480,7 +470,6 @@
         app:itemIconTint="@color/dodger_blue"
         app:itemTextColor="@color/dodger_blue"
         app:labelVisibilityMode="labeled"
-        app:menu="@menu/bottom_nav_menu"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />

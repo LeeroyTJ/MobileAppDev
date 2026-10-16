@@ -52,4 +52,7 @@ public interface PendingOperationDao {
 
     @Query("DELETE FROM pending_operations WHERE operationId = :operationId")
     void deleteById(String operationId);
+
+    @Query("DELETE FROM pending_operations WHERE accountId = :accountId AND operationType = :type")
+    void deleteByTypeForAccount(long accountId, String type);
 }

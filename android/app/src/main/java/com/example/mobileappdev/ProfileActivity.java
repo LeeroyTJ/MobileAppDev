@@ -1,8 +1,6 @@
 package com.example.mobileappdev;
 
-import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.text.InputType;
 import android.text.TextUtils;
@@ -20,6 +18,7 @@ import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mobileappdev.data.local.AppDatabase;
+import com.example.mobileappdev.data.local.dao.PendingOperationDao;
 import com.example.mobileappdev.data.local.entity.PendingOperationEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
 import com.example.mobileappdev.session.SessionManager;
@@ -43,13 +42,12 @@ import retrofit2.Response;
 
 public class ProfileActivity extends AppCompatActivity {
 
-    private static final String PREF_LAST_UPDATED = "profile_last_updated_time";
-
     private TextView tvAvatarInitials;
     private TextView tvProfileName;
     private TextView tvProfileStudentNumber;
     private TextView tvProfileProgramme;
     private TextView tvLabGroupValue;
+    private TextView tvLabGroupCapacity;
     private TextView tvSyncedLabel;
     private TextView tvLastUpdatedValue;
     private ImageView ivSyncCheck;
@@ -106,6 +104,8 @@ public class ProfileActivity extends AppCompatActivity {
     private void setupBottomNav() {
         BottomNavigationView bottomNav = findViewById(R.id.bottomNav);
         if (bottomNav != null) {
+            bottomNav.getMenu().clear();
+            bottomNav.inflateMenu(R.menu.bottom_nav_student);
             bottomNav.setSelectedItemId(R.id.navHome);
             bottomNav.setOnItemSelectedListener(item -> {
                 int id = item.getItemId();
@@ -130,7 +130,7 @@ public class ProfileActivity extends AppCompatActivity {
     private void bindViews() {
         View btnBack = findViewById(R.id.btnBack);
         if (btnBack != null) {
-            btnBack.setOnClickListener(v -> handleBackPress());
+            btnBack.setVisibility(View.VISIBLE);
         }
 
         tvAvatarInitials = findViewById(R.id.tvAvatarInitials);
@@ -138,6 +138,7 @@ public class ProfileActivity extends AppCompatActivity {
         tvProfileStudentNumber = findViewById(R.id.tvProfileStudentNumber);
         tvProfileProgramme = findViewById(R.id.tvProfileProgramme);
         tvLabGroupValue = findViewById(R.id.tvLabGroupValue);
+        tvLabGroupCapacity = findViewById(R.id.tvLabGroupCapacity);
         tvSyncedLabel = findViewById(R.id.tvSyncedLabel);
         tvLastUpdatedValue = findViewById(R.id.tvLastUpdatedValue);
         ivSyncCheck = findViewById(R.id.ivSyncCheck);
@@ -166,34 +167,17 @@ public class ProfileActivity extends AppCompatActivity {
                     return;
                 }
 
+                // performAssign = false — the picker only reports the choice; we queue the request.
                 GroupPickerBottomSheetDialogFragment dialog =
-                        GroupPickerBottomSheetDialogFragment.newInstance(myStudentId);
+                        GroupPickerBottomSheetDialogFragment.newInstance(myStudentId, false);
                 dialog.setOnGroupSelectedListener(groupCode -> {
-                    if (tvLabGroupValue != null) tvLabGroupValue.setText(groupCode);
-                    Map<String, Object> body = new HashMap<>();
-                    body.put("targetGroup", groupCode);
-                    body.put("reason", "Student requested group change from profile");
-                    ApiClient.getStudentService(this).requestGroupChange(myStudentId, body)
-                            .enqueue(new Callback<>() {
-                                @Override
-                                public void onResponse(@NonNull Call<Map<String, Object>> call,
-                                                       @NonNull Response<Map<String, Object>> response) {
-                                    if (response.isSuccessful()) {
-                                        Toast.makeText(ProfileActivity.this,
-                                                "Group change request submitted", Toast.LENGTH_SHORT).show();
-                                    } else {
-                                        Toast.makeText(ProfileActivity.this,
-                                                "Request submitted for sync", Toast.LENGTH_SHORT).show();
-                                    }
-                                }
-
-                                @Override
-                                public void onFailure(@NonNull Call<Map<String, Object>> call,
-                                                      @NonNull Throwable t) {
-                                    Toast.makeText(ProfileActivity.this,
-                                            "Request queued for sync when online", Toast.LENGTH_SHORT).show();
-                                }
-                            });
+                    // Do NOT change tvLabGroupValue — the confirmed group hasn't changed.
+                    // Surface the pending request in the capacity line instead.
+                    showPendingGroupRequest(groupCode);
+                    queueGroupChangeRequest(groupCode);
+                    Toast.makeText(ProfileActivity.this,
+                            R.string.saved_offline_will_send,
+                            Toast.LENGTH_LONG).show();
                 });
                 dialog.show(getSupportFragmentManager(), GroupPickerBottomSheetDialogFragment.TAG);
             });
@@ -211,12 +195,85 @@ public class ProfileActivity extends AppCompatActivity {
                 .pendingOperationDao()
                 .observeQueueForAccount(accountId)
                 .observe(this, queue -> {
-                    if (queue != null && !queue.isEmpty()) {
+                    if (queue == null || queue.isEmpty()) {
+                        if (tvSyncedLabel != null) tvSyncedLabel.setText(R.string.sync_status_synced);
+                        if (ivSyncCheck != null) ivSyncCheck.setImageResource(R.drawable.ic_check_circle);
+                        clearPendingGroupRequest();
+                        return;
+                    }
+
+                    boolean hasActionRequired = false;
+                    boolean hasPending = false;
+
+                    // The queue is ordered newest-first (createdAt DESC).
+                    // We want the most recent group-change row only — never an older one.
+                    PendingOperationEntity newestGroupChange = null;
+
+                    for (PendingOperationEntity op : queue) {
+                        if (PendingOperationEntity.STATUS_REJECTED.equals(op.status)
+                                || PendingOperationEntity.STATUS_CONFLICT.equals(op.status)
+                                || PendingOperationEntity.STATUS_ACTION_REQUIRED.equals(op.status)) {
+                            hasActionRequired = true;
+                        } else if (PendingOperationEntity.STATUS_PENDING.equals(op.status)
+                                || PendingOperationEntity.STATUS_SYNCING.equals(op.status)
+                                || PendingOperationEntity.STATUS_FAILED.equals(op.status)) {
+                            hasPending = true;
+                        }
+                        if (newestGroupChange == null
+                                && PendingOperationEntity.TYPE_REQUEST_GROUP_CHANGE.equals(op.operationType)) {
+                            newestGroupChange = op;   // first match wins = newest
+                        }
+                    }
+
+                    if (hasActionRequired) {
+                        if (tvSyncedLabel != null) tvSyncedLabel.setText(R.string.sync_action_required);
+                        if (ivSyncCheck != null) ivSyncCheck.setImageResource(R.drawable.ic_status_error);
+                    } else if (hasPending) {
                         if (tvSyncedLabel != null) tvSyncedLabel.setText(R.string.sync_pending);
                         if (ivSyncCheck != null) ivSyncCheck.setImageResource(R.drawable.ic_status_pending);
                     } else {
                         if (tvSyncedLabel != null) tvSyncedLabel.setText(R.string.sync_status_synced);
                         if (ivSyncCheck != null) ivSyncCheck.setImageResource(R.drawable.ic_check_circle);
+                    }
+
+                    if (newestGroupChange == null) {
+                        clearPendingGroupRequest();
+                        return;
+                    }
+
+                    switch (newestGroupChange.status) {
+                        case PendingOperationEntity.STATUS_PENDING:
+                        case PendingOperationEntity.STATUS_SYNCING:
+                        case PendingOperationEntity.STATUS_FAILED:
+                            showPendingGroupRequest(requestedGroupFrom(newestGroupChange));
+                            break;
+
+                        case PendingOperationEntity.STATUS_SYNCED:
+                            // Server confirmed — the canonical group is now the requested one.
+                            // Re-fetch the profile so the confirmed label reflects server truth,
+                            // and clear the pending line.
+                            clearPendingGroupRequest();
+                            loadProfile();
+                            break;
+
+                        case PendingOperationEntity.STATUS_REJECTED:
+                            showRejectedGroupRequest(
+                                    requestedGroupFrom(newestGroupChange),
+                                    reasonFrom(newestGroupChange)
+                            );
+                            break;
+
+                        case PendingOperationEntity.STATUS_CONFLICT:
+                        case PendingOperationEntity.STATUS_ACTION_REQUIRED:
+                            showRejectedGroupRequest(
+                                    requestedGroupFrom(newestGroupChange),
+                                    "Version conflict — refresh and try again"
+                            );
+                            break;
+
+                        default:
+                            clearPendingGroupRequest();
+                            break;
                     }
                 });
     }
@@ -266,14 +323,12 @@ public class ProfileActivity extends AppCompatActivity {
     }
 
     private void saveAndDisplayLastUpdatedTime(long millis) {
-        SharedPreferences prefs = getSharedPreferences("cohorthub_session", Context.MODE_PRIVATE);
-        prefs.edit().putLong(PREF_LAST_UPDATED, millis).apply();
+        SessionManager.getInstance(this).saveLastSyncedTime(millis);
         displayFormattedLastUpdated(millis);
     }
 
     private void loadCachedLastUpdatedTime() {
-        SharedPreferences prefs = getSharedPreferences("cohorthub_session", Context.MODE_PRIVATE);
-        long cachedMillis = prefs.getLong(PREF_LAST_UPDATED, -1);
+        long cachedMillis = SessionManager.getInstance(this).getLastSyncedTime();
         if (cachedMillis > 0) {
             displayFormattedLastUpdated(cachedMillis);
         } else {
@@ -458,6 +513,121 @@ public class ProfileActivity extends AppCompatActivity {
                 })
                 .setNegativeButton("Cancel", null)
                 .show();
+    }
+
+    /**
+     * Shows "Requested G02 · pending" in the capacity line, without touching the
+     * confirmed group label. Cleared when the request resolves.
+     */
+    private void showPendingGroupRequest(String requestedGroup) {
+        if (tvLabGroupCapacity == null) return;
+        String pending = getString(R.string.group_request_pending_format, requestedGroup);
+        tvLabGroupCapacity.setText(pending);
+        tvLabGroupCapacity.setVisibility(View.VISIBLE);
+    }
+
+    /**
+     * Restores the capacity line (or clears it, since ProfileActivity currently
+     * does not load capacity for the profile card).
+     */
+    private void clearPendingGroupRequest() {
+        if (tvLabGroupCapacity == null) return;
+        tvLabGroupCapacity.setText("");
+        tvLabGroupCapacity.setTextColor(getResources().getColor(R.color.text_secondary, getTheme()));
+    }
+
+    /**
+     * Persists a group-change request locally so it survives app restart and
+     * can be surfaced in the Sync screen's "Student Requests" section.
+     */
+    private void queueGroupChangeRequest(String requestedGroup) {
+        PendingOperationEntity op = new PendingOperationEntity();
+        op.operationId = UUID.randomUUID().toString();
+        op.entityId = myStudentId;
+        op.studentLocalId = null;
+        op.accountId = SessionManager.getInstance(this).getAccountId();
+        op.operationType = PendingOperationEntity.TYPE_REQUEST_GROUP_CHANGE;
+        op.baseVersion = myBaseVersion;
+        op.status = PendingOperationEntity.STATUS_PENDING;
+        op.createdAt = System.currentTimeMillis();
+
+        try {
+            op.payloadJson = new JSONObject()
+                    .put("studentId", myStudentId)
+                    .put("requestedGroup", requestedGroup)
+                    .put("baseVersion", myBaseVersion)
+                    .toString();
+        } catch (Exception e) {
+            op.payloadJson = "{\"requestedGroup\":\"" + requestedGroup + "\"}";
+        }
+
+        final long accountId = op.accountId;
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            PendingOperationDao dao = AppDatabase.getInstance(this).pendingOperationDao();
+            // Supersede older requests for the same account and operation type.
+            dao.deleteByTypeForAccount(accountId, PendingOperationEntity.TYPE_REQUEST_GROUP_CHANGE);
+            dao.insert(op);
+            executor.shutdown();
+        });
+    }
+
+    /** Extracts the requested group code from a REQUEST_GROUP_CHANGE row's payload. */
+    private String requestedGroupFrom(PendingOperationEntity op) {
+        if (op == null || op.payloadJson == null) return "";
+        try {
+            return new JSONObject(op.payloadJson).optString("requestedGroup", "");
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
+    /** Extracts the rejection reason code from a rejected row, if present. */
+    private String reasonFrom(PendingOperationEntity op) {
+        if (op == null || op.serverResultJson == null) return "Request rejected";
+        try {
+            JSONObject result = new JSONObject(op.serverResultJson);
+            // The sync handler wraps the payload as { operationId, status, data: { code, message } }
+            JSONObject data = result.optJSONObject("data");
+            if (data != null) {
+                String msg = data.optString("message", "");
+                String code = data.optString("code", "");
+                if (msg != null && !msg.isEmpty()) return msg;
+                if ("GROUP_FULL".equals(code)) return "That group is full";
+            }
+            String msg = result.optString("message", "");
+            if (msg != null && !msg.isEmpty()) return msg;
+        } catch (Exception ignored) { }
+        return "Request rejected";
+    }
+
+    /** Shows a rejection line in the capacity slot (does not modify the confirmed group label). */
+    private void showRejectedGroupRequest(String requestedGroup, String reason) {
+        if (tvLabGroupCapacity == null) return;
+        String text = "Requested " + requestedGroup + " — " + reason;
+        tvLabGroupCapacity.setText(text);
+        tvLabGroupCapacity.setVisibility(View.VISIBLE);
+        tvLabGroupCapacity.setTextColor(getResources().getColor(R.color.error_red, getTheme()));
+    }
+
+    /**
+     * Extracts the server's error.message from an error response body.
+     * Falls back to a generic message if the body is missing or malformed.
+     */
+    private String extractServerError(Response<Map<String, Object>> response) {
+        try {
+            if (response.body() != null) {
+                Object error = response.body().get("error");
+                if (error instanceof Map) {
+                    Object msg = ((Map<?, ?>) error).get("message");
+                    if (msg != null) return msg.toString();
+                }
+            }
+        } catch (Exception ignored) { }
+        if (response.code() == 409) return "That group is full. You keep your current group.";
+        if (response.code() == 403) return "You can't request a group change right now.";
+        if (response.code() == 404) return "Your profile wasn't found. Try signing in again.";
+        return "Couldn't send the request. Please try again.";
     }
 
     private String initialsOf(String name) {

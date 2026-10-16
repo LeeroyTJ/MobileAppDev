@@ -66,7 +66,6 @@ public class UnassignedActivity extends AppCompatActivity {
         bindViews();
         setupNavigation();
         setupRecyclerView();
-        loadUnassignedStudents();
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -103,12 +102,15 @@ public class UnassignedActivity extends AppCompatActivity {
         if (bottomNav != null) {
             bottomNav.setSelectedItemId(R.id.nav_unassigned);
         }
+        loadUnassignedStudents();
     }
 
     private void setupNavigation() {
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         if (bottomNav == null) return;
 
+        bottomNav.getMenu().clear();
+        bottomNav.inflateMenu(R.menu.bottom_nav_lecturer);
         bottomNav.setSelectedItemId(R.id.nav_unassigned);
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();

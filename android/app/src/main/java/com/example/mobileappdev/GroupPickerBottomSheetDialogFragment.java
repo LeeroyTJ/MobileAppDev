@@ -10,16 +10,16 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import com.example.mobileappdev.data.local.AppDatabase;
-import com.example.mobileappdev.data.local.entity.StudentEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.button.MaterialButton;
+import com.example.mobileappdev.data.local.AppDatabase;
+import com.example.mobileappdev.data.local.entity.StudentEntity;
+import java.util.concurrent.Executors;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Executors;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -36,15 +36,30 @@ public class GroupPickerBottomSheetDialogFragment extends BottomSheetDialogFragm
     private OnGroupSelectedListener listener;
     private long studentServerId = 0;
 
+    /**
+     * When true, picking a group performs a real assignment via
+     * POST /groups/:groupId/assign (lecturer flow, capacity-checked server-side).
+     * When false, picking a group only reports the choice to the listener
+     * (student "request group change" flow, which queues locally).
+     */
+    private boolean performAssign = true;
+
     private TextView tvG01Occupancy;
     private TextView tvG02Occupancy;
     private TextView tvG03Occupancy;
     private TextView tvG04Occupancy;
 
+    /** Lecturer-flow factory: picking a group assigns it. */
     public static GroupPickerBottomSheetDialogFragment newInstance(long studentServerId) {
+        return newInstance(studentServerId, true);
+    }
+
+    /** Explicit factory: set performAssign = false for the student request flow. */
+    public static GroupPickerBottomSheetDialogFragment newInstance(long studentServerId, boolean performAssign) {
         GroupPickerBottomSheetDialogFragment fragment = new GroupPickerBottomSheetDialogFragment();
         Bundle args = new Bundle();
         args.putLong("student_server_id", studentServerId);
+        args.putBoolean("perform_assign", performAssign);
         fragment.setArguments(args);
         return fragment;
     }
@@ -54,6 +69,7 @@ public class GroupPickerBottomSheetDialogFragment extends BottomSheetDialogFragm
         super.onCreate(savedInstanceState);
         if (getArguments() != null) {
             studentServerId = getArguments().getLong("student_server_id", 0);
+            performAssign = getArguments().getBoolean("perform_assign", true);
         }
     }
 
@@ -105,13 +121,9 @@ public class GroupPickerBottomSheetDialogFragment extends BottomSheetDialogFragm
                 }
 
                 Object dataObj = response.body().get("data");
-                if (!(dataObj instanceof List)) {
-                    return;
-                }
+                if (!(dataObj instanceof List)) return;
 
-                List<?> groupList = (List<?>) dataObj;
-
-                for (Object item : groupList) {
+                for (Object item : (List<?>) dataObj) {
                     if (item instanceof Map) {
                         Map<?, ?> groupMap = (Map<?, ?>) item;
                         Object codeObj = groupMap.get("group_code");
@@ -139,12 +151,22 @@ public class GroupPickerBottomSheetDialogFragment extends BottomSheetDialogFragm
 
             @Override
             public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
-                // If fetch fails (e.g. offline), placeholders ("-- / --") remain visible
+                // If fetch fails, placeholders ("-- / --") remain visible.
             }
         });
     }
 
     private void selectGroup(String groupCode, long groupId) {
+        // Path 1 — pick only. Used by the student's "Request group change" flow.
+        if (!performAssign) {
+            if (listener != null) {
+                listener.onGroupSelected(groupCode);
+            }
+            dismiss();
+            return;
+        }
+
+        // Path 2 — student has no server id, so we can't assign. Just report the choice.
         if (studentServerId <= 0) {
             if (listener != null) {
                 listener.onGroupSelected(groupCode);
@@ -155,6 +177,8 @@ public class GroupPickerBottomSheetDialogFragment extends BottomSheetDialogFragm
             return;
         }
 
+        // Path 3 — lecturer assignment. Goes through POST /groups/:id/assign,
+        // which enforces the 15-cap under a row lock (SELECT ... FOR UPDATE).
         Map<String, Object> body = new HashMap<>();
         body.put("studentId", studentServerId);
 
@@ -163,24 +187,25 @@ public class GroupPickerBottomSheetDialogFragment extends BottomSheetDialogFragm
             public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
                 if (response.isSuccessful() && response.body() != null
                         && Boolean.TRUE.equals(response.body().get("success"))) {
-                    Toast.makeText(requireContext(), "Successfully assigned student to group " + groupCode, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(),
+                            "Successfully assigned student to group " + groupCode, Toast.LENGTH_SHORT).show();
                     updateLocalRoomStudentGroup(studentServerId, groupCode);
                     if (listener != null) listener.onGroupSelected(groupCode);
                 } else if (response.code() == 409) {
-                    Toast.makeText(requireContext(), "Group " + groupCode + " is full (15/15 max capacity)", Toast.LENGTH_LONG).show();
+                    Toast.makeText(requireContext(),
+                            "Group " + groupCode + " is full (15/15 max capacity)", Toast.LENGTH_LONG).show();
                 } else {
-                    updateLocalRoomStudentGroup(studentServerId, groupCode);
-                    Toast.makeText(requireContext(), "Group assignment saved locally", Toast.LENGTH_SHORT).show();
-                    if (listener != null) listener.onGroupSelected(groupCode);
+                    Toast.makeText(requireContext(),
+                            "Couldn't assign this student to " + groupCode, Toast.LENGTH_SHORT).show();
                 }
                 dismiss();
             }
 
             @Override
             public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
-                updateLocalRoomStudentGroup(studentServerId, groupCode);
-                Toast.makeText(requireContext(), "Group assignment saved locally", Toast.LENGTH_SHORT).show();
-                if (listener != null) listener.onGroupSelected(groupCode);
+                Toast.makeText(requireContext(),
+                        "Network error — couldn't assign this student to " + groupCode,
+                        Toast.LENGTH_SHORT).show();
                 dismiss();
             }
         });

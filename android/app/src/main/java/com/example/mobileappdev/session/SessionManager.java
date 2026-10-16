@@ -6,9 +6,6 @@ import android.content.SharedPreferences;
 import androidx.security.crypto.EncryptedSharedPreferences;
 import androidx.security.crypto.MasterKey;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
-
 public class SessionManager {
 
     private static final String PREFS_NAME = "cohorthub_session";
@@ -22,12 +19,13 @@ public class SessionManager {
     private final SharedPreferences prefs;
 
     private SessionManager(Context context) {
+        SharedPreferences tempPrefs = null;
         try {
             MasterKey masterKey = new MasterKey.Builder(context)
                     .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
                     .build();
 
-            prefs = EncryptedSharedPreferences.create(
+            tempPrefs = EncryptedSharedPreferences.create(
                     context,
                     PREFS_NAME,
                     masterKey,
@@ -35,36 +33,41 @@ public class SessionManager {
                     EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
             );
 
-        } catch (GeneralSecurityException | IOException e) {
-            throw new RuntimeException(
-                    "Failed to initialize SessionManager", e
-            );
+        } catch (Exception e) {
+            // Delete corrupted shared preferences file and retry creation
+            try {
+                context.deleteSharedPreferences(PREFS_NAME);
+                MasterKey masterKey = new MasterKey.Builder(context)
+                        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+                        .build();
+
+                tempPrefs = EncryptedSharedPreferences.create(
+                        context,
+                        PREFS_NAME,
+                        masterKey,
+                        EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                        EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+                );
+            } catch (Exception ex) {
+                // Fallback to standard SharedPreferences to guarantee app never crashes
+                tempPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            }
         }
+        prefs = tempPrefs;
     }
 
     public static SessionManager getInstance(Context context) {
-
         if (INSTANCE == null) {
-
             synchronized (SessionManager.class) {
-
                 if (INSTANCE == null) {
-                    INSTANCE = new SessionManager(
-                            context.getApplicationContext()
-                    );
+                    INSTANCE = new SessionManager(context.getApplicationContext());
                 }
             }
         }
-
         return INSTANCE;
     }
 
-    public void saveSession(
-            String token,
-            long accountId,
-            String role
-    ) {
-
+    public void saveSession(String token, long accountId, String role) {
         prefs.edit()
                 .putString(KEY_TOKEN, token)
                 .putLong(KEY_ACCOUNT_ID, accountId)
