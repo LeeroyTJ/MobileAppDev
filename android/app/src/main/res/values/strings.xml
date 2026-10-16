@@ -1,3 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">CohortHub</string>
 
@@ -37,7 +38,6 @@
     <!-- Bottom Navigation -->
     <string name="nav_home">Home</string>
     <string name="nav_group">Group</string>
-    <string name="nav_sync">Sync</string>
     <string name="nav_profile">Profile</string>
 
     <!-- Profile & Edit Student Strings -->

@@ -107,6 +107,7 @@ public class StudentSheetBottomSheetDialogFragment extends BottomSheetDialogFrag
                 intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_NAME, name);
                 intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_NUMBER, number);
                 intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_PROGRAMME, programme);
+                intent.putExtra("student_server_id", studentServerId);
                 startActivity(intent);
             });
         }

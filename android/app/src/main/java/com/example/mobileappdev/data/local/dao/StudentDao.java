@@ -33,11 +33,20 @@ public interface StudentDao {
     @Query("SELECT * FROM students WHERE localId = :localId LIMIT 1")
     StudentEntity findByLocalId(long localId);
 
-    @Query("SELECT * FROM students WHERE accountId = :accountId AND labGroup IS NULL")
+    @Query("SELECT * FROM students WHERE localId = :localId LIMIT 1")
+    LiveData<StudentEntity> observeByLocalId(long localId);
+
+    @Query("SELECT * FROM students WHERE accountId = :accountId AND labGroup IS NULL AND isDeleted = 0")
     LiveData<List<StudentEntity>> observeUnassigned(long accountId);
 
     @Query("SELECT COUNT(*) FROM students WHERE labGroup = :group AND isDeleted = 0")
     int countActiveInGroup(String group);
+
+    @Query("SELECT COUNT(*) FROM students WHERE labGroup = :group AND isDeleted = 0")
+    LiveData<Integer> observeActiveCountInGroup(String group);
+
+    @Query("SELECT COUNT(*) FROM students WHERE accountId = :accountId AND syncStatus != 'SYNCED' AND isDeleted = 0")
+    LiveData<Integer> observeUnsyncedCountForAccount(long accountId);
 
     @Query("SELECT * FROM students WHERE accountId = :accountId AND syncStatus != 'SYNCED'")
     List<StudentEntity> findUnsyncedForAccount(long accountId);

@@ -192,14 +192,34 @@ public class AddStudentDialogFragment extends DialogFragment {
                         && response.body().data.results != null && !response.body().data.results.isEmpty()) {
 
                     SyncResult result = response.body().data.results.get(0);
-                    long serverId = result.entityId != null ? result.entityId : 0;
+                    String status = result.status != null ? result.status.toUpperCase() : "";
 
-                    saveStudentToRoom(name, studentNumber, selectedProgrammeCode, finalGroup, serverId, StudentEntity.STATUS_SYNCED, accountId);
-                    Toast.makeText(requireContext(), "Student added successfully", Toast.LENGTH_SHORT).show();
-                } else {
-                    saveStudentOffline(name, studentNumber, selectedProgrammeCode, finalGroup, accountId, op);
-                    Toast.makeText(requireContext(), "Saved locally — will sync when online", Toast.LENGTH_LONG).show();
+                    if ("APPLIED".equals(status) || "APPROVED".equals(status)) {
+                        long serverId = result.entityId != null ? result.entityId : 0;
+                        saveStudentToRoom(name, studentNumber, selectedProgrammeCode, finalGroup, serverId, StudentEntity.STATUS_SYNCED, accountId);
+                        Toast.makeText(requireContext(), "Student added successfully", Toast.LENGTH_SHORT).show();
+                        dismiss();
+                        return;
+                    } else {
+                        // Operation REJECTED / CONFLICT / ERROR — Do NOT save to Room
+                        String errorMsg = result.message;
+                        if (TextUtils.isEmpty(errorMsg) && result.data != null) {
+                            Object msgObj = result.data.get("message");
+                            if (msgObj != null) errorMsg = msgObj.toString();
+                        }
+                        if (TextUtils.isEmpty(errorMsg)) {
+                            errorMsg = "Failed to add student";
+                        }
+
+                        Toast.makeText(requireContext(), errorMsg, Toast.LENGTH_LONG).show();
+                        if (progressSaving != null) progressSaving.setVisibility(View.GONE);
+                        if (btnSave != null) btnSave.setEnabled(true);
+                        return;
+                    }
                 }
+
+                saveStudentOffline(name, studentNumber, selectedProgrammeCode, finalGroup, accountId, op);
+                Toast.makeText(requireContext(), "Saved locally — will sync when online", Toast.LENGTH_LONG).show();
                 dismiss();
             }
 

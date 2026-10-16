@@ -1,6 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools">
 
+    <!-- Disable full-screen activity slide animations so bottom nav bar appears static -->
+    <style name="NoAnimationWindow" parent="@android:style/Animation.Activity">
+        <item name="android:activityOpenEnterAnimation">@null</item>
+        <item name="android:activityOpenExitAnimation">@null</item>
+        <item name="android:activityCloseEnterAnimation">@null</item>
+        <item name="android:activityCloseExitAnimation">@null</item>
+    </style>
+
     <!-- Base application theme -->
     <style name="Theme.CohortHub" parent="Theme.Material3.Light.NoActionBar">
         <item name="colorPrimary">@color/dodger_blue</item>
@@ -16,6 +24,7 @@
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:textColorPrimary">@color/text_primary</item>
         <item name="android:textColorSecondary">@color/text_secondary</item>
+        <item name="android:windowAnimationStyle">@style/NoAnimationWindow</item>
     </style>
 
     <!-- Outlined TextInputLayout used for standard text form fields -->
