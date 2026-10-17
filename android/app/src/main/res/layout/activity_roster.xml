@@ -373,8 +373,7 @@
                     android:layout_marginTop="10dp"
                     android:max="60"
                     android:progressBackgroundTint="@color/primary_light"
-                    android:progressTint="@color/primary"
-                    tools:progress="12" />
+                    android:progressTint="@color/primary" />
 
             </LinearLayout>
 
