@@ -39,11 +39,16 @@ public class MoreBottomSheetDialogFragment extends BottomSheetDialogFragment {
         View signOut = view.findViewById(R.id.optionSignOut);
 
         if (groupsOverview != null) {
-            groupsOverview.setOnClickListener(v -> {
-                dismiss();
-                GroupPickerBottomSheetDialogFragment dialog = new GroupPickerBottomSheetDialogFragment();
-                dialog.show(getParentFragmentManager(), GroupPickerBottomSheetDialogFragment.TAG);
-            });
+            // STOPGAP: The real Lab Groups Overview screen (G01–G04 aggregate
+            // capacity) has not been built yet. The previous implementation
+            // opened GroupPickerBottomSheetDialogFragment with no student ID,
+            // which silently no-oped on tap.
+            //
+            // Hidden until GroupsOverviewActivity exists. Set to View.VISIBLE
+            // and wire a real click handler once that screen is built.
+            //
+            // TODO: build GroupsOverviewActivity and un-hide this row.
+            groupsOverview.setVisibility(View.GONE);
         }
 
         if (unassigned != null) {

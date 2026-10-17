@@ -67,10 +67,6 @@
             android:name=".DeleteStudentActivity"
             android:exported="false" />
 
-        <activity
-            android:name=".ConnectionErrorActivity"
-            android:exported="false" />
-
     </application>
 
 </manifest>
