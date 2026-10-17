@@ -50,6 +50,18 @@ public interface PendingOperationDao {
     @Query("DELETE FROM pending_operations WHERE accountId = :accountId")
     void clearForAccount(long accountId);
 
+    @Query("SELECT * FROM pending_operations WHERE accountId = :accountId " +
+            "AND status IN ('SYNCED', 'REJECTED')")
+    List<PendingOperationEntity> findCompletedForAccount(long accountId);
+
+    @Query("SELECT COUNT(*) FROM pending_operations WHERE accountId = :accountId " +
+            "AND status IN ('SYNCED', 'REJECTED')")
+    int countCompletedForAccount(long accountId);
+
+    @Query("DELETE FROM pending_operations WHERE accountId = :accountId " +
+            "AND status IN ('SYNCED', 'REJECTED')")
+    void deleteCompletedForAccount(long accountId);
+
     @Query("DELETE FROM pending_operations WHERE operationId = :operationId")
     void deleteById(String operationId);
 

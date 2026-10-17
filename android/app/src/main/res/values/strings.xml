@@ -98,6 +98,8 @@
     <string name="saved_offline_will_send">Saved. It will be sent when you\'re back online.</string>
     <string name="error_student_number_format">Student number must be exactly 9 digits</string>
 
+    <string name="sync_clear_completed">Clear completed</string>
+
     <!-- Dropdown data -->
     <string-array name="programme_options">
         <item>BSc Computer Science</item>
