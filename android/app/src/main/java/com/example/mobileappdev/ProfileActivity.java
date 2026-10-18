@@ -535,6 +535,7 @@ public class ProfileActivity extends AppCompatActivity {
         if (tvLabGroupCapacity == null) return;
         tvLabGroupCapacity.setText("");
         tvLabGroupCapacity.setTextColor(getResources().getColor(R.color.text_secondary, getTheme()));
+        tvLabGroupCapacity.setVisibility(View.GONE);
     }
 
     /**
