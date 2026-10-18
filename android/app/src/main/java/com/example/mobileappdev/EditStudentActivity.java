@@ -276,19 +276,27 @@ public class EditStudentActivity extends AppCompatActivity {
                         && Boolean.TRUE.equals(response.body().get("success"))) {
                     groupCode = targetGroup.groupCode;
                     updateLocalRoomStudentGroup(studentServerId, groupCode);
-                    Toast.makeText(EditStudentActivity.this, "Assigned to group " + targetGroup.groupCode, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(EditStudentActivity.this,
+                            "Assigned to group " + targetGroup.groupCode,
+                            Toast.LENGTH_SHORT).show();
                 } else if (response.code() == 409) {
-                    Toast.makeText(EditStudentActivity.this, "GROUP_FULL: Selected group capacity (15/15) reached", Toast.LENGTH_LONG).show();
+                    Toast.makeText(EditStudentActivity.this,
+                            "GROUP_FULL: Selected group capacity (15/15) reached",
+                            Toast.LENGTH_LONG).show();
                 } else {
                     queueGroupChangeOffline(targetGroup.groupCode);
-                    Toast.makeText(EditStudentActivity.this, "Group change saved locally", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(EditStudentActivity.this,
+                            "Group change saved locally — will sync when online",
+                            Toast.LENGTH_LONG).show();
                 }
             }
 
             @Override
             public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
                 queueGroupChangeOffline(targetGroup.groupCode);
-                Toast.makeText(EditStudentActivity.this, "Group change saved locally", Toast.LENGTH_SHORT).show();
+                Toast.makeText(EditStudentActivity.this,
+                        "Group change saved locally — will sync when online",
+                        Toast.LENGTH_LONG).show();
             }
         });
     }
@@ -331,19 +339,27 @@ public class EditStudentActivity extends AppCompatActivity {
                                     && Boolean.TRUE.equals(response.body().get("success"))) {
                                 number = newNumber;
                                 updateLocalRoomStudentNumber(studentServerId, newNumber);
-                                Toast.makeText(EditStudentActivity.this, "Student number updated successfully", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(EditStudentActivity.this,
+                                        "Student number updated successfully",
+                                        Toast.LENGTH_SHORT).show();
                             } else if (response.code() == 409) {
-                                Toast.makeText(EditStudentActivity.this, "Conflict: Student number already exists or version conflict", Toast.LENGTH_LONG).show();
+                                Toast.makeText(EditStudentActivity.this,
+                                        "Conflict: Student number already exists or version conflict",
+                                        Toast.LENGTH_LONG).show();
                             } else {
                                 queueNumberCorrectionOffline(newNumber);
-                                Toast.makeText(EditStudentActivity.this, "Correction saved locally", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(EditStudentActivity.this,
+                                        "Correction saved locally — will sync when online",
+                                        Toast.LENGTH_LONG).show();
                             }
                         }
 
                         @Override
                         public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
                             queueNumberCorrectionOffline(newNumber);
-                            Toast.makeText(EditStudentActivity.this, "Correction saved locally — will sync when online", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(EditStudentActivity.this,
+                                    "Correction saved locally — will sync when online",
+                                    Toast.LENGTH_LONG).show();
                         }
                     });
                 })
@@ -395,13 +411,19 @@ public class EditStudentActivity extends AppCompatActivity {
                                     if (verObj instanceof Number) baseVersion = ((Number) verObj).intValue();
                                 }
                                 updateLocalRoomStudentName(studentServerId, newName);
-                                Toast.makeText(EditStudentActivity.this, "Student details updated successfully", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(EditStudentActivity.this,
+                                        "Student details updated successfully",
+                                        Toast.LENGTH_SHORT).show();
                                 finish();
                             } else if (response.code() == 409) {
-                                Toast.makeText(EditStudentActivity.this, "VERSION_CONFLICT: Record modified on server. Please refresh.", Toast.LENGTH_LONG).show();
+                                Toast.makeText(EditStudentActivity.this,
+                                        "VERSION_CONFLICT: Record modified on server. Please refresh.",
+                                        Toast.LENGTH_LONG).show();
                             } else {
                                 queueNameEditOffline(newName);
-                                Toast.makeText(EditStudentActivity.this, "Details saved locally", Toast.LENGTH_SHORT).show();
+                                Toast.makeText(EditStudentActivity.this,
+                                        "Details saved locally — will sync when online",
+                                        Toast.LENGTH_LONG).show();
                                 finish();
                             }
                         }
@@ -409,7 +431,9 @@ public class EditStudentActivity extends AppCompatActivity {
                         @Override
                         public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
                             queueNameEditOffline(newName);
-                            Toast.makeText(EditStudentActivity.this, "Details saved locally", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(EditStudentActivity.this,
+                                    "Details saved locally — will sync when online",
+                                    Toast.LENGTH_LONG).show();
                             finish();
                         }
                     });
@@ -454,6 +478,8 @@ public class EditStudentActivity extends AppCompatActivity {
         groupCode = newGroup;
     }
 
+    // Used only by the ONLINE SUCCESS path — the offline path is handled
+    // by StudentSyncRepository.submit*(), which updates Room inside a transaction.
     private void updateLocalRoomStudentGroup(long serverId, String newGroup) {
         if (serverId <= 0) return;
         AppDatabase db = AppDatabase.getInstance(getApplicationContext());
