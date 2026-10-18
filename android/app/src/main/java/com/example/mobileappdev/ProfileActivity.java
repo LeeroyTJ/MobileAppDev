@@ -20,6 +20,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.mobileappdev.data.local.AppDatabase;
 import com.example.mobileappdev.data.local.dao.PendingOperationDao;
 import com.example.mobileappdev.data.local.entity.PendingOperationEntity;
+import com.example.mobileappdev.data.local.entity.StudentEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
 import com.example.mobileappdev.session.SessionManager;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -541,33 +542,40 @@ public class ProfileActivity extends AppCompatActivity {
      * can be surfaced in the Sync screen's "Student Requests" section.
      */
     private void queueGroupChangeRequest(String requestedGroup) {
-        PendingOperationEntity op = new PendingOperationEntity();
-        op.operationId = UUID.randomUUID().toString();
-        op.entityId = myStudentId;
-        op.studentLocalId = null;
-        op.accountId = SessionManager.getInstance(this).getAccountId();
-        op.operationType = PendingOperationEntity.TYPE_REQUEST_GROUP_CHANGE;
-        op.baseVersion = myBaseVersion;
-        op.status = PendingOperationEntity.STATUS_PENDING;
-        op.createdAt = System.currentTimeMillis();
+        final long accountId = SessionManager.getInstance(this).getAccountId();
+        final long studentServerId = myStudentId;
+        final int baseVersion = myBaseVersion;
 
-        try {
-            op.payloadJson = new JSONObject()
-                    .put("studentId", myStudentId)
-                    .put("requestedGroup", requestedGroup)
-                    .put("baseVersion", myBaseVersion)
-                    .toString();
-        } catch (Exception e) {
-            op.payloadJson = "{\"requestedGroup\":\"" + requestedGroup + "\"}";
-        }
-
-        final long accountId = op.accountId;
         ExecutorService executor = Executors.newSingleThreadExecutor();
         executor.execute(() -> {
-            PendingOperationDao dao = AppDatabase.getInstance(this).pendingOperationDao();
-            // Supersede older requests for the same account and operation type.
-            dao.deleteByTypeForAccount(accountId, PendingOperationEntity.TYPE_REQUEST_GROUP_CHANGE);
-            dao.insert(op);
+            AppDatabase db = AppDatabase.getInstance(getApplicationContext());
+
+            // Look up the student's local row so applySyncResult can find it
+            // when the operation is APPLIED.
+            StudentEntity localStudent = db.studentDao().findByServerId(studentServerId);
+            Long localId = (localStudent != null) ? localStudent.localId : null;
+
+            PendingOperationEntity op = new PendingOperationEntity();
+            op.operationId = UUID.randomUUID().toString();
+            op.entityId = studentServerId;
+            op.studentLocalId = localId;
+            op.accountId = accountId;
+            op.operationType = PendingOperationEntity.TYPE_REQUEST_GROUP_CHANGE;
+            op.baseVersion = baseVersion;
+            op.status = PendingOperationEntity.STATUS_PENDING;
+            op.createdAt = System.currentTimeMillis();
+
+            try {
+                op.payloadJson = new JSONObject()
+                        .put("studentId", studentServerId)
+                        .put("requestedGroup", requestedGroup)
+                        .put("baseVersion", baseVersion)
+                        .toString();
+            } catch (Exception e) {
+                op.payloadJson = "{\"requestedGroup\":\"" + requestedGroup + "\"}";
+            }
+
+            db.pendingOperationDao().insert(op);
             executor.shutdown();
         });
     }
