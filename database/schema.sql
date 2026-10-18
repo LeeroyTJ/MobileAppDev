@@ -14,6 +14,7 @@ USE cohorthub;
 -- 0. DROP (reverse FK order, so re-running is safe)
 -- ============================================================
 
+DROP TABLE IF EXISTS group_requests;
 DROP TABLE IF EXISTS sync_operations;
 DROP TABLE IF EXISTS claim_codes;
 DROP TABLE IF EXISTS students;
@@ -151,6 +152,35 @@ CREATE TABLE claim_codes (
         REFERENCES students(student_id)
         ON DELETE SET NULL
         ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
+-- ============================================================
+-- 7. GROUP REQUESTS (audit trail for group-change requests)
+-- ============================================================
+
+CREATE TABLE group_requests (
+    request_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    student_id BIGINT UNSIGNED NOT NULL,
+    current_group_id BIGINT UNSIGNED NULL,
+    requested_group_id BIGINT UNSIGNED NOT NULL,
+    status ENUM('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
+    rejection_reason VARCHAR(255) NULL,
+    operation_id CHAR(36) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resolved_at DATETIME NULL,
+    PRIMARY KEY (request_id),
+    KEY idx_group_requests_student (student_id),
+    KEY idx_group_requests_status (status),
+    KEY idx_group_requests_operation (operation_id),
+    CONSTRAINT fk_group_requests_student
+        FOREIGN KEY (student_id) REFERENCES students(student_id)
+        ON DELETE CASCADE ON UPDATE CASCADE,
+    CONSTRAINT fk_group_requests_current
+        FOREIGN KEY (current_group_id) REFERENCES lab_groups(group_id)
+        ON DELETE SET NULL ON UPDATE CASCADE,
+    CONSTRAINT fk_group_requests_requested
+        FOREIGN KEY (requested_group_id) REFERENCES lab_groups(group_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE = InnoDB;
 
 

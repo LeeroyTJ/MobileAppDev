@@ -355,7 +355,6 @@ router.put('/:id', authenticateToken, async (req, res) => {
         }
         const student = rows[0];
 
-        // Task 11.2: Strict ownership enforcement
         if (req.user.role !== 'LECTURER' && student.account_id !== req.user.id) {
             await connection.rollback();
             return res.status(403).json({
@@ -401,6 +400,150 @@ router.put('/:id', authenticateToken, async (req, res) => {
         return res.status(500).json({
             success: false,
             error: { code: 'INTERNAL_ERROR', message: 'Server error during update' }
+        });
+    } finally {
+        connection.release();
+    }
+});
+
+/**
+ * POST /api/v1/students/:studentId/group-requests
+ * Student requests a group change (own record only).
+ * Creates a PENDING group_requests row; does not assign the student.
+ * The change is applied when a lecturer approves (or a scheduled job runs).
+ */
+router.post('/:studentId/group-requests', authenticateToken, async (req, res) => {
+    const studentId = req.params.studentId;
+    const { groupId } = req.body;
+
+    // Validate inputs
+    if (!isPositiveInt(studentId)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_STUDENT_ID', message: 'Invalid student id' }
+        });
+    }
+    if (!isPositiveInt(groupId)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_GROUP_ID', message: 'Valid groupId is required' }
+        });
+    }
+
+    // Only students can request on their own record
+    if (req.user.role !== 'STUDENT') {
+        return res.status(403).json({
+            success: false,
+            error: { code: 'FORBIDDEN', message: 'Only students can request a group change' }
+        });
+    }
+
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+
+        // Fetch the student and verify ownership
+        const [studentRows] = await connection.query(
+            `SELECT student_id, account_id, group_id, version
+             FROM students
+             WHERE student_id = ? AND deleted_at IS NULL`,
+            [studentId]
+        );
+
+        if (studentRows.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({
+                success: false,
+                error: { code: 'STUDENT_NOT_FOUND', message: 'Student not found' }
+            });
+        }
+
+        const student = studentRows[0];
+
+        if (student.account_id !== req.user.id) {
+            await connection.rollback();
+            return res.status(403).json({
+                success: false,
+                error: { code: 'FORBIDDEN', message: 'Access denied' }
+            });
+        }
+
+        // Verify the target group exists
+        const [groupRows] = await connection.query(
+            'SELECT group_id, group_code, capacity FROM lab_groups WHERE group_id = ?',
+            [groupId]
+        );
+
+        if (groupRows.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({
+                success: false,
+                error: { code: 'GROUP_NOT_FOUND', message: 'Group not found' }
+            });
+        }
+
+        const targetGroup = groupRows[0];
+
+        // Already in that group? Return a friendly no-op response.
+        if (student.group_id === targetGroup.group_id) {
+            await connection.rollback();
+            return res.status(400).json({
+                success: false,
+                error: {
+                    code: 'ALREADY_IN_GROUP',
+                    message: `You are already in ${targetGroup.group_code}`
+                }
+            });
+        }
+
+        // Reject if a PENDING request for the same student already exists
+        const [pendingRows] = await connection.query(
+            `SELECT request_id, requested_group_id
+             FROM group_requests
+             WHERE student_id = ? AND status = 'PENDING'`,
+            [studentId]
+        );
+
+        if (pendingRows.length > 0) {
+            await connection.rollback();
+            return res.status(409).json({
+                success: false,
+                error: {
+                    code: 'PENDING_REQUEST_EXISTS',
+                    message: 'You already have a pending group-change request. Wait for it to be reviewed.'
+                },
+                data: { existingRequestId: pendingRows[0].request_id }
+            });
+        }
+
+        // Insert the PENDING request
+        const [insertResult] = await connection.query(
+            `INSERT INTO group_requests
+                (student_id, current_group_id, requested_group_id, status)
+             VALUES (?, ?, ?, 'PENDING')`,
+            [studentId, student.group_id, targetGroup.group_id]
+        );
+
+        await connection.commit();
+
+        return res.status(201).json({
+            success: true,
+            data: {
+                status: 'PENDING',
+                requestId: insertResult.insertId,
+                studentId: Number(studentId),
+                requestedGroupId: Number(groupId),
+                requestedGroupCode: targetGroup.group_code,
+                currentGroupId: student.group_id
+            }
+        });
+
+    } catch (error) {
+        await connection.rollback();
+        console.error('Group request error:', error);
+        return res.status(500).json({
+            success: false,
+            error: { code: 'INTERNAL_ERROR', message: 'Server error during group request' }
         });
     } finally {
         connection.release();
