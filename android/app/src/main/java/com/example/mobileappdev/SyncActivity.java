@@ -16,14 +16,19 @@ import androidx.work.OneTimeWorkRequest;
 import androidx.work.WorkManager;
 
 import com.example.mobileappdev.data.local.AppDatabase;
+import com.example.mobileappdev.data.local.entity.PendingOperationEntity;
 import com.example.mobileappdev.session.SessionManager;
 import com.example.mobileappdev.sync.SyncWorker;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
+import com.google.android.material.snackbar.Snackbar;
 
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * SyncActivity
@@ -79,6 +84,14 @@ public class SyncActivity extends AppCompatActivity {
 
         if (syncToolbar != null) {
             syncToolbar.setNavigationOnClickListener(v -> finish());
+            syncToolbar.inflateMenu(R.menu.menu_sync_toolbar);
+            syncToolbar.setOnMenuItemClickListener(item -> {
+                if (item.getItemId() == R.id.action_clear_completed) {
+                    confirmClearCompleted();
+                    return true;
+                }
+                return false;
+            });
         }
 
         if (btnSyncNow != null) {
@@ -169,5 +182,65 @@ public class SyncActivity extends AppCompatActivity {
             if (btnSyncNow != null) btnSyncNow.setEnabled(true);
             Toast.makeText(SyncActivity.this, "Sync trigger sent successfully", Toast.LENGTH_SHORT).show();
         }, 1500);
+    }
+
+    private void confirmClearCompleted() {
+        if (accountId <= 0) return;
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            int count = AppDatabase.getInstance(getApplicationContext())
+                    .pendingOperationDao()
+                    .countCompletedForAccount(accountId);
+
+            runOnUiThread(() -> {
+                if (count == 0) {
+                    Toast.makeText(SyncActivity.this,
+                            "Nothing to clear", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                new MaterialAlertDialogBuilder(SyncActivity.this)
+                        .setTitle("Clear completed operations?")
+                        .setMessage("This will remove " + count
+                                + " synced or rejected operation(s) from your history."
+                                + "\n\nYour server data is not affected.")
+                        .setPositiveButton("Clear", (d, w) -> doClearCompleted())
+                        .setNegativeButton("Cancel", null)
+                        .show();
+            });
+            executor.shutdown();
+        });
+    }
+
+    private void doClearCompleted() {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        executor.execute(() -> {
+            AppDatabase db = AppDatabase.getInstance(getApplicationContext());
+            List<PendingOperationEntity> toDelete =
+                    db.pendingOperationDao().findCompletedForAccount(accountId);
+
+            if (toDelete.isEmpty()) {
+                runOnUiThread(() -> Toast.makeText(SyncActivity.this,
+                        "Nothing to clear", Toast.LENGTH_SHORT).show());
+                return;
+            }
+
+            db.pendingOperationDao().deleteCompletedForAccount(accountId);
+
+            runOnUiThread(() -> {
+                Snackbar.make(findViewById(android.R.id.content),
+                        toDelete.size() + " operation(s) cleared",
+                        Snackbar.LENGTH_LONG)
+                        .setAction("Undo", v ->
+                                Executors.newSingleThreadExecutor().execute(() -> {
+                                    for (PendingOperationEntity op : toDelete) {
+                                        db.pendingOperationDao().insert(op);
+                                    }
+                                }))
+                        .show();
+            });
+        });
+        executor.shutdown();
     }
 }

@@ -333,6 +333,7 @@
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:fontFamily="sans-serif-medium"
+                        android:text="@string/roster_capacity_title"
                         android:textAppearance="?attr/textAppearanceTitleMedium"
                         android:textColor="?attr/colorOnSurface"
                         tools:text="Lab Group Capacity" />
@@ -370,8 +371,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="8dp"
                     android:layout_marginTop="10dp"
-                    android:max="15"
-                    android:progress="12"
+                    android:max="60"
                     android:progressBackgroundTint="@color/primary_light"
                     android:progressTint="@color/primary" />
 

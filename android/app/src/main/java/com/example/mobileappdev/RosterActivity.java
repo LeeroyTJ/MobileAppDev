@@ -8,6 +8,7 @@ import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.view.View;
+import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -68,6 +69,11 @@ public class RosterActivity extends AppCompatActivity {
     private FloatingActionButton fabAdd;
 
     private StudentAdapter adapter;
+
+    private TextView tvRosterGroupTitle;
+    private TextView tvRosterCapacityRatio;
+    private TextView tvRosterPlacesRemainingPill;
+    private ProgressBar progressRosterCapacity;
 
     // Search debounce timer (300ms)
     private final Handler searchHandler = new Handler(Looper.getMainLooper());
@@ -144,6 +150,10 @@ public class RosterActivity extends AppCompatActivity {
         activeFiltersDetail = findViewById(R.id.active_filters_detail);
         buttonClearFilters = findViewById(R.id.button_clear_filters);
         resultCount = findViewById(R.id.result_count);
+        tvRosterGroupTitle = findViewById(R.id.tv_roster_group_title);
+        tvRosterCapacityRatio = findViewById(R.id.tv_roster_group_capacity_ratio);
+        tvRosterPlacesRemainingPill = findViewById(R.id.tv_roster_places_remaining_pill);
+        progressRosterCapacity = findViewById(R.id.progress_roster_group_capacity);
         
         MaterialButton buttonOpenFilters = findViewById(R.id.button_open_filters);
         buttonOpenFilters.setOnClickListener(v -> {
@@ -371,6 +381,7 @@ public class RosterActivity extends AppCompatActivity {
             if (students != null) {
                 cachedAccountStudents = students;
                 applyFiltersAndFilterList();
+                updateCapacityCard();
             }
         });
     }
@@ -477,6 +488,7 @@ public class RosterActivity extends AppCompatActivity {
 
                         cachedAccountStudents = remoteStudents;
                         applyFiltersAndFilterList();
+                        updateCapacityCard();
                         saveRemoteStudentsToLocalDb(remoteStudents);
                     }
                 } else if (response.code() == 401 || response.code() == 403) {
@@ -551,6 +563,70 @@ public class RosterActivity extends AppCompatActivity {
         shareIntent.putExtra(Intent.EXTRA_TEXT, summary.toString());
 
         startActivity(Intent.createChooser(shareIntent, "Share Group Summary"));
+    }
+
+    /**
+     * Recomputes and renders the Lab Group Capacity card.
+     * Shows aggregate counts across all four groups (G01–G04, 15 each = 60 total).
+     * Called whenever cachedAccountStudents changes.
+     */
+    private void updateCapacityCard() {
+        if (tvRosterCapacityRatio == null) return;
+
+        int assigned = 0;
+        int unassigned = 0;
+
+        for (StudentEntity s : cachedAccountStudents) {
+            if (s == null) continue;
+            boolean isUnassigned = s.labGroup == null
+                    || s.labGroup.isEmpty()
+                    || "Unassigned".equalsIgnoreCase(s.labGroup)
+                    || "NULL".equalsIgnoreCase(s.labGroup);
+            if (isUnassigned) unassigned++;
+            else assigned++;
+        }
+
+        final int GROUP_CAPACITY = 15;
+        final int GROUP_COUNT = 4;
+        final int TOTAL_CAPACITY = GROUP_CAPACITY * GROUP_COUNT;   // 60
+
+        // Title stays fixed — set once here for safety
+        if (tvRosterGroupTitle != null) {
+            tvRosterGroupTitle.setText(R.string.roster_capacity_title);
+        }
+
+        // Ratio: "N / 60 students"
+        if (tvRosterCapacityRatio != null) {
+            tvRosterCapacityRatio.setText(
+                    getString(R.string.capacity_format, assigned, TOTAL_CAPACITY));
+        }
+
+        // Bar: fills proportionally. Cap at TOTAL_CAPACITY to avoid overdraw on over-assignment.
+        if (progressRosterCapacity != null) {
+            progressRosterCapacity.setMax(TOTAL_CAPACITY);
+            progressRosterCapacity.setProgress(Math.min(assigned, TOTAL_CAPACITY));
+        }
+
+        // Pill: prefer "unassigned" (actionable) over "places remaining"
+        if (tvRosterPlacesRemainingPill != null) {
+            if (unassigned > 0) {
+                tvRosterPlacesRemainingPill.setText(
+                        getString(R.string.roster_capacity_unassigned_format, unassigned));
+            } else {
+                int remaining = Math.max(0, TOTAL_CAPACITY - assigned);
+                if (remaining == 0) {
+                    tvRosterPlacesRemainingPill.setText(R.string.capacity_full);
+                } else if (remaining <= 2) {
+                    tvRosterPlacesRemainingPill.setText(
+                            getResources().getQuantityString(
+                                    R.plurals.capacity_near_full, remaining, remaining));
+                } else {
+                    tvRosterPlacesRemainingPill.setText(
+                            getResources().getQuantityString(
+                                    R.plurals.places_remaining, remaining, remaining));
+                }
+            }
+        }
     }
 
     @Override

@@ -26,7 +26,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Objects;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -161,10 +160,6 @@ public class StudentGroupActivity extends AppCompatActivity {
         hideError();
         showLoading(true);
 
-        // If we were opened with an explicit group id (lecturer drill-in from the
-        // Groups overview), load that group directly. Otherwise this is the student's
-        // Group tab: always re-resolve the student's CURRENT group from the server,
-        // so a group change applied elsewhere (e.g. via sync) is reflected here.
         if (drilledIn && groupId > 0) {
             loadGroupData();
         } else {
@@ -178,12 +173,6 @@ public class StudentGroupActivity extends AppCompatActivity {
             @Override
             public void onResponse(@NonNull Call<Map<String, Object>> call,
                                    @NonNull Response<Map<String, Object>> response) {
-                if (response.code() == 401 || response.code() == 403) {
-                    showLoading(false);
-                    new SessionExpiredDialogFragment()
-                            .show(getSupportFragmentManager(), SessionExpiredDialogFragment.TAG);
-                    return;
-                }
                 if (!response.isSuccessful() || response.body() == null
                         || !(response.body().get("data") instanceof Map)) {
                     showLoading(false);
@@ -215,7 +204,6 @@ public class StudentGroupActivity extends AppCompatActivity {
                                    @NonNull Response<Map<String, Object>> response) {
                 showLoading(false);
                 if (!response.isSuccessful() || response.body() == null
-                        || !Objects.equals(response.body().get("success"), Boolean.TRUE)
                         || !(response.body().get("data") instanceof Map)) {
                     showError();
                     return;
@@ -237,7 +225,7 @@ public class StudentGroupActivity extends AppCompatActivity {
         String groupCode = code != null ? code.toString() : "G" + groupId;
 
         if (tvGroupTitle != null) {
-            tvGroupTitle.setText(groupCode);   // just "G01": the label above already says "Lab Group"
+            tvGroupTitle.setText(groupCode);
         }
 
         int capacity = intOf(data.get("capacity"), 15);
@@ -267,7 +255,7 @@ public class StudentGroupActivity extends AppCompatActivity {
         }
 
         StringBuilder sb = new StringBuilder();
-        for (String code : PROGRAMME_ORDER) {          // fixed order, always all three
+        for (String code : PROGRAMME_ORDER) {
             if (sb.length() > 0) sb.append('\n');
             Integer n = counts.get(code);
             sb.append(fullName(code)).append(": ").append(n != null ? n : 0);
@@ -320,9 +308,9 @@ public class StudentGroupActivity extends AppCompatActivity {
 
     private String fullName(String code) {
         switch (code) {
-            case "CS": return getString(R.string.programme_cs);
-            case "IT": return getString(R.string.programme_it);
-            case "DS": return getString(R.string.programme_ds);
+            case "CS": return "Computer Science";
+            case "IT": return "Information Technology";
+            case "DS": return "Data Science";
             default:   return code;
         }
     }
