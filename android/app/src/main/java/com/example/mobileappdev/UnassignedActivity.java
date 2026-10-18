@@ -13,8 +13,10 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mobileappdev.adapter.StudentAdapter;
+import com.example.mobileappdev.data.local.AppDatabase;
 import com.example.mobileappdev.data.local.entity.StudentEntity;
 import com.example.mobileappdev.data.remote.ApiClient;
+import com.example.mobileappdev.data.repository.StudentSyncRepository;
 import com.example.mobileappdev.session.SessionManager;
 import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
@@ -26,6 +28,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -66,6 +69,8 @@ public class UnassignedActivity extends AppCompatActivity {
         bindViews();
         setupNavigation();
         setupRecyclerView();
+        // loadUnassignedStudents() is called from onResume() so the list refreshes
+        // every time this screen becomes visible.
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -171,8 +176,10 @@ public class UnassignedActivity extends AppCompatActivity {
                                             ((Number) map.get("student_id")).longValue() : 0;
                                     entity.studentNumber = map.get("student_number") != null ? map.get("student_number").toString() : "";
                                     entity.name = map.get("student_name") != null ? map.get("student_name").toString() : "";
-                                    entity.programme = map.get("programme_name") != null ? map.get("programme_name").toString() :
-                                            (map.get("programme_code") != null ? map.get("programme_code").toString() : "");
+                                    // Standardise on programme_code to match RosterActivity
+                                    entity.programme = map.get("programme_code") != null
+                                            ? map.get("programme_code").toString()
+                                            : (map.get("programme_name") != null ? map.get("programme_name").toString() : "");
                                     entity.labGroup = map.get("group_code") != null ? map.get("group_code").toString() : null;
                                     entity.baseVersion = map.get("version") instanceof Number ?
                                             ((Number) map.get("version")).intValue() : 1;
@@ -254,8 +261,9 @@ public class UnassignedActivity extends AppCompatActivity {
                     return;
                 }
 
-                List<Long> groupIds = new ArrayList<>();
-                List<String> groupNames = new ArrayList<>();
+                final List<Long> groupIds = new ArrayList<>();
+                final List<String> groupCodes = new ArrayList<>();
+                final List<String> groupNames = new ArrayList<>();
 
                 for (Object item : groupsData) {
                     if (item instanceof Map) {
@@ -270,6 +278,7 @@ public class UnassignedActivity extends AppCompatActivity {
                                 ((Number) groupMap.get("capacity")).longValue() : 0;
 
                         groupIds.add(gId);
+                        groupCodes.add(code);
                         groupNames.add(code + " - " + name + " (" + occupied + "/" + capacity + ")");
                     }
                 }
@@ -280,9 +289,9 @@ public class UnassignedActivity extends AppCompatActivity {
                         .setTitle("Assign " + student.name + " to Group")
                         .setSingleChoiceItems(groupNames.toArray(new CharSequence[0]), 0, (dialog, which) -> selectedIndex[0] = which)
                         .setPositiveButton("Assign", (dialog, which) -> {
-                            if (selectedIndex[0] >= 0 && selectedIndex[0] < groupIds.size()) {
-                                long targetGroupId = groupIds.get(selectedIndex[0]);
-                                executeAssignStudent(student, targetGroupId);
+                            int idx = selectedIndex[0];
+                            if (idx >= 0 && idx < groupIds.size()) {
+                                executeAssignStudent(student, groupIds.get(idx), groupCodes.get(idx));
                             }
                         })
                         .setNegativeButton("Cancel", null)
@@ -296,7 +305,7 @@ public class UnassignedActivity extends AppCompatActivity {
         });
     }
 
-    private void executeAssignStudent(StudentEntity student, long groupId) {
+    private void executeAssignStudent(StudentEntity student, long groupId, String groupCode) {
         Map<String, Object> body = new HashMap<>();
         body.put("studentId", student.serverId != null ? student.serverId : 0);
 
@@ -307,22 +316,42 @@ public class UnassignedActivity extends AppCompatActivity {
                         if (response.isSuccessful() && response.body() != null
                                 && Boolean.TRUE.equals(response.body().get("success"))) {
                             Toast.makeText(UnassignedActivity.this,
-                                    "Assigned " + student.name + " to group", Toast.LENGTH_SHORT).show();
+                                    "Assigned " + student.name + " to group " + groupCode,
+                                    Toast.LENGTH_SHORT).show();
                             loadUnassignedStudents();
                         } else if (response.code() == 409) {
                             Toast.makeText(UnassignedActivity.this,
                                     "Selected group is full", Toast.LENGTH_LONG).show();
                         } else {
+                            // Server rejected — queue locally for retry.
+                            queueAssignOffline(student, groupCode);
                             Toast.makeText(UnassignedActivity.this,
-                                    "Failed to assign student to group", Toast.LENGTH_SHORT).show();
+                                    "Assignment saved locally — will sync when online",
+                                    Toast.LENGTH_LONG).show();
                         }
                     }
 
                     @Override
                     public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
+                        // Offline — queue locally for next sync.
+                        queueAssignOffline(student, groupCode);
                         Toast.makeText(UnassignedActivity.this,
-                                "Network error during assignment", Toast.LENGTH_SHORT).show();
+                                "Assignment saved locally — will sync when online",
+                                Toast.LENGTH_LONG).show();
                     }
                 });
+    }
+
+    private void queueAssignOffline(StudentEntity student, String groupCode) {
+        if (student.serverId == null || student.serverId <= 0) return;
+        AppDatabase db = AppDatabase.getInstance(getApplicationContext());
+        long accountId = SessionManager.getInstance(this).getAccountId();
+        Executors.newSingleThreadExecutor().execute(() -> {
+            StudentEntity local = db.studentDao().findByServerId(student.serverId);
+            if (local == null) return;
+            StudentSyncRepository repo = new StudentSyncRepository(db);
+            repo.submitGroupChange(local.localId, accountId, student.serverId,
+                    groupCode, null /* was unassigned */, local.baseVersion);
+        });
     }
 }
