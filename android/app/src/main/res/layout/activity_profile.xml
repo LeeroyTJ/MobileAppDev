@@ -199,6 +199,7 @@
                             android:layout_weight="1"
                             android:textColor="@color/text_secondary"
                             android:textSize="12sp"
+                            android:visibility="gone"
                             tools:text="11 / 15 Students" />
 
                         <TextView
@@ -210,6 +211,7 @@
                             android:paddingVertical="3dp"
                             android:textColor="@color/primary_dark"
                             android:textSize="11sp"
+                            android:visibility="gone"
                             tools:text="4 places remaining" />
                     </LinearLayout>
 
@@ -218,11 +220,11 @@
                         android:layout_width="0dp"
                         android:layout_height="6dp"
                         android:layout_marginTop="10dp"
+                        android:visibility="gone"
                         app:trackCornerRadius="3dp"
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/containerGroupMetrics"
-                        tools:progress="73" />
+                        app:layout_constraintTop_toBottomOf="@id/containerGroupMetrics" />
 
                 </androidx.constraintlayout.widget.ConstraintLayout>
 

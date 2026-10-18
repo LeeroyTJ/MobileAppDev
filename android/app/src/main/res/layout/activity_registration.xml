@@ -193,7 +193,31 @@
                     android:paddingBottom="14dp" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Claim Code (Optional) -->
+            <!-- Lab group (dropdown) -->
+            <com.google.android.material.textfield.TextInputLayout
+                android:id="@+id/tilLabGroup"
+                style="@style/CohortHubDropdownLayout"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="@dimen/field_spacing"
+                android:hint="@string/label_lab_group"
+                app:startIconDrawable="@drawable/ic_group"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toBottomOf="@id/tilProgramme">
+
+                <AutoCompleteTextView
+                    android:id="@+id/actLabGroup"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:inputType="none"
+                    android:textColor="@color/text_primary"
+                    android:textSize="16sp"
+                    android:paddingTop="20dp"
+                    android:paddingBottom="14dp" />
+            </com.google.android.material.textfield.TextInputLayout>
+
+            <!-- Claim code (optional) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilClaimCode"
                 style="@style/CohortHubTextInputLayout"
@@ -210,8 +234,7 @@
                     android:id="@+id/etClaimCode"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Claim code (optional)"
-                    android:inputType="text"
+                    android:inputType="textCapCharacters"
                     android:maxLines="1"
                     android:textColor="@color/text_primary"
                     android:textSize="16sp"
@@ -231,7 +254,7 @@
                 android:padding="14dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tilClaimCode">
+                app:layout_constraintTop_toBottomOf="@id/tilProgramme">
 
                 <ImageView
                     android:layout_width="20dp"
