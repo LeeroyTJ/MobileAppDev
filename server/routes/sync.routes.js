@@ -298,7 +298,7 @@ router.post('/', authenticateToken, async (req, res) => {
                             message: 'studentId and requestedGroup are required'
                         };
                     } else {
-                        // Resolve the target group code (G01..G04) to its id, under the pool.
+                        // Resolve the target group code (G01..G04) to its id.
                         const [targetGroupRows] = await connection.execute(
                             'SELECT group_id, group_code, capacity FROM lab_groups WHERE group_code = ?',
                             [requestedGroupCode]
@@ -332,7 +332,14 @@ router.post('/', authenticateToken, async (req, res) => {
                                     message: 'Access denied'
                                 };
                             } else if (studentRows[0].group_id === targetGroupId) {
-                                // Already in that group — treat as a no-op success.
+                                // Already in that group — log it as APPROVED (no-op) and return APPLIED.
+                                await connection.execute(
+                                    `INSERT INTO group_requests
+                                        (student_id, current_group_id, requested_group_id, status, operation_id, resolved_at)
+                                     VALUES (?, ?, ?, 'APPROVED', ?, NOW())`,
+                                    [studentId, studentRows[0].group_id, targetGroupId, operationId]
+                                );
+
                                 opStatus = 'APPLIED';
                                 responsePayload = {
                                     id: studentId,
@@ -356,15 +363,33 @@ router.post('/', authenticateToken, async (req, res) => {
                                 );
 
                                 if (count >= capacity) {
+                                    const reason = `${requestedGroupCode} is full (${count}/${capacity})`;
+
+                                    // Log the rejection
+                                    await connection.execute(
+                                        `INSERT INTO group_requests
+                                            (student_id, current_group_id, requested_group_id, status, rejection_reason, operation_id, resolved_at)
+                                         VALUES (?, ?, ?, 'REJECTED', ?, ?, NOW())`,
+                                        [studentId, studentRows[0].group_id, targetGroupId, reason, operationId]
+                                    );
+
                                     opStatus = 'REJECTED';
                                     responsePayload = {
                                         code: 'GROUP_FULL',
-                                        message: `${requestedGroupCode} is full (${count}/${capacity})`
+                                        message: reason
                                     };
                                 } else {
                                     await connection.execute(
                                         'UPDATE students SET group_id = ?, version = version + 1 WHERE student_id = ?',
                                         [targetGroupId, studentId]
+                                    );
+
+                                    // Log the approval
+                                    await connection.execute(
+                                        `INSERT INTO group_requests
+                                            (student_id, current_group_id, requested_group_id, status, operation_id, resolved_at)
+                                         VALUES (?, ?, ?, 'APPROVED', ?, NOW())`,
+                                        [studentId, studentRows[0].group_id, targetGroupId, operationId]
                                     );
 
                                     opStatus = 'APPLIED';
@@ -486,39 +511,97 @@ router.post('/', authenticateToken, async (req, res) => {
  */
 router.get('/changes', authenticateToken, async (req, res) => {
     const { since } = req.query;
-    try {
-        let query = `SELECT s.*, p.code as programme_code, g.group_code
-                     FROM students s
-                     JOIN programmes p ON s.programme_id = p.programme_id
-                     LEFT JOIN lab_groups g ON s.group_id = g.group_id`;
-        const params = [];
 
-        if (since) {
-            let dateVal;
-            if (/^\d+$/.test(since)) {
-                dateVal = new Date(Number(since));
-            } else {
-                dateVal = new Date(since);
-            }
-            if (!isNaN(dateVal.getTime())) {
-                query += ` WHERE s.updated_at >= ?`;
-                params.push(dateVal);
-            }
+    // Parse `since` once — used by both queries below.
+    let sinceDate = null;
+    if (since) {
+        let dateVal;
+        if (/^\d+$/.test(since)) {
+            dateVal = new Date(Number(since));
+        } else {
+            dateVal = new Date(since);
+        }
+        if (!isNaN(dateVal.getTime())) {
+            sinceDate = dateVal;
+        }
+    }
+
+    try {
+        // ---------- 1. Student changes ----------
+        let studentQuery = `
+            SELECT s.*, p.code AS programme_code, g.group_code
+            FROM students s
+            JOIN programmes p ON s.programme_id = p.programme_id
+            LEFT JOIN lab_groups g ON s.group_id = g.group_id`;
+        const studentParams = [];
+
+        if (sinceDate) {
+            studentQuery += ' WHERE s.updated_at >= ?';
+            studentParams.push(sinceDate);
+        }
+        studentQuery += ' ORDER BY s.updated_at ASC';
+
+        const [studentRows] = await pool.query(studentQuery, studentParams);
+
+        // ---------- 2. Group-request resolutions ----------
+        // Only resolved rows (APPROVED/REJECTED) are "changes" — PENDING hasn't happened.
+        // A student sees only their own requests; a lecturer sees all.
+        let requestQuery = `
+            SELECT
+                gr.request_id,
+                gr.student_id,
+                s.student_name,
+                s.student_number,
+                gr.current_group_id,
+                cg.group_code AS current_group_code,
+                gr.requested_group_id,
+                rg.group_code AS requested_group_code,
+                gr.status,
+                gr.rejection_reason,
+                gr.operation_id,
+                gr.created_at,
+                gr.resolved_at
+            FROM group_requests gr
+            JOIN students s ON gr.student_id = s.student_id
+            LEFT JOIN lab_groups cg ON gr.current_group_id = cg.group_id
+            JOIN lab_groups rg ON gr.requested_group_id = rg.group_id
+            WHERE gr.status IN ('APPROVED', 'REJECTED')
+              AND gr.resolved_at >= ?`;
+        const requestParams = [];
+
+        if (sinceDate) {
+            requestParams.push(sinceDate);
+        } else {
+            // If no `since` given, return the last 30 days of resolutions.
+            // Prevents the first sync from downloading years of history.
+            requestParams.push(new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
         }
 
-        query += ` ORDER BY s.updated_at ASC`;
-        const [rows] = await pool.query(query, params);
+        // Scope: students see only their own requests; lecturers see all.
+        if (req.user.role === 'STUDENT') {
+            requestQuery += ' AND s.account_id = ?';
+            requestParams.push(req.user.id);
+        }
+
+        requestQuery += ' ORDER BY gr.resolved_at ASC';
+
+        const [requestRows] = await pool.query(requestQuery, requestParams);
 
         return res.status(200).json({
             success: true,
             data: {
-                changes: rows,
+                changes: studentRows,          // kept for backward compatibility
+                students: studentRows,         // new explicit name (same data)
+                group_requests: requestRows,   // new field
                 serverTime: new Date().toISOString()
             }
         });
     } catch (error) {
         console.error('Sync changes error:', error);
-        return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
+        return res.status(500).json({
+            success: false,
+            error: { code: 'INTERNAL_ERROR', message: 'Server error' }
+        });
     }
 });
 
