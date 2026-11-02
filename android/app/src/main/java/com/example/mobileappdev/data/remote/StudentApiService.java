@@ -18,7 +18,9 @@ public interface StudentApiService {
     Call<Map<String, Object>> getRoster(
             @Query("programme") String programme,
             @Query("group") String group,
-            @Query("search") String search
+            @Query("search") String search,
+            @Query("limit") Integer limit,
+            @Query("offset") Integer offset
     );
 
     @GET("api/v1/students/me/profile")

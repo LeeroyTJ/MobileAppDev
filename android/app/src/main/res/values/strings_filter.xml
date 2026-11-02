@@ -33,6 +33,15 @@
         <item>@string/group_g02</item>
         <item>@string/group_g03</item>
         <item>@string/group_g04</item>
+        <item>@string/group_g05</item>
+        <item>@string/group_g06</item>
+        <item>@string/group_g07</item>
+        <item>@string/group_g08</item>
+        <item>@string/group_g09</item>
+        <item>@string/group_g10</item>
+        <item>@string/group_g11</item>
+        <item>@string/group_g12</item>
+        <item>@string/group_g13</item>
         <item>@string/group_unassigned</item>
     </string-array>
 

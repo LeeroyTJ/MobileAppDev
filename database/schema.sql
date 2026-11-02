@@ -237,4 +237,14 @@ VALUES
     ('G01', 'Lab Group 01', 15),
     ('G02', 'Lab Group 02', 15),
     ('G03', 'Lab Group 03', 15),
-    ('G04', 'Lab Group 04', 15);
+    ('G04', 'Lab Group 04', 15),
+    ('G05', 'Lab Group 05', 15),
+    ('G06', 'Lab Group 06', 15),
+    ('G07', 'Lab Group 07', 15),
+    ('G08', 'Lab Group 08', 15),
+    ('G09', 'Lab Group 09', 15),
+    ('G10', 'Lab Group 10', 15),
+    ('G11', 'Lab Group 11', 15),
+    ('G12', 'Lab Group 12', 15),
+    ('G13', 'Lab Group 13', 15),
+    ('G14', 'Lab Group 14', 15);

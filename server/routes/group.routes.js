@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
-const { authenticateToken } = require('../middleware/auth');
+const { authenticateToken, verifyRole } = require('../middleware/auth');
 const { isPositiveInt } = require('../utils/validators');
 
 // GET /api/v1/groups/:groupId
@@ -247,6 +247,32 @@ router.get('/', authenticateToken, async (req, res) => {
         return res.status(200).json({ success: true, data: rows });
     } catch (error) {
         console.error('Group list error:', error);
+        return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
+    }
+});
+
+// POST /api/v1/groups
+router.post('/', authenticateToken, verifyRole('LECTURER'), async (req, res) => {
+    const { groupCode, name } = req.body;
+
+    if (!groupCode) {
+        return res.status(400).json({ success: false, error: { code: 'VALIDATION_ERROR', message: 'groupCode is required' } });
+    }
+
+    try {
+        const [result] = await pool.query(
+            'INSERT INTO lab_groups (group_code, name, capacity) VALUES (?, ?, 15)',
+            [groupCode, name || `Lab Group ${groupCode.replace('G', '')}`]
+        );
+
+        return res.status(201).json({
+            success: true,
+            data: { groupId: result.insertId, groupCode }
+        });
+    } catch (error) {
+        if (error.code === 'ER_DUP_ENTRY') {
+            return res.status(409).json({ success: false, error: { code: 'DUPLICATE_GROUP', message: 'Group code already exists' } });
+        }
         return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Server error' } });
     }
 });

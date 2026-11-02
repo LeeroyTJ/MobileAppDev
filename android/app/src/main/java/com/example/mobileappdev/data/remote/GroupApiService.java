@@ -21,4 +21,7 @@ public interface GroupApiService {
 
     @POST("api/v1/groups/{groupId}/transfer")
     Call<Map<String, Object>> transferStudent(@Path("groupId") long groupId, @Body Map<String, Object> body);
+
+    @POST("api/v1/groups")
+    Call<Map<String, Object>> createGroup(@Body Map<String, Object> body);
 }
