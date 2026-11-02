@@ -53,4 +53,7 @@ public interface StudentDao {
 
     @Query("DELETE FROM students WHERE accountId = :accountId")
     void clearForAccount(long accountId);
+
+    @Query("SELECT * FROM students WHERE accountId = :accountId AND isDeleted = 0")
+    List<StudentEntity> findAllForAccount(long accountId);
 }

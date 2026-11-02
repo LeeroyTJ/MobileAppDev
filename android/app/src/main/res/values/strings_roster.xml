@@ -41,6 +41,15 @@
     <string name="group_g02">G02</string>
     <string name="group_g03">G03</string>
     <string name="group_g04">G04</string>
+    <string name="group_g05">G05</string>
+    <string name="group_g06">G06</string>
+    <string name="group_g07">G07</string>
+    <string name="group_g08">G08</string>
+    <string name="group_g09">G09</string>
+    <string name="group_g10">G10</string>
+    <string name="group_g11">G11</string>
+    <string name="group_g12">G12</string>
+    <string name="group_g13">G13</string>
     <string name="group_unassigned">Unassigned</string>
 
     <plurals name="roster_count">

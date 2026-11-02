@@ -199,34 +199,21 @@ public class StudentAdapter extends RecyclerView.Adapter<StudentAdapter.StudentV
             int bgColor;
             int textColor;
 
-            if (groupCode == null) {
-                groupCode = "";
+            if (groupCode == null || groupCode.trim().isEmpty()) {
+                groupCode = "UNASSIGNED";
             }
 
-            switch (groupCode.toUpperCase().trim()) {
-                case "G01":
-                    bgColor = Color.parseColor("#E3F2FD"); // Light blue
-                    textColor = Color.parseColor("#1565C0"); // Dark blue
-                    break;
-                case "G02":
-                    bgColor = Color.parseColor("#E8F5E9"); // Light green
-                    textColor = Color.parseColor("#2E7D32"); // Dark green
-                    break;
-                case "G03":
-                    bgColor = Color.parseColor("#FFF3E0"); // Light orange
-                    textColor = Color.parseColor("#E65100"); // Dark orange
-                    break;
-                case "G04":
-                    bgColor = Color.parseColor("#F3E5F5"); // Light purple
-                    textColor = Color.parseColor("#6A1B9A"); // Dark purple
-                    break;
-                case "UNASSIGNED":
-                default:
-                    bgColor = Color.parseColor("#EEEEEE"); // Light grey
-                    textColor = Color.parseColor("#616161"); // Dark grey
-                    break;
+            // Only Unassigned gets a different color (Grey).
+            // Every real group (G01, G02, G07, etc.) gets the standard Blue.
+            if ("UNASSIGNED".equalsIgnoreCase(groupCode.trim())) {
+                bgColor = Color.parseColor("#EEEEEE"); // Light grey
+                textColor = Color.parseColor("#616161"); // Dark grey
+            } else {
+                bgColor = Color.parseColor("#E3F2FD"); // Light blue
+                textColor = Color.parseColor("#1565C0"); // Dark blue
             }
 
+            // Build the rounded background shape
             GradientDrawable drawable = new GradientDrawable();
             drawable.setShape(GradientDrawable.RECTANGLE);
             float density = context.getResources().getDisplayMetrics().density;

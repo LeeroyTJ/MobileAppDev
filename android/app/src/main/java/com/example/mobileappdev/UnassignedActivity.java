@@ -157,7 +157,7 @@ public class UnassignedActivity extends AppCompatActivity {
     private void loadUnassignedStudents() {
         showLoadingState();
 
-        ApiClient.getStudentService(this).getRoster(null, "UNASSIGNED", null)
+        ApiClient.getStudentService(this).getRoster(null, "UNASSIGNED", null, 200, 0)
                 .enqueue(new Callback<>() {
                     @Override
                     public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {

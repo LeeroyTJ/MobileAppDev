@@ -1,6 +1,7 @@
 package com.example.mobileappdev;
 
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -15,6 +16,7 @@ import android.widget.Toast;
 import androidx.activity.OnBackPressedCallback;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -29,11 +31,14 @@ import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
+import com.google.android.material.chip.Chip;
 import com.google.android.material.chip.ChipGroup;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.android.material.progressindicator.CircularProgressIndicator;
 import com.google.android.material.textfield.TextInputEditText;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -84,6 +89,9 @@ public class RosterActivity extends AppCompatActivity {
     private long lastBackPressTime = 0;
     private static final long BACK_PRESS_INTERVAL = 2000;
 
+    // Tracks the total number of groups from the server (for dynamic capacity)
+    private int totalGroupCountFromServer = 0;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -115,6 +123,7 @@ public class RosterActivity extends AppCompatActivity {
         setupRecyclerView();
         setupSearchDebounce();
         setupChipFilters();
+        loadGroupFilterChips();
         setupClearFilters();
         setupBottomNavigation();
         setupFab();
@@ -127,6 +136,14 @@ public class RosterActivity extends AppCompatActivity {
                 handleBackPress();
             }
         });
+
+        getSupportFragmentManager().setFragmentResultListener(
+                AddGroupDialogFragment.RESULT_KEY, this, (requestKey, result) -> {
+                    if (result.getBoolean(AddGroupDialogFragment.EXTRA_SUCCESS, false)) {
+                        loadGroupFilterChips(); // Refresh chips so the new group appears
+                        fetchRemoteRoster();    // Refresh the student list
+                    }
+                });
     }
 
     private void handleBackPress() {
@@ -154,7 +171,7 @@ public class RosterActivity extends AppCompatActivity {
         tvRosterCapacityRatio = findViewById(R.id.tv_roster_group_capacity_ratio);
         tvRosterPlacesRemainingPill = findViewById(R.id.tv_roster_places_remaining_pill);
         progressRosterCapacity = findViewById(R.id.progress_roster_group_capacity);
-        
+
         MaterialButton buttonOpenFilters = findViewById(R.id.button_open_filters);
         buttonOpenFilters.setOnClickListener(v -> {
             FilterBottomSheetDialogFragment dialog = new FilterBottomSheetDialogFragment();
@@ -179,8 +196,12 @@ public class RosterActivity extends AppCompatActivity {
         toolbar.inflateMenu(R.menu.menu_roster_toolbar);
         toolbar.setOnMenuItemClickListener(item -> {
             int itemId = item.getItemId();
-            if (itemId == R.id.action_share) {
-                shareSanitizedGroupSummary();
+            if (itemId == R.id.action_add_group) {
+                AddGroupDialogFragment dialog = new AddGroupDialogFragment();
+                dialog.show(getSupportFragmentManager(), AddGroupDialogFragment.TAG);
+                return true;
+            } else if (itemId == R.id.action_share) {
+                exportGroupToCsv(null); // Export all
                 return true;
             } else if (itemId == R.id.action_logout) {
                 new SignOutConfirmationDialogFragment().show(getSupportFragmentManager(), SignOutConfirmationDialogFragment.TAG);
@@ -244,17 +265,11 @@ public class RosterActivity extends AppCompatActivity {
                 viewModel.setProgrammeFilter("");
                 return;
             }
-
             int checkedId = checkedIds.get(0);
-            if (checkedId == R.id.chip_cs) {
-                viewModel.setProgrammeFilter("CS");
-            } else if (checkedId == R.id.chip_it) {
-                viewModel.setProgrammeFilter("IT");
-            } else if (checkedId == R.id.chip_ds) {
-                viewModel.setProgrammeFilter("DS");
-            } else {
-                viewModel.setProgrammeFilter("");
-            }
+            if (checkedId == R.id.chip_cs) viewModel.setProgrammeFilter("CS");
+            else if (checkedId == R.id.chip_it) viewModel.setProgrammeFilter("IT");
+            else if (checkedId == R.id.chip_ds) viewModel.setProgrammeFilter("DS");
+            else viewModel.setProgrammeFilter("");
         });
 
         chipGroupLabGroup.setOnCheckedStateChangeListener((group, checkedIds) -> {
@@ -262,20 +277,71 @@ public class RosterActivity extends AppCompatActivity {
                 viewModel.setGroupFilter("");
                 return;
             }
-
+            // Dynamic chip: read the tag we set in loadGroupFilterChips()
             int checkedId = checkedIds.get(0);
-            if (checkedId == R.id.chip_g01) {
-                viewModel.setGroupFilter("G01");
-            } else if (checkedId == R.id.chip_g02) {
-                viewModel.setGroupFilter("G02");
-            } else if (checkedId == R.id.chip_g03) {
-                viewModel.setGroupFilter("G03");
-            } else if (checkedId == R.id.chip_g04) {
-                viewModel.setGroupFilter("G04");
-            } else if (checkedId == R.id.chip_unassigned) {
-                viewModel.setGroupFilter("Unassigned");
+            Chip checkedChip = group.findViewById(checkedId);
+            if (checkedChip != null && checkedChip.getTag() != null) {
+                viewModel.setGroupFilter(checkedChip.getTag().toString());
             } else {
                 viewModel.setGroupFilter("");
+            }
+        });
+    }
+
+    private void loadGroupFilterChips() {
+        if (chipGroupLabGroup == null) return;
+
+        ApiClient.getGroupService(this).listGroups().enqueue(new Callback<>() {
+            @Override
+            public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
+                if (!response.isSuccessful() || response.body() == null
+                        || !Boolean.TRUE.equals(response.body().get("success"))) {
+                    return;
+                }
+
+                List<?> data = (List<?>) response.body().get("data");
+                if (data == null || data.isEmpty()) return;
+
+                chipGroupLabGroup.removeAllViews();
+                chipGroupLabGroup.setOnCheckedStateChangeListener(null);
+
+                // Update the count for the capacity card
+                totalGroupCountFromServer = data.size();
+                updateCapacityCard(); // Refresh capacity immediately
+
+                // Add a chip for each group
+                for (Object item : data) {
+                    if (item instanceof Map) {
+                        Map<?, ?> groupMap = (Map<?, ?>) item;
+                        String code = groupMap.get("group_code") != null ? groupMap.get("group_code").toString() : "";
+                        if (code.isEmpty()) continue;
+
+                        Chip chip = new Chip(RosterActivity.this, null);
+                        chip.setText(code);
+                        chip.setCheckable(true);
+                        chip.setClickable(true);
+                        chip.setId(android.view.View.generateViewId());
+                        chip.setTag(code);
+                        chipGroupLabGroup.addView(chip);
+                    }
+                }
+
+                // Add the Unassigned chip last
+                Chip unassignedChip = new Chip(RosterActivity.this, null);
+                unassignedChip.setText("Unassigned");
+                unassignedChip.setCheckable(true);
+                unassignedChip.setClickable(true);
+                unassignedChip.setId(android.view.View.generateViewId());
+                unassignedChip.setTag("Unassigned");
+                chipGroupLabGroup.addView(unassignedChip);
+
+                // Reattach the listener
+                setupChipFilters();
+            }
+
+            @Override
+            public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
+                // Silent fail — the filter sheet still works
             }
         });
     }
@@ -451,7 +517,8 @@ public class RosterActivity extends AppCompatActivity {
         String grp = viewModel.getGroupFilter().getValue();
         String search = viewModel.getSearchQuery().getValue();
 
-        ApiClient.getStudentService(this).getRoster(prog, grp, search).enqueue(new Callback<>() {
+        // Note: passing 200 limit to ensure we get all students
+        ApiClient.getStudentService(this).getRoster(prog, grp, search, 200, 0).enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
                 loadingIndicator.setVisibility(View.GONE);
@@ -507,15 +574,17 @@ public class RosterActivity extends AppCompatActivity {
     }
 
     private void saveRemoteStudentsToLocalDb(List<StudentEntity> remoteStudents) {
-        if (remoteStudents == null || remoteStudents.isEmpty()) return;
+        if (remoteStudents == null) return;
         long accountId = sessionManager.getAccountId();
         Executors.newSingleThreadExecutor().execute(() -> {
+            // Insert/update all remote students
             for (StudentEntity remote : remoteStudents) {
                 if (remote.serverId != null && remote.serverId > 0) {
                     StudentEntity existing = db.studentDao().findByServerId(remote.serverId);
                     if (existing != null) {
                         remote.localId = existing.localId;
                         if (StudentEntity.STATUS_PENDING.equals(existing.syncStatus)) {
+                            // Preserve unconfirmed local edit
                             remote.labGroup = existing.labGroup;
                             remote.name = existing.name;
                             remote.syncStatus = existing.syncStatus;
@@ -525,57 +594,84 @@ public class RosterActivity extends AppCompatActivity {
                 remote.accountId = accountId;
                 db.studentDao().insert(remote);
             }
+
+            // Delete local rows whose serverId is not in the remote list
+            java.util.Set<Long> remoteServerIds = new java.util.HashSet<>();
+            for (StudentEntity r : remoteStudents) {
+                if (r.serverId != null) remoteServerIds.add(r.serverId);
+            }
+
+            java.util.List<StudentEntity> allLocal = db.studentDao().findUnsyncedForAccount(accountId);
+            for (StudentEntity local : allLocal) {
+                if (local.serverId != null
+                        && !remoteServerIds.contains(local.serverId)
+                        && StudentEntity.STATUS_SYNCED.equals(local.syncStatus)) {
+                    db.studentDao().delete(local);
+                }
+            }
         });
     }
 
-    private void shareSanitizedGroupSummary() {
-        int g01Count = 0;
-        int g02Count = 0;
-        int g03Count = 0;
-        int g04Count = 0;
-        int unassignedCount = 0;
-
-        for (StudentEntity student : cachedAccountStudents) {
-            if (student == null) continue;
-            String group = student.labGroup;
-            if ("G01".equalsIgnoreCase(group)) g01Count++;
-            else if ("G02".equalsIgnoreCase(group)) g02Count++;
-            else if ("G03".equalsIgnoreCase(group)) g03Count++;
-            else if ("G04".equalsIgnoreCase(group)) g04Count++;
-            else unassignedCount++;
+    private void exportGroupToCsv(String groupCode) {
+        if (cachedAccountStudents == null || cachedAccountStudents.isEmpty()) {
+            Toast.makeText(this, "No students to export", Toast.LENGTH_SHORT).show();
+            return;
         }
 
-        int totalEnrolled = cachedAccountStudents.size();
+        try {
+            StringBuilder csv = new StringBuilder();
+            // Excel headers
+            csv.append("Student Number,Name,Programme,Group\n");
 
-        StringBuilder summary = new StringBuilder();
-        summary.append("CohortHub Lab Group Summary\n");
-        summary.append("Total Enrolled Students: ").append(totalEnrolled).append("\n\n");
-        summary.append("Group Capacity Breakdown (Max 15 per group):\n");
-        summary.append("• Lab Group G01: ").append(g01Count).append("/15 places filled\n");
-        summary.append("• Lab Group G02: ").append(g02Count).append("/15 places filled\n");
-        summary.append("• Lab Group G03: ").append(g03Count).append("/15 places filled\n");
-        summary.append("• Lab Group G04: ").append(g04Count).append("/15 places filled\n");
-        summary.append("• Unassigned Students: ").append(unassignedCount);
+            for (StudentEntity s : cachedAccountStudents) {
+                // Filter: only export the requested group, or all if groupCode is null
+                if (groupCode != null && !groupCode.equalsIgnoreCase(s.labGroup)) {
+                    continue;
+                }
 
-        Intent shareIntent = new Intent(Intent.ACTION_SEND);
-        shareIntent.setType("text/plain");
-        shareIntent.putExtra(Intent.EXTRA_SUBJECT, "CohortHub Lab Group Summary");
-        shareIntent.putExtra(Intent.EXTRA_TEXT, summary.toString());
+                String g = (s.labGroup == null || s.labGroup.isEmpty()) ? "Unassigned" : s.labGroup;
 
-        startActivity(Intent.createChooser(shareIntent, "Share Group Summary"));
+                // Wrap name in quotes in case it has commas
+                csv.append(s.studentNumber).append(",")
+                        .append("\"").append(s.name.replace("\"", "\"\"")).append("\"").append(",")
+                        .append(s.programme).append(",")
+                        .append(g).append("\n");
+            }
+
+            // Save to cache
+            File cacheDir = new File(getCacheDir(), "exports");
+            if (!cacheDir.exists()) cacheDir.mkdirs();
+
+            String fileName = (groupCode == null ? "All_Groups" : groupCode) + "_Export.csv";
+            File file = new File(cacheDir, fileName);
+
+            try (FileOutputStream fos = new FileOutputStream(file)) {
+                fos.write(csv.toString().getBytes());
+            }
+
+            // Share via Android Sharesheet
+            Uri fileUri = FileProvider.getUriForFile(this, getPackageName() + ".fileprovider", file);
+
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType("text/csv");
+            shareIntent.putExtra(Intent.EXTRA_STREAM, fileUri);
+            shareIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+            startActivity(Intent.createChooser(shareIntent, "Export Group to CSV"));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(this, "Export failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
+        }
     }
 
-    /**
-     * Recomputes and renders the Lab Group Capacity card.
-     * Shows aggregate counts across all four groups (G01–G04, 15 each = 60 total).
-     * Called whenever cachedAccountStudents changes.
-     */
     private void updateCapacityCard() {
         if (tvRosterCapacityRatio == null) return;
 
         int assigned = 0;
         int unassigned = 0;
 
+        // Count assigned vs unassigned students from the local list
         for (StudentEntity s : cachedAccountStudents) {
             if (s == null) continue;
             boolean isUnassigned = s.labGroup == null
@@ -587,27 +683,25 @@ public class RosterActivity extends AppCompatActivity {
         }
 
         final int GROUP_CAPACITY = 15;
-        final int GROUP_COUNT = 4;
-        final int TOTAL_CAPACITY = GROUP_CAPACITY * GROUP_COUNT;   // 60
 
-        // Title stays fixed — set once here for safety
+        // Fallback to 14 groups if the server hasn't responded yet
+        int groupCount = (totalGroupCountFromServer > 0) ? totalGroupCountFromServer : 14;
+        final int TOTAL_CAPACITY = GROUP_CAPACITY * groupCount;
+
         if (tvRosterGroupTitle != null) {
             tvRosterGroupTitle.setText(R.string.roster_capacity_title);
         }
 
-        // Ratio: "N / 60 students"
         if (tvRosterCapacityRatio != null) {
             tvRosterCapacityRatio.setText(
                     getString(R.string.capacity_format, assigned, TOTAL_CAPACITY));
         }
 
-        // Bar: fills proportionally. Cap at TOTAL_CAPACITY to avoid overdraw on over-assignment.
         if (progressRosterCapacity != null) {
             progressRosterCapacity.setMax(TOTAL_CAPACITY);
             progressRosterCapacity.setProgress(Math.min(assigned, TOTAL_CAPACITY));
         }
 
-        // Pill: prefer "unassigned" (actionable) over "places remaining"
         if (tvRosterPlacesRemainingPill != null) {
             if (unassigned > 0) {
                 tvRosterPlacesRemainingPill.setText(
