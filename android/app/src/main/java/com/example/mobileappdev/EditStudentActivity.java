@@ -97,6 +97,10 @@ public class EditStudentActivity extends AppCompatActivity {
         bindViews();
         fetchGroupsAndPopulateSpinner();
 
+        if (getIntent().getBooleanExtra("trigger_number_correction", false)) {
+            promptNumberCorrection();
+        }
+
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
@@ -478,8 +482,6 @@ public class EditStudentActivity extends AppCompatActivity {
         groupCode = newGroup;
     }
 
-    // Used only by the ONLINE SUCCESS path — the offline path is handled
-    // by StudentSyncRepository.submit*(), which updates Room inside a transaction.
     private void updateLocalRoomStudentGroup(long serverId, String newGroup) {
         if (serverId <= 0) return;
         AppDatabase db = AppDatabase.getInstance(getApplicationContext());
