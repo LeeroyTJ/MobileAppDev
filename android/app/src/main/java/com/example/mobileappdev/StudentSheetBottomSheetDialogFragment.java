@@ -6,7 +6,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -22,8 +21,9 @@ public class StudentSheetBottomSheetDialogFragment extends BottomSheetDialogFrag
     private String programme;
     private String group;
     private long studentServerId;
+    private int baseVersion;
 
-    public static StudentSheetBottomSheetDialogFragment newInstance(String name, String number, String programme, String group, long studentServerId) {
+    public static StudentSheetBottomSheetDialogFragment newInstance(String name, String number, String programme, String group, long studentServerId, int baseVersion) {
         StudentSheetBottomSheetDialogFragment fragment = new StudentSheetBottomSheetDialogFragment();
         Bundle args = new Bundle();
         args.putString(DeleteStudentActivity.EXTRA_STUDENT_NAME, name);
@@ -31,6 +31,7 @@ public class StudentSheetBottomSheetDialogFragment extends BottomSheetDialogFrag
         args.putString(DeleteStudentActivity.EXTRA_STUDENT_PROGRAMME, programme);
         args.putString("student_group", group);
         args.putLong("student_server_id", studentServerId);
+        args.putInt("student_base_version", baseVersion);
         fragment.setArguments(args);
         return fragment;
     }
@@ -44,6 +45,7 @@ public class StudentSheetBottomSheetDialogFragment extends BottomSheetDialogFrag
             programme = getArguments().getString(DeleteStudentActivity.EXTRA_STUDENT_PROGRAMME, "CS");
             group = getArguments().getString("student_group", "Unassigned");
             studentServerId = getArguments().getLong("student_server_id", 0);
+            baseVersion = getArguments().getInt("student_base_version", 1);
         }
     }
 
@@ -80,6 +82,8 @@ public class StudentSheetBottomSheetDialogFragment extends BottomSheetDialogFrag
                 intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_NAME, name);
                 intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_NUMBER, number);
                 intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_PROGRAMME, programme);
+                intent.putExtra("group_code", group);
+                intent.putExtra("base_version", baseVersion);
                 intent.putExtra("student_server_id", studentServerId);
                 startActivity(intent);
             });
@@ -96,7 +100,15 @@ public class StudentSheetBottomSheetDialogFragment extends BottomSheetDialogFrag
         if (correctNumber != null) {
             correctNumber.setOnClickListener(v -> {
                 dismiss();
-                Toast.makeText(requireContext(), "Correction request opened for " + name, Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(requireContext(), EditStudentActivity.class);
+                intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_NAME, name);
+                intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_NUMBER, number);
+                intent.putExtra(DeleteStudentActivity.EXTRA_STUDENT_PROGRAMME, programme);
+                intent.putExtra("group_code", group);
+                intent.putExtra("base_version", baseVersion);
+                intent.putExtra("student_server_id", studentServerId);
+                intent.putExtra("trigger_number_correction", true);
+                startActivity(intent);
             });
         }
 
