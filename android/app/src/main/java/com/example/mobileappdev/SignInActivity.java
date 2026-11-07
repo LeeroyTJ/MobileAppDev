@@ -14,7 +14,9 @@ import androidx.appcompat.app.AppCompatActivity;
 import com.example.mobileappdev.data.remote.ApiClient;
 import com.example.mobileappdev.session.SessionManager;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.button.MaterialButtonToggleGroup;
 import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -77,6 +79,22 @@ public class SignInActivity extends AppCompatActivity {
         etPassword = findViewById(R.id.etPassword);
         btnSignIn = findViewById(R.id.btnSignIn);
         TextView tvRegisterLink = findViewById(R.id.tvRegisterLink);
+        MaterialButtonToggleGroup toggleRole = findViewById(R.id.toggleRole);
+        TextInputLayout tilStudentNumber = findViewById(R.id.tilStudentNumber);
+        View layoutRegisterContainer = findViewById(R.id.layoutRegisterContainer);
+
+        if (toggleRole != null) {
+            toggleRole.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+                if (!isChecked) return;
+                boolean isLecturer = checkedId == R.id.btnRoleLecturer;
+                if (layoutRegisterContainer != null) {
+                    layoutRegisterContainer.setVisibility(isLecturer ? View.GONE : View.VISIBLE);
+                }
+                if (tilStudentNumber != null) {
+                    tilStudentNumber.setHint(isLecturer ? R.string.label_lecturer_id : R.string.label_student_number);
+                }
+            });
+        }
 
         btnSignIn.setOnClickListener(v -> attemptSignIn());
         if (tvRegisterLink != null) {
