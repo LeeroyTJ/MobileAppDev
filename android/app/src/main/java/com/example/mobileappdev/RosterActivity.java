@@ -218,7 +218,7 @@ public class RosterActivity extends AppCompatActivity {
                 if (sessionManager.isLecturer()) {
                     long sId = student.serverId != null ? student.serverId : 0;
                     StudentSheetBottomSheetDialogFragment sheet = StudentSheetBottomSheetDialogFragment.newInstance(
-                            student.name, student.studentNumber, student.programme, student.labGroup, sId
+                            student.name, student.studentNumber, student.programme, student.labGroup, sId, student.baseVersion
                     );
                     sheet.show(getSupportFragmentManager(), StudentSheetBottomSheetDialogFragment.TAG);
                 } else {
