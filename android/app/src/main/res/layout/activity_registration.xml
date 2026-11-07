@@ -217,18 +217,19 @@
                     android:paddingBottom="14dp" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Claim code (optional) -->
+            <!-- Claim code (hidden until the server confirms it is needed) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilClaimCode"
                 style="@style/CohortHubTextInputLayout"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/field_spacing"
+                android:visibility="gone"
                 android:hint="Claim code (optional, for pre-registered students)"
                 app:startIconDrawable="@drawable/ic_key"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tilProgramme">
+                app:layout_constraintTop_toBottomOf="@id/tilLabGroup">
 
                 <com.google.android.material.textfield.TextInputEditText
                     android:id="@+id/etClaimCode"
@@ -254,7 +255,7 @@
                 android:padding="14dp"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tilProgramme">
+                app:layout_constraintTop_toBottomOf="@id/tilClaimCode">
 
                 <ImageView
                     android:layout_width="20dp"
