@@ -5,6 +5,7 @@
     <string name="action_back">Back</string>
     <string name="action_retry">Retry</string>
     <string name="action_share_summary">Share Summary</string>
+    <string name="action_sort">Sort</string>
 
     <!-- Bottom navigation -->
     <string name="nav_students">Students</string>
