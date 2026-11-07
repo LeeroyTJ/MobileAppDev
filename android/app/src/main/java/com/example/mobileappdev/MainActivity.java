@@ -4,13 +4,13 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
-import android.view.View;
 import android.view.animation.AnimationUtils;
 import android.widget.ImageView;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mobileappdev.session.SessionManager;
+import com.example.mobileappdev.sync.SyncWorker;
 
 /**
  * Invisible router Activity + Splash Screen.
@@ -22,6 +22,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main); // We'll create this layout next
+
+        // Schedule periodic background sync worker
+        SyncWorker.schedulePeriodic(getApplicationContext());
 
         // Find the logo and animate it
         ImageView logo = findViewById(R.id.splashLogo);
