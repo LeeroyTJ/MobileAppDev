@@ -77,12 +77,48 @@ public class RegistrationActivity extends AppCompatActivity {
         bindViews();
         setupProgrammeDropdown();
         setupClaimCodeWatcher();
+
+        etStudentNumber.addTextChangedListener(new TextWatcher() {
+            Handler h = new Handler(Looper.getMainLooper());
+            Runnable r;
+            @Override
+            public void onTextChanged(CharSequence s, int a, int b, int c) {
+                if (r != null) h.removeCallbacks(r);
+                r = () -> {
+                    if (s.length() == 9 && NetworkUtils.isOnline(RegistrationActivity.this)) {
+                        checkIfClaimCodeRequired(s.toString());
+                    } else {
+                        findViewById(R.id.tilClaimCode).setVisibility(View.GONE);
+                    }
+                };
+                h.postDelayed(r, 500);
+            }
+            @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) {}
+            @Override public void afterTextChanged(Editable s) {}
+        });
+
+        private void checkIfClaimCodeRequired(String studentNumber) {
+            ApiClient.getAuthService(this).checkStudent(studentNumber).enqueue(new Callback<>() {
+                @Override public void onResponse(Call<Map<String, Object>> call, Response<Map<String, Object>> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        Map<?, ?> data = (Map<?, ?>) response.body().get("data");
+                        boolean requires = Boolean.TRUE.equals(data.get("requiresClaimCode"));
+                        findViewById(R.id.tilClaimCode).setVisibility(requires ? View.VISIBLE : View.GONE);
+                    }
+                }
+                @Override public void onFailure(Call<Map<String, Object>> call, Throwable t) {}
+            });
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        updateNetworkState();
+        boolean online = NetworkUtils.isOnline(this);
+        MaterialButton btn = findViewById(R.id.btnSaveRegistration);
+        View draftNotice = findViewById(R.id.layoutDraftNotice);
+        btn.setText(online ? "Register" : "Save Registration");
+        draftNotice.setVisibility(online ? View.GONE : View.VISIBLE);
     }
 
     @Override

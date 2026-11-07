@@ -17,4 +17,9 @@ public interface AuthApiService {
 
     @GET("api/v1/auth/me")
     Call<Map<String, Object>> getMe();
+
+    @GET("api/v1/auth/check-student/{studentNumber}")
+    Call<Map<String, Object>> checkStudent(@retrofit2.http.Path("studentNumber") String studentNumber);
+    
+    
 }
