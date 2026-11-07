@@ -20,6 +20,51 @@ if (!JWT_SECRET) {
 }
 
 /**
+ * GET /api/v1/auth/check-student/:studentNumber
+ * Public endpoint. Used by registration to decide whether to show the claim code field.
+ */
+router.get('/check-student/:studentNumber', async (req, res) => {
+    const { studentNumber } = req.params;
+
+    if (!/^\d{9}$/.test(studentNumber)) {
+        return res.status(400).json({
+            success: false,
+            error: { code: 'INVALID_STUDENT_NUMBER', message: 'Must be 9 digits' }
+        });
+    }
+
+    try {
+        const [rows] = await pool.query(
+            'SELECT student_id, account_id FROM students WHERE student_number = ? AND deleted_at IS NULL',
+            [studentNumber]
+        );
+
+        if (rows.length === 0) {
+            return res.json({
+                success: true,
+                data: { exists: false, requiresClaimCode: false }
+            });
+        }
+
+        const student = rows[0];
+        if (student.account_id !== null) {
+            return res.json({
+                success: true,
+                data: { exists: true, requiresClaimCode: false, alreadyRegistered: true }
+            });
+        }
+
+        return res.json({
+            success: true,
+            data: { exists: true, requiresClaimCode: true }
+        });
+    } catch (err) {
+        console.error('check-student error:', err);
+        res.status(500).json({ success: false, error: { message: 'Server error' } });
+    }
+});
+
+/**
  * POST /api/v1/auth/register
  * Public registration endpoint
  */
@@ -159,10 +204,6 @@ router.post('/register', async (req, res) => {
             );
             accountId = accountResult.insertId;
 
-            // NOTE: programme_id needs to come from the request body for a
-            // brand-new registration, since there's no pre-entered record to
-            // read it from. Confirm with your UI team that the registration
-            // form sends programmeId.
             const [studentResult] = await connection.query(
                 'INSERT INTO students (account_id, programme_id, student_number, student_name) VALUES (?, ?, ?, ?)',
                 [accountId, req.body.programmeId, studentNumber, trimmedName]
