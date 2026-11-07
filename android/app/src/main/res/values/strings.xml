@@ -37,11 +37,12 @@
     <string name="hint_programme">Select programme</string>
     <string name="label_lab_group">Assign group</string>
     <string name="hint_lab_group">Select group (G01 \u2013 G04)</string>
-    <string name="label_claim_code">Claim code (optional, for pre-registered)</string>
     <string name="hint_claim_code">e.g. ABC123</string>
     <string name="draft_notice">Saved as draft — verify to complete when online.</string>
     <string name="btn_save_registration">Save registration</string>
     <string name="terms_privacy_notice">By registering, you agree to our terms and privacy policy.</string>
+    <string name="btn_register">Register</string>
+    <string name="label_claim_code">Claim code (optional, for pre-registered students)</string>
 
     <!-- Bottom Navigation -->
     <string name="nav_home">Home</string>
