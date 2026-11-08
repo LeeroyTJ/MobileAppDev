@@ -28,6 +28,16 @@ public class RosterViewModel extends ViewModel {
     private final MutableLiveData<List<StudentEntity>> students =
             new MutableLiveData<>();
 
+    private final MutableLiveData<String> sortOrder = new MutableLiveData<>("NAME"); // Default to Name
+
+    public void setSortOrder(String order) {
+        sortOrder.setValue(order);
+    }
+
+    public LiveData<String> getSortOrder() {
+        return sortOrder;
+    }
+
     public void setSearchQuery(String value) {
         searchQuery.setValue(value != null ? value : "");
     }

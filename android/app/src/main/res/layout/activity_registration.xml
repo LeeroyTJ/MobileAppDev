@@ -104,7 +104,6 @@
                     android:id="@+id/etFullName"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/hint_full_name"
                     android:inputType="textPersonName"
                     android:maxLines="1"
                     android:textColor="@color/text_primary"
@@ -131,7 +130,6 @@
                     android:id="@+id/etStudentNumber"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/hint_student_number"
                     android:inputType="number"
                     android:maxLength="9"
                     android:maxLines="1"
@@ -159,7 +157,6 @@
                     android:id="@+id/etPassword"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/hint_password"
                     android:inputType="textPassword"
                     android:maxLines="1"
                     android:textColor="@color/text_primary"
@@ -185,7 +182,6 @@
                     android:id="@+id/actProgramme"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="@string/hint_programme"
                     android:inputType="none"
                     android:textColor="@color/text_primary"
                     android:textSize="16sp"
@@ -193,29 +189,15 @@
                     android:paddingBottom="14dp" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Lab group (dropdown) -->
+            <!-- Hidden Lab Group (Required for constraints to work properly, but invisible) -->
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilLabGroup"
-                style="@style/CohortHubDropdownLayout"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="@dimen/field_spacing"
-                android:hint="@string/label_lab_group"
-                app:startIconDrawable="@drawable/ic_group"
-                app:layout_constraintEnd_toEndOf="parent"
+                android:visibility="gone"
+                app:layout_constraintTop_toBottomOf="@id/tilProgramme"
                 app:layout_constraintStart_toStartOf="parent"
-                app:layout_constraintTop_toBottomOf="@id/tilProgramme">
-
-                <AutoCompleteTextView
-                    android:id="@+id/actLabGroup"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:inputType="none"
-                    android:textColor="@color/text_primary"
-                    android:textSize="16sp"
-                    android:paddingTop="20dp"
-                    android:paddingBottom="14dp" />
-            </com.google.android.material.textfield.TextInputLayout>
+                app:layout_constraintEnd_toEndOf="parent" />
 
             <!-- Claim code (hidden until the server confirms it is needed) -->
             <com.google.android.material.textfield.TextInputLayout
@@ -225,7 +207,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="@dimen/field_spacing"
                 android:visibility="gone"
-                android:hint="Claim code (optional, for pre-registered students)"
+                android:hint="@string/label_claim_code"
                 app:startIconDrawable="@drawable/ic_key"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
@@ -243,7 +225,7 @@
                     android:paddingBottom="14dp" />
             </com.google.android.material.textfield.TextInputLayout>
 
-            <!-- Draft notice -->
+            <!-- Draft notice (Wrapper needs to be able to hide itself without leaving a gap) -->
             <LinearLayout
                 android:id="@+id/layoutDraftNotice"
                 android:layout_width="0dp"

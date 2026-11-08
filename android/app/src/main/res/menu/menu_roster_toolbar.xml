@@ -2,22 +2,25 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
 
+    <!-- Export to CSV -->
+    <item
+        android:id="@+id/action_share"
+        android:icon="@drawable/ic_document"
+        android:title="@string/action_share_summary"
+        app:showAsAction="ifRoom" />
+
+    <!-- Filter & Sort (Replaces the separate filter icon) -->
+    <item
+        android:id="@+id/action_filter_sort"
+        android:icon="@drawable/ic_filter_list"
+        android:title="Filter &amp; Sort"
+        app:showAsAction="ifRoom" />
+
+    <!-- Overflow Menu -->
     <item
         android:id="@+id/action_add_group"
         android:title="Add Group"
         app:showAsAction="never" />
-
-    <item
-        android:id="@+id/action_share"
-        android:title="@string/action_share_summary"
-        android:icon="@drawable/ic_document"
-        app:showAsAction="ifRoom" />
-
-    <item
-        android:id="@+id/action_sort"
-        android:title="@string/action_sort"
-        android:icon="@drawable/ic_filter_list"
-        app:showAsAction="ifRoom" />
 
     <item
         android:id="@+id/action_logout"

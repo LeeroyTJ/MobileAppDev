@@ -56,4 +56,7 @@ public interface StudentDao {
 
     @Query("SELECT * FROM students WHERE accountId = :accountId AND isDeleted = 0")
     List<StudentEntity> findAllForAccount(long accountId);
+
+    @Query("SELECT DISTINCT labGroup FROM students WHERE accountId = :accountId AND labGroup IS NOT NULL AND labGroup != '' AND labGroup != 'Unassigned' ORDER BY labGroup")
+    List<String> getDistinctGroupsForAccount(long accountId);
 }

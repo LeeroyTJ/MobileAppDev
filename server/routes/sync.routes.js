@@ -52,11 +52,6 @@ router.post('/', authenticateToken, async (req, res) => {
         try {
             await connection.beginTransaction();
 
-            // =========================================================
-            // TASK 12.1 & 12.2: IDEMPOTENCY CHECK
-            // Inspect incoming operationId UUID against sync_operations table.
-            // If operation was previously processed, return cached payload.
-            // =========================================================
             const [existing] = await connection.execute(
                 `SELECT status, response_payload FROM sync_operations WHERE operation_id = ?`,
                 [operationId]
@@ -401,6 +396,54 @@ router.post('/', authenticateToken, async (req, res) => {
                                         version: studentRows[0].version + 1
                                     };
                                 }
+                            }
+                        }
+                    }
+                }
+
+                // -----------------------------------------------------
+                // CORRECT STUDENT NUMBER (Pending Approval)
+                // -----------------------------------------------------
+                else if (type === 'CORRECT_STUDENT_NUMBER') {
+                    const studentId = payload?.studentId || op.entityId;
+                    const correctedNumber = payload?.correctedStudentNumber;
+
+                    if (!studentId || !correctedNumber) {
+                        opStatus = 'REJECTED';
+                        responsePayload = { code: 'INVALID_OPERATION', message: 'studentId and correctedStudentNumber are required' };
+                    } else {
+                        const [studentRows] = await connection.execute(
+                            'SELECT student_id, account_id, student_number FROM students WHERE student_id = ? AND deleted_at IS NULL',
+                            [studentId]
+                        );
+
+                        if (studentRows.length === 0) {
+                            opStatus = 'NOT_FOUND';
+                            responsePayload = { code: 'STUDENT_NOT_FOUND', message: 'Student not found' };
+                        } else if (userRole !== 'LECTURER' && studentRows[0].account_id !== userId) {
+                            opStatus = 'REJECTED';
+                            responsePayload = { code: 'FORBIDDEN', message: 'Access denied' };
+                        } else {
+                            // Check if the new number is already taken
+                            const [existing] = await connection.execute(
+                                'SELECT student_id FROM students WHERE student_number = ? AND student_id != ?',
+                                [correctedNumber, studentId]
+                            );
+
+                            if (existing.length > 0) {
+                                opStatus = 'REJECTED';
+                                responsePayload = { code: 'STUDENT_NUMBER_EXISTS', message: 'Number already in use' };
+                            } else {
+                                // Insert into the request table
+                                await connection.execute(
+                                    `INSERT INTO student_number_requests
+                                        (student_id, current_number, requested_number, status, operation_id)
+                                     VALUES (?, ?, ?, 'PENDING', ?)`,
+                                    [studentId, studentRows[0].student_number, correctedNumber, operationId]
+                                );
+
+                                opStatus = 'APPLIED';
+                                responsePayload = { id: studentId, status: 'PENDING', message: 'Correction request submitted' };
                             }
                         }
                     }

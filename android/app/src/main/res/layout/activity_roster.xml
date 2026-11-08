@@ -358,13 +358,6 @@
                 android:textAppearance="?attr/textAppearanceTitleSmall"
                 tools:text="60 students" />
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/button_open_filters"
-                style="@style/Widget.Material3.Button.IconButton"
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:contentDescription="@string/roster_open_filters"
-                app:icon="@drawable/ic_filter_list" />
 
         </LinearLayout>
 

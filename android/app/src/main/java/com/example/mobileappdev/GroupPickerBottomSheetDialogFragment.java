@@ -4,22 +4,24 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.example.mobileappdev.data.local.AppDatabase;
 import com.example.mobileappdev.data.remote.ApiClient;
+import com.example.mobileappdev.session.SessionManager;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.button.MaterialButton;
-import com.example.mobileappdev.data.local.AppDatabase;
-import com.example.mobileappdev.data.local.entity.StudentEntity;
-import java.util.concurrent.Executors;
+import com.google.android.material.card.MaterialCardView;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 import retrofit2.Call;
 import retrofit2.Callback;
@@ -35,31 +37,12 @@ public class GroupPickerBottomSheetDialogFragment extends BottomSheetDialogFragm
 
     private OnGroupSelectedListener listener;
     private long studentServerId = 0;
-
-    /**
-     * When true, picking a group performs a real assignment via
-     * POST /groups/:groupId/assign (lecturer flow, capacity-checked server-side).
-     * When false, picking a group only reports the choice to the listener
-     * (student "request group change" flow, which queues locally).
-     */
     private boolean performAssign = true;
 
-    private TextView tvG01Occupancy;
-    private TextView tvG02Occupancy;
-    private TextView tvG03Occupancy;
-    private TextView tvG04Occupancy;
-
-    private View cardGroupG01;
-    private View cardGroupG02;
-    private View cardGroupG03;
-    private View cardGroupG04;
-
-    /** Lecturer-flow factory: picking a group assigns it. */
     public static GroupPickerBottomSheetDialogFragment newInstance(long studentServerId) {
         return newInstance(studentServerId, true);
     }
 
-    /** Explicit factory: set performAssign = false for the student request flow. */
     public static GroupPickerBottomSheetDialogFragment newInstance(long studentServerId, boolean performAssign) {
         GroupPickerBottomSheetDialogFragment fragment = new GroupPickerBottomSheetDialogFragment();
         Bundle args = new Bundle();
@@ -93,149 +76,142 @@ public class GroupPickerBottomSheetDialogFragment extends BottomSheetDialogFragm
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        cardGroupG01 = view.findViewById(R.id.cardGroupG01);
-        cardGroupG02 = view.findViewById(R.id.cardGroupG02);
-        cardGroupG03 = view.findViewById(R.id.cardGroupG03);
-        cardGroupG04 = view.findViewById(R.id.cardGroupG04);
-
-        tvG01Occupancy = view.findViewById(R.id.tvG01Occupancy);
-        tvG02Occupancy = view.findViewById(R.id.tvG02Occupancy);
-        tvG03Occupancy = view.findViewById(R.id.tvG03Occupancy);
-        tvG04Occupancy = view.findViewById(R.id.tvG04Occupancy);
-
+        LinearLayout container = view.findViewById(R.id.groupOptionsContainer);
         MaterialButton btnCancel = view.findViewById(R.id.btnCancelPicker);
 
-        if (cardGroupG01 != null) cardGroupG01.setOnClickListener(v -> selectGroup("G01", 1));
-        if (cardGroupG02 != null) cardGroupG02.setOnClickListener(v -> selectGroup("G02", 2));
-        if (cardGroupG03 != null) cardGroupG03.setOnClickListener(v -> selectGroup("G03", 3));
-        if (cardGroupG04 != null) cardGroupG04.setOnClickListener(v -> selectGroup("G04", 4));
         if (btnCancel != null) btnCancel.setOnClickListener(v -> dismiss());
 
-        fetchGroupCapacities();
+        fetchAndBuildGroups(container);
     }
 
-    private void fetchGroupCapacities() {
+    private void fetchAndBuildGroups(LinearLayout container) {
         if (getContext() == null) return;
 
         ApiClient.getGroupService(requireContext()).listGroups().enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
-                if (!isAdded() || !response.isSuccessful() || response.body() == null
-                        || !Boolean.TRUE.equals(response.body().get("success"))) {
-                    return;
-                }
+                if (!isAdded()) return;
 
-                Object dataObj = response.body().get("data");
-                if (!(dataObj instanceof List)) return;
-
-                for (Object item : (List<?>) dataObj) {
-                    if (item instanceof Map) {
-                        Map<?, ?> groupMap = (Map<?, ?>) item;
-                        Object codeObj = groupMap.get("group_code");
-                        Object occupiedObj = groupMap.get("occupied");
-                        Object capacityObj = groupMap.get("capacity");
-
-                        String code = codeObj != null ? codeObj.toString() : "";
-                        long occupied = (occupiedObj instanceof Number) ? ((Number) occupiedObj).longValue() : 0;
-                        long capacity = (capacityObj instanceof Number) ? ((Number) capacityObj).longValue() : 15;
-
-                        String text = occupied + " / " + capacity;
-                        boolean isFull = occupied >= capacity;
-
-                        if ("G01".equalsIgnoreCase(code)) {
-                            if (tvG01Occupancy != null) tvG01Occupancy.setText(text);
-                            applyCapacityState(cardGroupG01, isFull);
-                        } else if ("G02".equalsIgnoreCase(code)) {
-                            if (tvG02Occupancy != null) tvG02Occupancy.setText(text);
-                            applyCapacityState(cardGroupG02, isFull);
-                        } else if ("G03".equalsIgnoreCase(code)) {
-                            if (tvG03Occupancy != null) tvG03Occupancy.setText(text);
-                            applyCapacityState(cardGroupG03, isFull);
-                        } else if ("G04".equalsIgnoreCase(code)) {
-                            if (tvG04Occupancy != null) tvG04Occupancy.setText(text);
-                            applyCapacityState(cardGroupG04, isFull);
-                        }
+                if (response.isSuccessful() && response.body() != null) {
+                    List<?> groupList = (List<?>) response.body().get("data");
+                    if (groupList != null && !groupList.isEmpty()) {
+                        buildOnlineGroupCards(container, groupList);
+                        return;
                     }
                 }
+                // Fallback if response is bad
+                loadCachedGroups(container);
             }
 
             @Override
             public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
-                // If fetch fails, placeholders ("-- / --") remain visible.
+                if (!isAdded()) return;
+                // Offline! Build from cached Room data.
+                loadCachedGroups(container);
             }
         });
     }
 
-    private void applyCapacityState(View card, boolean isFull) {
-        if (card == null) return;
-        card.setEnabled(!isFull);
-        card.setAlpha(isFull ? 0.5f : 1.0f);
-        card.setClickable(!isFull);
+    private void buildOnlineGroupCards(LinearLayout container, List<?> groupList) {
+        container.removeAllViews();
+        for (Object item : groupList) {
+            if (item instanceof Map) {
+                Map<?, ?> groupMap = (Map<?, ?>) item;
+                String code = groupMap.get("group_code") != null ? groupMap.get("group_code").toString() : "";
+                long capacity = groupMap.get("capacity") instanceof Number ? ((Number) groupMap.get("capacity")).longValue() : 15;
+                long occupied = groupMap.get("occupied") instanceof Number ? ((Number) groupMap.get("occupied")).longValue() : 0;
+                long groupId = groupMap.get("group_id") instanceof Number ? ((Number) groupMap.get("group_id")).longValue() : 0;
+
+                if (code.isEmpty()) continue;
+                addRow(container, code, capacity, occupied, groupId, true);
+            }
+        }
+    }
+
+    private void loadCachedGroups(LinearLayout container) {
+        AppDatabase db = AppDatabase.getInstance(requireContext());
+        long accountId = SessionManager.getInstance(requireContext()).getAccountId();
+
+        Executors.newSingleThreadExecutor().execute(() -> {
+            // Query Room for the distinct groups that currently have students
+            List<String> cachedGroups = db.studentDao().getDistinctGroupsForAccount(accountId);
+
+            if (!isAdded()) return;
+            requireActivity().runOnUiThread(() -> {
+                container.removeAllViews();
+                if (cachedGroups == null || cachedGroups.isEmpty()) {
+                    Toast.makeText(requireContext(), "No groups found in cache", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                for (String code : cachedGroups) {
+                    // We don't know the capacity/occupancy offline, so we pass 0 for both.
+                    // The user can still select the group.
+                    addRow(container, code, 15, 0, 0, false);
+                }
+            });
+        });
+    }
+
+    private void addRow(LinearLayout container, String code, long capacity, long occupied, long groupId, boolean isOnline) {
+        View row = LayoutInflater.from(requireContext()).inflate(R.layout.item_group_picker_row, container, false);
+        TextView tvName = row.findViewById(R.id.tvGroupName);
+        TextView tvOccupancy = row.findViewById(R.id.tvGroupOccupancy);
+        MaterialCardView card = (MaterialCardView) row;
+
+        tvName.setText("Lab Group " + code);
+
+        if (isOnline) {
+            tvOccupancy.setText(occupied + " / " + capacity);
+            boolean isFull = occupied >= capacity;
+            if (isFull) {
+                card.setEnabled(false);
+                card.setAlpha(0.5f);
+                card.setClickable(false);
+            } else {
+                card.setOnClickListener(v -> selectGroup(code, groupId));
+            }
+        } else {
+            // Offline view
+            tvOccupancy.setText("Offline");
+            card.setOnClickListener(v -> selectGroup(code, groupId));
+        }
+
+        container.addView(row);
     }
 
     private void selectGroup(String groupCode, long groupId) {
-        // Path 1 — pick only. Used by the student's "Request group change" flow.
         if (!performAssign) {
-            if (listener != null) {
-                listener.onGroupSelected(groupCode);
-            }
+            if (listener != null) listener.onGroupSelected(groupCode);
             dismiss();
             return;
         }
 
-        // Path 2 — student has no server id, so we can't assign. Just report the choice.
         if (studentServerId <= 0) {
-            if (listener != null) {
-                listener.onGroupSelected(groupCode);
-            } else {
-                Toast.makeText(requireContext(), "Selected " + groupCode, Toast.LENGTH_SHORT).show();
-            }
+            if (listener != null) listener.onGroupSelected(groupCode);
             dismiss();
             return;
         }
 
-        // Path 3 — lecturer assignment. Goes through POST /groups/:id/assign,
-        // which enforces the 15-cap under a row lock (SELECT ... FOR UPDATE).
         Map<String, Object> body = new HashMap<>();
         body.put("studentId", studentServerId);
 
         ApiClient.getGroupService(requireContext()).assignStudent(groupId, body).enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
-                if (response.isSuccessful() && response.body() != null
-                        && Boolean.TRUE.equals(response.body().get("success"))) {
-                    Toast.makeText(requireContext(),
-                            "Successfully assigned student to group " + groupCode, Toast.LENGTH_SHORT).show();
-                    updateLocalRoomStudentGroup(studentServerId, groupCode);
+                if (response.isSuccessful() && response.body() != null && Boolean.TRUE.equals(response.body().get("success"))) {
+                    Toast.makeText(requireContext(), "Successfully assigned to " + groupCode, Toast.LENGTH_SHORT).show();
                     if (listener != null) listener.onGroupSelected(groupCode);
-                } else if (response.code() == 409) {
-                    Toast.makeText(requireContext(),
-                            "Group " + groupCode + " is full (15/15 max capacity)", Toast.LENGTH_LONG).show();
                 } else {
-                    Toast.makeText(requireContext(),
-                            "Couldn't assign this student to " + groupCode, Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), "Failed to assign to " + groupCode, Toast.LENGTH_SHORT).show();
                 }
                 dismiss();
             }
 
             @Override
             public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
-                Toast.makeText(requireContext(),
-                        "Network error — couldn't assign this student to " + groupCode,
-                        Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), "Network error", Toast.LENGTH_SHORT).show();
                 dismiss();
-            }
-        });
-    }
-
-    private void updateLocalRoomStudentGroup(long serverId, String groupCode) {
-        if (getContext() == null || serverId <= 0) return;
-        AppDatabase db = AppDatabase.getInstance(getContext().getApplicationContext());
-        Executors.newSingleThreadExecutor().execute(() -> {
-            StudentEntity student = db.studentDao().findByServerId(serverId);
-            if (student != null) {
-                student.labGroup = groupCode;
-                db.studentDao().update(student);
             }
         });
     }

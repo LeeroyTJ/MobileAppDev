@@ -212,7 +212,23 @@ router.post('/register', async (req, res) => {
         }
 
         await connection.commit();
-        return res.status(201).json({ success: true, data: { accountId, studentId } });
+
+        // Generate a JWT so the app can auto-login the student
+        const token = jwt.sign(
+            { id: accountId, role: 'STUDENT' },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
+        return res.status(201).json({
+            success: true,
+            data: {
+                accessToken: token,
+                accountId: accountId,
+                studentId: studentId,
+                role: 'STUDENT'
+            }
+        });
 
     } catch (error) {
         await connection.rollback();

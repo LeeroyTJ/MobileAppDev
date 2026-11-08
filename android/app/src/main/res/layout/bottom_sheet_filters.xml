@@ -1,24 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-<!--
-    LabNexa
-    Filter & Search Bottom Sheet
-
-    Used from the Lecturer Roster (opened by @id/button_open_filters).
-
-    Filters:
-    - Programme
-    - Lab group, including Unassigned
-    - Local synchronization status
-
-    Dropdowns map 1:1 to RosterViewModel: programmeFilter, groupFilter, statusFilter.
-    Position 0 of every dropdown is "All" (= no filter).
-
-    The screen is UI-only at this stage.
-    Java/ViewModel logic will be added later.
-    Requires Material Components 1.10+ (colorSurfaceContainer).
--->
-
 <androidx.core.widget.NestedScrollView
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -38,10 +18,7 @@
         android:paddingTop="16dp"
         android:paddingBottom="24dp">
 
-        <!-- ========================================================= -->
-        <!-- HEADER                                                     -->
-        <!-- ========================================================= -->
-
+        <!-- HEADER -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -69,17 +46,66 @@
 
         </LinearLayout>
 
+        <!-- SORT SECTION -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="Sort By"
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:textColor="@color/text_primary"
+            android:fontFamily="sans-serif-medium" />
 
-        <!-- ========================================================= -->
-        <!-- PROGRAMME                                                  -->
-        <!-- ========================================================= -->
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/toggleSort"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            app:singleSelection="true"
+            app:selectionRequired="true"
+            app:checkedButton="@id/btnSortName">
 
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSortName"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Name" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSortNumber"
+                style="?attr/materialButtonOutlinedStyle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Number" />
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_marginTop="24dp"
+            android:layout_marginBottom="8dp"
+            android:background="@color/outline" />
+
+        <!-- FILTERS SECTION -->
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:text="Filter By"
+            android:textAppearance="?attr/textAppearanceTitleMedium"
+            android:textColor="@color/text_primary"
+            android:fontFamily="sans-serif-medium" />
+
+        <!-- PROGRAMME -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/input_programme"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="12dp"
             android:hint="@string/filter_label_programme">
 
             <com.google.android.material.textfield.MaterialAutoCompleteTextView
@@ -94,11 +120,7 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
-
-        <!-- ========================================================= -->
-        <!-- LAB GROUP                                                  -->
-        <!-- ========================================================= -->
-
+        <!-- LAB GROUP -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/input_group"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
@@ -119,11 +141,7 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
-
-        <!-- ========================================================= -->
-        <!-- SYNC STATUS (local only: the API has no status filter)     -->
-        <!-- ========================================================= -->
-
+        <!-- SYNC STATUS -->
         <com.google.android.material.textfield.TextInputLayout
             android:id="@+id/input_status"
             style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
@@ -145,13 +163,7 @@
 
         </com.google.android.material.textfield.TextInputLayout>
 
-
-        <!-- ========================================================= -->
-        <!-- RESULT SUMMARY                                             -->
-        <!-- Live count. Use plurals filter_result_count with           -->
-        <!-- studentsFound. Live region: TalkBack announces changes.    -->
-        <!-- ========================================================= -->
-
+        <!-- RESULT SUMMARY -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/filter_result_card"
             android:layout_width="match_parent"
@@ -191,11 +203,7 @@
 
         </com.google.android.material.card.MaterialCardView>
 
-
-        <!-- ========================================================= -->
-        <!-- APPLY BUTTON (closes the sheet; filters are already live)  -->
-        <!-- ========================================================= -->
-
+        <!-- APPLY BUTTON -->
         <com.google.android.material.button.MaterialButton
             android:id="@+id/sheet_button_apply"
             android:layout_width="match_parent"

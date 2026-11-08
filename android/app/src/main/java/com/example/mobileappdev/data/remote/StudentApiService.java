@@ -43,4 +43,13 @@ public interface StudentApiService {
 
     @POST("api/v1/students/{id}/group-requests")
     Call<Map<String, Object>> requestGroupChange(@Path("id") long id, @Body Map<String, Object> body);
+
+    @GET("api/v1/students/requests/number-corrections")
+    Call<Map<String, Object>> getPendingNumberCorrections();
+
+    @POST("api/v1/students/requests/number-corrections/{requestId}/approve")
+    Call<Map<String, Object>> approveNumberCorrection(@Path("requestId") long requestId);
+
+    @POST("api/v1/students/requests/number-corrections/{requestId}/reject")
+    Call<Map<String, Object>> rejectNumberCorrection(@Path("requestId") long requestId);
 }
