@@ -593,4 +593,75 @@ router.delete('/:id', authenticateToken, verifyRole('LECTURER'), async (req, res
     }
 });
 
+// GET /api/v1/students/requests/number-corrections
+router.get('/requests/number-corrections', authenticateToken, verifyRole('LECTURER'), async (req, res) => {
+    try {
+        const [rows] = await pool.query(`
+            SELECT r.request_id, r.student_id, s.student_name,
+                   r.current_number, r.requested_number, r.created_at
+            FROM student_number_requests r
+            JOIN students s ON r.student_id = s.student_id
+            WHERE r.status = 'PENDING'
+            ORDER BY r.created_at ASC
+        `);
+        return res.status(200).json({ success: true, data: rows });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: { message: 'Server error' } });
+    }
+});
+
+// POST /api/v1/students/requests/number-corrections/:requestId/approve
+router.post('/requests/number-corrections/:requestId/approve', authenticateToken, verifyRole('LECTURER'), async (req, res) => {
+    const { requestId } = req.params;
+    const connection = await pool.getConnection();
+    try {
+        await connection.beginTransaction();
+        const [rows] = await connection.query(
+            "SELECT * FROM student_number_requests WHERE request_id = ? AND status = 'PENDING' FOR UPDATE",
+            [requestId]
+        );
+        if (rows.length === 0) {
+            await connection.rollback();
+            return res.status(404).json({ success: false, error: { message: 'Request not found' } });
+        }
+
+        const request = rows[0];
+
+        // Apply the new number to the student
+        await connection.query(
+            'UPDATE students SET student_number = ?, version = version + 1 WHERE student_id = ?',
+            [request.requested_number, request.student_id]
+        );
+
+        // Mark request as approved
+        await connection.query(
+            "UPDATE student_number_requests SET status = 'APPROVED', resolved_at = NOW() WHERE request_id = ?",
+            [requestId]
+        );
+
+        await connection.commit();
+        return res.status(200).json({ success: true, message: 'Approved' });
+    } catch (error) {
+        await connection.rollback();
+        return res.status(500).json({ success: false, error: { message: 'Server error' } });
+    } finally {
+        connection.release();
+    }
+});
+
+// POST /api/v1/students/requests/number-corrections/:requestId/reject
+router.post('/requests/number-corrections/:requestId/reject', authenticateToken, verifyRole('LECTURER'), async (req, res) => {
+    const { requestId } = req.params;
+    try {
+        const [result] = await pool.query(
+            "UPDATE student_number_requests SET status = 'REJECTED', resolved_at = NOW() WHERE request_id = ? AND status = 'PENDING'",
+            [requestId]
+        );
+        if (result.affectedRows === 0) return res.status(404).json({ success: false });
+        return res.status(200).json({ success: true, message: 'Rejected' });
+    } catch (error) {
+        return res.status(500).json({ success: false });
+    }
+});
+
 module.exports = router;

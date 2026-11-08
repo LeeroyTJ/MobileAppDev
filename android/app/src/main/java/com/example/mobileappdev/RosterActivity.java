@@ -172,12 +172,6 @@ public class RosterActivity extends AppCompatActivity {
         tvRosterPlacesRemainingPill = findViewById(R.id.tv_roster_places_remaining_pill);
         progressRosterCapacity = findViewById(R.id.progress_roster_group_capacity);
 
-        MaterialButton buttonOpenFilters = findViewById(R.id.button_open_filters);
-        buttonOpenFilters.setOnClickListener(v -> {
-            FilterBottomSheetDialogFragment dialog = new FilterBottomSheetDialogFragment();
-            dialog.show(getSupportFragmentManager(), FilterBottomSheetDialogFragment.TAG);
-        });
-
         rosterList = findViewById(R.id.roster_list);
         loadingIndicator = findViewById(R.id.loading_indicator);
         emptyState = findViewById(R.id.empty_state);
@@ -202,6 +196,10 @@ public class RosterActivity extends AppCompatActivity {
                 return true;
             } else if (itemId == R.id.action_share) {
                 exportGroupToCsv(null); // Export all
+                return true;
+            } else if (itemId == R.id.action_filter_sort) {
+                FilterBottomSheetDialogFragment dialog = new FilterBottomSheetDialogFragment();
+                dialog.show(getSupportFragmentManager(), FilterBottomSheetDialogFragment.TAG);
                 return true;
             } else if (itemId == R.id.action_logout) {
                 new SignOutConfirmationDialogFragment().show(getSupportFragmentManager(), SignOutConfirmationDialogFragment.TAG);
@@ -328,7 +326,7 @@ public class RosterActivity extends AppCompatActivity {
 
                 // Add the Unassigned chip last
                 Chip unassignedChip = new Chip(RosterActivity.this, null);
-                unassignedChip.setText("Unassigned");
+                unassignedChip.setText(R.string.group_unassigned);
                 unassignedChip.setCheckable(true);
                 unassignedChip.setClickable(true);
                 unassignedChip.setId(android.view.View.generateViewId());
@@ -405,6 +403,9 @@ public class RosterActivity extends AppCompatActivity {
     }
 
     private void observeViewModel() {
+
+        viewModel.getSortOrder().observe(this, order -> applyFiltersAndFilterList());
+
         viewModel.getStudents().observe(this, students -> {
             if (students == null || students.isEmpty()) {
                 rosterList.setVisibility(View.GONE);
@@ -503,6 +504,13 @@ public class RosterActivity extends AppCompatActivity {
             }
 
             filtered.add(student);
+        }
+
+        String sortOrder = viewModel.getSortOrder().getValue();
+        if ("NUMBER".equals(sortOrder)) {
+            filtered.sort((a, b) -> a.studentNumber.compareToIgnoreCase(b.studentNumber));
+        } else {
+            filtered.sort((a, b) -> a.name.compareToIgnoreCase(b.name));
         }
 
         viewModel.setStudents(filtered);
@@ -640,7 +648,10 @@ public class RosterActivity extends AppCompatActivity {
 
             // Save to cache
             File cacheDir = new File(getCacheDir(), "exports");
-            if (!cacheDir.exists()) cacheDir.mkdirs();
+            if (!cacheDir.exists() && !cacheDir.mkdirs()) {
+                Toast.makeText(this, "Failed to create export directory", Toast.LENGTH_SHORT).show();
+                return;
+            }
 
             String fileName = (groupCode == null ? "All_Groups" : groupCode) + "_Export.csv";
             File file = new File(cacheDir, fileName);
@@ -660,7 +671,7 @@ public class RosterActivity extends AppCompatActivity {
             startActivity(Intent.createChooser(shareIntent, "Export Group to CSV"));
 
         } catch (Exception e) {
-            e.printStackTrace();
+            android.util.Log.e("CSV_EXPORT", "Error exporting CSV", e);
             Toast.makeText(this, "Export failed: " + e.getMessage(), Toast.LENGTH_LONG).show();
         }
     }

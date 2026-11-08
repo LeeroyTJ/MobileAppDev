@@ -14,6 +14,7 @@ USE cohorthub;
 -- 0. DROP (reverse FK order, so re-running is safe)
 -- ============================================================
 
+DROP TABLE IF EXISTS student_number_requests;
 DROP TABLE IF EXISTS group_requests;
 DROP TABLE IF EXISTS sync_operations;
 DROP TABLE IF EXISTS claim_codes;
@@ -154,6 +155,29 @@ CREATE TABLE claim_codes (
         ON UPDATE CASCADE
 ) ENGINE = InnoDB;
 
+
+-- ============================================================
+-- 6. STUDENT NUMBER REQUESTS (audit trail for number corrections)
+-- ============================================================
+
+CREATE TABLE student_number_requests (
+    request_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    student_id BIGINT UNSIGNED NOT NULL,
+    current_number VARCHAR(50) NOT NULL,
+    requested_number VARCHAR(50) NOT NULL,
+    status ENUM('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
+    operation_id CHAR(36) NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    resolved_at DATETIME NULL,
+    PRIMARY KEY (request_id),
+    KEY idx_num_requests_student (student_id),
+    KEY idx_num_requests_status (status),
+    CONSTRAINT fk_num_requests_student
+        FOREIGN KEY (student_id) REFERENCES students(student_id)
+        ON DELETE CASCADE ON UPDATE CASCADE
+) ENGINE = InnoDB;
+
+
 -- ============================================================
 -- 7. GROUP REQUESTS (audit trail for group-change requests)
 -- ============================================================
@@ -185,7 +209,7 @@ CREATE TABLE group_requests (
 
 
 -- ============================================================
--- 6. SYNC OPERATIONS
+-- 8. SYNC OPERATIONS (idempotency receipts)
 -- ============================================================
 
 CREATE TABLE sync_operations (
@@ -218,7 +242,7 @@ CREATE TABLE sync_operations (
 
 
 -- ============================================================
--- 7. SEED PROGRAMMES
+-- 9. SEED PROGRAMMES
 -- ============================================================
 
 INSERT INTO programmes (code, name)
@@ -229,7 +253,7 @@ VALUES
 
 
 -- ============================================================
--- 8. SEED LAB GROUPS
+-- 10. SEED LAB GROUPS
 -- ============================================================
 
 INSERT INTO lab_groups (group_code, name, capacity)

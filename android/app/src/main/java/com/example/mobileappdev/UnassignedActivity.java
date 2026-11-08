@@ -248,63 +248,22 @@ public class UnassignedActivity extends AppCompatActivity {
     }
 
     private void showGroupAssignmentDialog(StudentEntity student) {
-        ApiClient.getGroupService(this).listGroups().enqueue(new Callback<>() {
-            @Override
-            public void onResponse(@NonNull Call<Map<String, Object>> call, @NonNull Response<Map<String, Object>> response) {
-                if (!response.isSuccessful() || response.body() == null
-                        || !Boolean.TRUE.equals(response.body().get("success"))) {
-                    Toast.makeText(UnassignedActivity.this, "Failed to load groups", Toast.LENGTH_SHORT).show();
-                    return;
-                }
+        if (student.serverId == null || student.serverId <= 0) {
+            Toast.makeText(this, "Cannot assign unsynced student", Toast.LENGTH_SHORT).show();
+            return;
+        }
 
-                List<?> groupsData = (List<?>) response.body().get("data");
-                if (groupsData == null || groupsData.isEmpty()) {
-                    Toast.makeText(UnassignedActivity.this, "No groups available", Toast.LENGTH_SHORT).show();
-                    return;
-                }
+        // Use the same beautiful bottom sheet as the Roster
+        GroupPickerBottomSheetDialogFragment dialog =
+                GroupPickerBottomSheetDialogFragment.newInstance(student.serverId, true);
 
-                final List<Long> groupIds = new ArrayList<>();
-                final List<String> groupCodes = new ArrayList<>();
-                final List<String> groupNames = new ArrayList<>();
-
-                for (Object item : groupsData) {
-                    if (item instanceof Map) {
-                        Map<?, ?> groupMap = (Map<?, ?>) item;
-                        long gId = groupMap.get("group_id") instanceof Number ?
-                                ((Number) groupMap.get("group_id")).longValue() : 0;
-                        String code = groupMap.get("group_code") != null ? groupMap.get("group_code").toString() : "";
-                        String name = groupMap.get("name") != null ? groupMap.get("name").toString() : "";
-                        long occupied = groupMap.get("occupied") instanceof Number ?
-                                ((Number) groupMap.get("occupied")).longValue() : 0;
-                        long capacity = groupMap.get("capacity") instanceof Number ?
-                                ((Number) groupMap.get("capacity")).longValue() : 0;
-
-                        groupIds.add(gId);
-                        groupCodes.add(code);
-                        groupNames.add(code + " - " + name + " (" + occupied + "/" + capacity + ")");
-                    }
-                }
-
-                final int[] selectedIndex = {0};
-
-                new MaterialAlertDialogBuilder(UnassignedActivity.this)
-                        .setTitle("Assign " + student.name + " to Group")
-                        .setSingleChoiceItems(groupNames.toArray(new CharSequence[0]), 0, (dialog, which) -> selectedIndex[0] = which)
-                        .setPositiveButton("Assign", (dialog, which) -> {
-                            int idx = selectedIndex[0];
-                            if (idx >= 0 && idx < groupIds.size()) {
-                                executeAssignStudent(student, groupIds.get(idx), groupCodes.get(idx));
-                            }
-                        })
-                        .setNegativeButton("Cancel", null)
-                        .show();
-            }
-
-            @Override
-            public void onFailure(@NonNull Call<Map<String, Object>> call, @NonNull Throwable t) {
-                Toast.makeText(UnassignedActivity.this, "Network error loading groups", Toast.LENGTH_SHORT).show();
-            }
+        dialog.setOnGroupSelectedListener(groupCode -> {
+            Toast.makeText(UnassignedActivity.this,
+                    "Assigned " + student.name + " to " + groupCode, Toast.LENGTH_SHORT).show();
+            loadUnassignedStudents(); // Refresh the unassigned list
         });
+
+        dialog.show(getSupportFragmentManager(), GroupPickerBottomSheetDialogFragment.TAG);
     }
 
     private void executeAssignStudent(StudentEntity student, long groupId, String groupCode) {

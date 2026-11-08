@@ -16,6 +16,7 @@ import com.example.mobileappdev.viewmodel.RosterViewModel;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.button.MaterialButton;
 import com.google.android.material.textfield.MaterialAutoCompleteTextView;
+import com.google.android.material.button.MaterialButtonToggleGroup;
 
 public class FilterBottomSheetDialogFragment extends BottomSheetDialogFragment {
 
@@ -51,6 +52,25 @@ public class FilterBottomSheetDialogFragment extends BottomSheetDialogFragment {
 
         MaterialButton btnClear = view.findViewById(R.id.sheet_button_clear);
         MaterialButton btnApply = view.findViewById(R.id.sheet_button_apply);
+        MaterialButtonToggleGroup toggleSort = view.findViewById(R.id.toggleSort);
+
+        toggleSort.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+            if (isChecked) {
+                if (checkedId == R.id.btnSortName) {
+                    viewModel.setSortOrder("NAME");
+                } else if (checkedId == R.id.btnSortNumber) {
+                    viewModel.setSortOrder("NUMBER");
+                }
+            }
+        });
+
+        String currentSort = viewModel.getSortOrder().getValue();
+        if ("NUMBER".equals(currentSort)) {
+            toggleSort.check(R.id.btnSortNumber);
+        } else {
+            toggleSort.check(R.id.btnSortName);
+        }
+
         dropdownProgramme = view.findViewById(R.id.dropdown_programme);
         dropdownGroup = view.findViewById(R.id.dropdown_group);
         dropdownStatus = view.findViewById(R.id.dropdown_status);

@@ -2,11 +2,12 @@
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
+    android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="24dp"
+    android:paddingTop="24dp"
+    android:paddingStart="24dp"
+    android:paddingEnd="24dp"
     android:background="@color/surface">
 
     <TextView
@@ -26,174 +27,30 @@
         android:textAppearance="?attr/textAppearanceBodyMedium"
         android:textColor="@color/text_secondary" />
 
-    <!-- Group Options List -->
-    <LinearLayout
+    <!-- The ScrollView with a weight of 1 will take up all remaining space -->
+    <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
+        android:layout_height="0dp"
+        android:layout_weight="1"
         android:layout_marginTop="20dp"
-        android:orientation="vertical">
+        android:layout_marginBottom="12dp">
 
-        <!-- G01 -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardGroupG01"
+        <LinearLayout
+            android:id="@+id/groupOptionsContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:clickable="true"
-            android:focusable="true"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/outline"
-            app:strokeWidth="1dp">
+            android:orientation="vertical" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="16dp">
+    </androidx.core.widget.NestedScrollView>
 
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Lab Group G01"
-                    android:textAppearance="?attr/textAppearanceTitleMedium"
-                    android:textColor="@color/text_primary" />
-
-                <TextView
-                    android:id="@+id/tvG01Occupancy"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="-- / --"
-                    android:textAppearance="?attr/textAppearanceLabelLarge"
-                    android:textColor="@color/dodger_blue" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- G02 -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardGroupG02"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:clickable="true"
-            android:focusable="true"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/outline"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Lab Group G02"
-                    android:textAppearance="?attr/textAppearanceTitleMedium"
-                    android:textColor="@color/text_primary" />
-
-                <TextView
-                    android:id="@+id/tvG02Occupancy"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="-- / --"
-                    android:textAppearance="?attr/textAppearanceLabelLarge"
-                    android:textColor="@color/dodger_blue" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- G03 -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardGroupG03"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:clickable="true"
-            android:focusable="true"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/outline"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Lab Group G03"
-                    android:textAppearance="?attr/textAppearanceTitleMedium"
-                    android:textColor="@color/text_primary" />
-
-                <TextView
-                    android:id="@+id/tvG03Occupancy"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="-- / --"
-                    android:textAppearance="?attr/textAppearanceLabelLarge"
-                    android:textColor="@color/dodger_blue" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-        <!-- G04 -->
-        <com.google.android.material.card.MaterialCardView
-            android:id="@+id/cardGroupG04"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="12dp"
-            android:clickable="true"
-            android:focusable="true"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="0dp"
-            app:strokeColor="@color/outline"
-            app:strokeWidth="1dp">
-
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:padding="16dp">
-
-                <TextView
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Lab Group G04"
-                    android:textAppearance="?attr/textAppearanceTitleMedium"
-                    android:textColor="@color/text_primary" />
-
-                <TextView
-                    android:id="@+id/tvG04Occupancy"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="-- / --"
-                    android:textAppearance="?attr/textAppearanceLabelLarge"
-                    android:textColor="@color/dodger_blue" />
-            </LinearLayout>
-        </com.google.android.material.card.MaterialCardView>
-
-    </LinearLayout>
-
+    <!-- The button stays at the bottom -->
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btnCancelPicker"
         style="@style/Widget.Material3.Button.OutlinedButton"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:minHeight="52dp"
-        android:layout_marginTop="12dp"
+        android:layout_marginBottom="24dp"
         android:text="@string/btn_cancel" />
 
 </LinearLayout>
