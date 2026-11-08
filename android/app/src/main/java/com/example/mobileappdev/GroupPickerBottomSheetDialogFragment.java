@@ -49,6 +49,11 @@ public class GroupPickerBottomSheetDialogFragment extends BottomSheetDialogFragm
     private TextView tvG03Occupancy;
     private TextView tvG04Occupancy;
 
+    private View cardGroupG01;
+    private View cardGroupG02;
+    private View cardGroupG03;
+    private View cardGroupG04;
+
     /** Lecturer-flow factory: picking a group assigns it. */
     public static GroupPickerBottomSheetDialogFragment newInstance(long studentServerId) {
         return newInstance(studentServerId, true);
@@ -88,10 +93,10 @@ public class GroupPickerBottomSheetDialogFragment extends BottomSheetDialogFragm
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
 
-        View g01 = view.findViewById(R.id.cardGroupG01);
-        View g02 = view.findViewById(R.id.cardGroupG02);
-        View g03 = view.findViewById(R.id.cardGroupG03);
-        View g04 = view.findViewById(R.id.cardGroupG04);
+        cardGroupG01 = view.findViewById(R.id.cardGroupG01);
+        cardGroupG02 = view.findViewById(R.id.cardGroupG02);
+        cardGroupG03 = view.findViewById(R.id.cardGroupG03);
+        cardGroupG04 = view.findViewById(R.id.cardGroupG04);
 
         tvG01Occupancy = view.findViewById(R.id.tvG01Occupancy);
         tvG02Occupancy = view.findViewById(R.id.tvG02Occupancy);
@@ -100,10 +105,10 @@ public class GroupPickerBottomSheetDialogFragment extends BottomSheetDialogFragm
 
         MaterialButton btnCancel = view.findViewById(R.id.btnCancelPicker);
 
-        if (g01 != null) g01.setOnClickListener(v -> selectGroup("G01", 1));
-        if (g02 != null) g02.setOnClickListener(v -> selectGroup("G02", 2));
-        if (g03 != null) g03.setOnClickListener(v -> selectGroup("G03", 3));
-        if (g04 != null) g04.setOnClickListener(v -> selectGroup("G04", 4));
+        if (cardGroupG01 != null) cardGroupG01.setOnClickListener(v -> selectGroup("G01", 1));
+        if (cardGroupG02 != null) cardGroupG02.setOnClickListener(v -> selectGroup("G02", 2));
+        if (cardGroupG03 != null) cardGroupG03.setOnClickListener(v -> selectGroup("G03", 3));
+        if (cardGroupG04 != null) cardGroupG04.setOnClickListener(v -> selectGroup("G04", 4));
         if (btnCancel != null) btnCancel.setOnClickListener(v -> dismiss());
 
         fetchGroupCapacities();
@@ -135,15 +140,20 @@ public class GroupPickerBottomSheetDialogFragment extends BottomSheetDialogFragm
                         long capacity = (capacityObj instanceof Number) ? ((Number) capacityObj).longValue() : 15;
 
                         String text = occupied + " / " + capacity;
+                        boolean isFull = occupied >= capacity;
 
-                        if ("G01".equalsIgnoreCase(code) && tvG01Occupancy != null) {
-                            tvG01Occupancy.setText(text);
-                        } else if ("G02".equalsIgnoreCase(code) && tvG02Occupancy != null) {
-                            tvG02Occupancy.setText(text);
-                        } else if ("G03".equalsIgnoreCase(code) && tvG03Occupancy != null) {
-                            tvG03Occupancy.setText(text);
-                        } else if ("G04".equalsIgnoreCase(code) && tvG04Occupancy != null) {
-                            tvG04Occupancy.setText(text);
+                        if ("G01".equalsIgnoreCase(code)) {
+                            if (tvG01Occupancy != null) tvG01Occupancy.setText(text);
+                            applyCapacityState(cardGroupG01, isFull);
+                        } else if ("G02".equalsIgnoreCase(code)) {
+                            if (tvG02Occupancy != null) tvG02Occupancy.setText(text);
+                            applyCapacityState(cardGroupG02, isFull);
+                        } else if ("G03".equalsIgnoreCase(code)) {
+                            if (tvG03Occupancy != null) tvG03Occupancy.setText(text);
+                            applyCapacityState(cardGroupG03, isFull);
+                        } else if ("G04".equalsIgnoreCase(code)) {
+                            if (tvG04Occupancy != null) tvG04Occupancy.setText(text);
+                            applyCapacityState(cardGroupG04, isFull);
                         }
                     }
                 }
@@ -154,6 +164,13 @@ public class GroupPickerBottomSheetDialogFragment extends BottomSheetDialogFragm
                 // If fetch fails, placeholders ("-- / --") remain visible.
             }
         });
+    }
+
+    private void applyCapacityState(View card, boolean isFull) {
+        if (card == null) return;
+        card.setEnabled(!isFull);
+        card.setAlpha(isFull ? 0.5f : 1.0f);
+        card.setClickable(!isFull);
     }
 
     private void selectGroup(String groupCode, long groupId) {

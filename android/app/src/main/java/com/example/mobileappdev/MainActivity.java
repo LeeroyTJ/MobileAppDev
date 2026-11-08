@@ -14,6 +14,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.mobileappdev.session.SessionManager;
+import com.example.mobileappdev.sync.SyncWorker;
 
 /**
  * Invisible router Activity + Splash Screen.
@@ -28,6 +29,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main); // We'll create this layout next
+
+        // Schedule periodic background sync worker
+        SyncWorker.schedulePeriodic(getApplicationContext());
 
         // Find the logo and animate it
         ImageView logo = findViewById(R.id.splashLogo);
@@ -56,11 +60,6 @@ public class MainActivity extends AppCompatActivity {
         }, 1500); // 1.5 seconds delay
     }
 
-    /**
-     * M9: Registers a network callback on the application context (so it survives
-     * this activity finishing). When a network becomes available and the user is
-     * logged in, the SyncWorker is triggered immediately.
-     */
     private void registerAutoSync() {
         if (networkCallbackRegistered) return;
 

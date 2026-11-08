@@ -14,6 +14,12 @@
         app:showAsAction="ifRoom" />
 
     <item
+        android:id="@+id/action_sort"
+        android:title="@string/action_sort"
+        android:icon="@drawable/ic_filter_list"
+        app:showAsAction="ifRoom" />
+
+    <item
         android:id="@+id/action_logout"
         android:title="@string/action_logout"
         app:showAsAction="never" />

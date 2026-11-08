@@ -114,9 +114,25 @@ public class DeleteStudentActivity extends AppCompatActivity {
 
     private void executeDelete() {
         if (studentServerId <= 0) {
-            Toast.makeText(this, "Student record not synced with server", Toast.LENGTH_SHORT).show();
-            setResult(RESULT_OK);
-            finish();
+            // Delete local-only / unsynced student from Room
+            String targetNumber = getIntent().getStringExtra(EXTRA_STUDENT_NUMBER);
+            Executors.newSingleThreadExecutor().execute(() -> {
+                StudentEntity local = null;
+                for (StudentEntity s : AppDatabase.getInstance(this).studentDao().findAllForAccount(sessionManager.getAccountId())) {
+                    if (s.studentNumber != null && s.studentNumber.equals(targetNumber)) {
+                        local = s;
+                        break;
+                    }
+                }
+                if (local != null) {
+                    AppDatabase.getInstance(this).studentDao().delete(local);
+                }
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "Local student deleted", Toast.LENGTH_SHORT).show();
+                    setResult(RESULT_OK);
+                    finish();
+                });
+            });
             return;
         }
 
