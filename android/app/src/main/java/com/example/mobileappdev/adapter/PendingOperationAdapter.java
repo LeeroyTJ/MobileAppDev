@@ -140,66 +140,43 @@ public class PendingOperationAdapter extends RecyclerView.Adapter<PendingOperati
     }
 
     public static String extractStudentInfo(PendingOperationEntity op) {
-        if (op == null) return "Student Info";
-        String name = "";
-        String number = "";
-        String correctedNumber = "";
-        String group = "";
+        if (op == null || op.payloadJson == null) return "No details";
 
-        if (op.payloadJson != null && !op.payloadJson.isEmpty()) {
-            try {
-                JSONObject json = new JSONObject(op.payloadJson);
-                if (json.has("studentName")) name = json.optString("studentName", "");
-                else if (json.has("student_name")) name = json.optString("student_name", "");
-                else if (json.has("name")) name = json.optString("name", "");
-                else if (json.has("firstName") || json.has("lastName")) {
-                    String fn = json.optString("firstName", "");
-                    String ln = json.optString("lastName", "");
-                    name = (fn + " " + ln).trim();
-                }
+        try {
+            org.json.JSONObject json = new org.json.JSONObject(op.payloadJson);
 
-                if (json.has("studentNumber")) number = json.optString("studentNumber", "");
-                else if (json.has("student_number")) number = json.optString("student_number", "");
-
-                if (json.has("correctedStudentNumber")) {
-                    correctedNumber = json.optString("correctedStudentNumber", "");
-                }
-
-                if (json.has("group_code")) group = json.optString("group_code", "");
-                else if (json.has("labGroup")) group = json.optString("labGroup", "");
-                else if (json.has("requestedGroup")) group = json.optString("requestedGroup", "");
-            } catch (Exception ignored) {
+            // Number correction
+            if ("CORRECT_STUDENT_NUMBER".equals(op.operationType)) {
+                String newNum = json.optString("correctedStudentNumber", "");
+                if (!newNum.isEmpty()) return "New number: " + newNum;
             }
-        }
 
-        if (!correctedNumber.isEmpty()) {
-            return "Corrected #: " + correctedNumber + (!name.isEmpty() ? " (" + name + ")" : "");
-        }
+            // Group change
+            if ("REQUEST_GROUP_CHANGE".equals(op.operationType)) {
+                String reqGroup = json.optString("requestedGroup", "");
+                if (!reqGroup.isEmpty()) return "Requested group: " + reqGroup;
+            }
 
-        StringBuilder sb = new StringBuilder();
-        if (!name.isEmpty()) {
-            sb.append(name);
-        }
-        if (!number.isEmpty()) {
-            if (sb.length() > 0) sb.append(" (").append(number).append(")");
-            else sb.append("Student #: ").append(number);
-        }
-        if (!group.isEmpty()) {
-            if (sb.length() > 0) sb.append(" • Group: ").append(group);
-            else sb.append("Group: ").append(group);
-        }
+            // Create / update / delete
+            String name = json.optString("studentName", json.optString("name", ""));
+            String number = json.optString("studentNumber", "");
+            String group = json.optString("labGroup", "");
 
-        if (sb.length() > 0) {
-            return sb.toString();
-        }
+            StringBuilder sb = new StringBuilder();
+            if (!name.isEmpty()) sb.append(name);
+            if (!number.isEmpty()) {
+                if (sb.length() > 0) sb.append(" • ").append(number);
+                else sb.append(number);
+            }
+            if (!group.isEmpty()) {
+                if (sb.length() > 0) sb.append(" • ").append(group);
+                else sb.append(group);
+            }
 
-        if (op.studentLocalId != null) {
-            return "Student Local ID: " + op.studentLocalId;
-        } else if (op.entityId != null) {
-            return "Student Server ID: " + op.entityId;
+            return sb.length() > 0 ? sb.toString() : "Pending operation";
+        } catch (Exception e) {
+            return "Pending operation";
         }
-
-        return "Student Info Pending";
     }
 
     public static String getStatusLabel(String status) {

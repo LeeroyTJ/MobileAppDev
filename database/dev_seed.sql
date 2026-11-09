@@ -1,25 +1,14 @@
 -- ============================================================
--- CohortHub dev seed — real class list (14 groups, G14 excluded)
--- Group 14 (our team) is intentionally missing — team members
--- register through the app and are assigned by a lecturer.
---
--- Over-capacity resolution: groups with >15 students have the
--- excess moved to Unassigned, so capacity rule is preserved.
---
--- Duplicate student numbers in Group 11: only the first
--- occurrence is inserted; the rest are commented out pending
--- lecturer confirmation.
+-- CohortHub dev seed — real class list (15 groups)
+-- Programme codes are CS, IT, DS (from schema.sql).
 -- ============================================================
 
 USE cohorthub;
 
--- Programme codes are CS, IT, DS (from schema.sql).
--- No DS students in the class list.
-
 INSERT INTO students (programme_id, group_id, student_number, student_name)
 SELECT p.programme_id, g.group_id, v.num, v.name
 FROM (
-    -- ---- G01: 15 CS, 1 CS moved to Unassigned ----
+    -- ---- G01: 15 CS ----
     SELECT '202402387' AS num, 'Mulemwa Muchima'           AS name, 'CS' AS prog, 'G01' AS grp
     UNION ALL SELECT '202406643', 'Edwin Kampamba',         'CS', 'G01'
     UNION ALL SELECT '202400442', 'Ivwananji Chipasha',     'CS', 'G01'
@@ -35,7 +24,7 @@ FROM (
     UNION ALL SELECT '202409163', 'Nancy Mailoni',          'CS', 'G01'
     UNION ALL SELECT '202408720', 'Onester Kalunga',        'CS', 'G01'
     UNION ALL SELECT '202409779', 'Mayamiko Phiri',         'CS', 'G01'
-    -- 16th student moved to Unassigned (capacity is 15)
+    -- 16th student moved to Unassigned
     UNION ALL SELECT '202408882', 'Atupele Andende',        'CS', NULL
 
     -- ---- G02: 15 CS ----
@@ -55,7 +44,7 @@ FROM (
     UNION ALL SELECT '202407170', 'Lute Walusungu Gondwe',  'CS', 'G02'
     UNION ALL SELECT '202405590', 'Matildah Yusiku',        'CS', 'G02'
 
-    -- ---- G03: 14 mixed programmes ----
+    -- ---- G03: 14 mixed ----
     UNION ALL SELECT '202404194', 'Gift Chabuka',           'CS', 'G03'
     UNION ALL SELECT '202307232', 'Ruth Kangwa',            'CS', 'G03'
     UNION ALL SELECT '202406919', 'Jason Mbao',             'CS', 'G03'
@@ -193,25 +182,20 @@ FROM (
     -- 16th student moved to Unassigned
     UNION ALL SELECT '202109428', 'Gaidon Sichone',         'CS', NULL
 
-    -- ---- G11: 15 CS, 1 moved to Unassigned, 2 duplicates skipped ----
-    -- NOTE: student #7 (SIMASIKU ABEL, 202407015) duplicates #1's number
-    --       student #9 (TRAORE MORDECAI SALIM, 202403846) duplicates #8's number
-    -- These are skipped pending lecturer confirmation.
+    -- ---- G11: 13 CS after skips + 1 moved to Unassigned ----
     UNION ALL SELECT '202407015', 'Miti Katanga',           'CS', 'G11'
     UNION ALL SELECT '202404688', 'Mbasela Fabian',         'CS', 'G11'
     UNION ALL SELECT '202404172', 'Chola Ben',              'CS', 'G11'
     UNION ALL SELECT '202403019', 'Hamasukwa Agrippa C.',   'CS', 'G11'
     UNION ALL SELECT '202401150', 'Muunda Mainza',          'CS', 'G11'
     UNION ALL SELECT '202001699', 'Mumbi Chibesa',          'CS', 'G11'
-    -- SKIP: SIMASIKU ABEL 202407015 (duplicate of #1)
     UNION ALL SELECT '202403846', 'Chanda Collins',         'CS', 'G11'
-    -- SKIP: TRAORE MORDECAI SALIM 202403846 (duplicate of #8)
     UNION ALL SELECT '202405943', 'Chilufya Mapalo',        'CS', 'G11'
     UNION ALL SELECT '202203897', 'Mwape Kelvin',           'CS', 'G11'
     UNION ALL SELECT '202206607', 'Kansamba Auxiria',       'CS', 'G11'
     UNION ALL SELECT '202305732', 'Banda Salima',           'CS', 'G11'
     UNION ALL SELECT '202403844', 'Traore Lamin',           'CS', 'G11'
-    UNION ALL SELECT '202303375', 'Daka Racheal',           'CS', 'G11'
+    UNION ALL SELECT '202303375', 'Daka Racheal',           'CS', NULL
 
     -- ---- G12: 14 mixed ----
     UNION ALL SELECT '202401321', 'Moon Clive',             'IT', 'G12'
@@ -246,13 +230,46 @@ FROM (
     UNION ALL SELECT '202401433', 'Ndhlovu Godfrey',        'CS', 'G13'
     UNION ALL SELECT '202406496', 'Lungu Rebecca',          'CS', 'G13'
 
-    -- ---- G14 EXCLUDED: team members register through the app ----
+    -- ---- G14: 12 team members (Thabo & Josephat excluded for demo) ----
+    UNION ALL SELECT '202410082', 'Joyce Gondwe',           'CS', 'G14'
+    UNION ALL SELECT '202401120', 'Antonette Kapinga',      'CS', 'G14'
+    UNION ALL SELECT '202407636', 'Foster Namukanzye',      'CS', 'G14'
+    UNION ALL SELECT '202308118', 'Emmanuel Sikubeka',      'CS', 'G14'
+    UNION ALL SELECT '202410125', 'Ezekiel Judge',          'CS', 'G14'
+    UNION ALL SELECT '202408068', 'Joel Nduba',             'CS', 'G14'
+    UNION ALL SELECT '202407198', 'Neo Maseba',             'CS', 'G14'
+    UNION ALL SELECT '202402976', 'Henry Mapulanga',        'CS', 'G14'
+    UNION ALL SELECT '202406795', 'Andrew Kalengo',         'CS', 'G14'
+    UNION ALL SELECT '202408447', 'Nathan Kamfwa',          'CS', 'G14'
+    UNION ALL SELECT '202406183', 'Sylvester Chansa',       'CS', 'G14'
+    UNION ALL SELECT '202301847', 'Emmanuel Njunga',        'CS', 'G14'
+
+    -- ---- G15: 15 mixed ----
+    UNION ALL SELECT '202407073', 'Chabota Siyingwa',       'IT', 'G15'
+    UNION ALL SELECT '202404367', 'Reagan Chikumbutso Mbao','CS', 'G15'
+    UNION ALL SELECT '202406336', 'Fedness Malilwe',        'IT', 'G15'
+    UNION ALL SELECT '202408460', 'Musonda Amos',           'CS', 'G15'
+    UNION ALL SELECT '202409112', 'Munesu Lemba',           'CS', 'G15'
+    UNION ALL SELECT '202408468', 'Arthur Sinyenga',        'CS', 'G15'
+    UNION ALL SELECT '202403876', 'Libuku Libuku',          'CS', 'G15'
+    UNION ALL SELECT '202402399', 'Alicia Kunda Muteba',    'IT', 'G15'
+    UNION ALL SELECT '202405510', 'Lutema Jutine Lutangu',  'CS', 'G15'
+    UNION ALL SELECT '202407579', 'Lushomo Muteteete',      'CS', 'G15'
+    UNION ALL SELECT '202106055', 'Chirwa Janet',           'IT', 'G15'
+    UNION ALL SELECT '202408026', 'John Kabemba',           'IT', 'G15'
+    UNION ALL SELECT '202403212', 'Victor Lupenga',         'CS', 'G15'
+    UNION ALL SELECT '202407907', 'George Kunda',           'CS', 'G15'
+    UNION ALL SELECT '202404116', 'Temwananji Mutambo',     'IT', 'G15'
+
 ) v
 JOIN programmes p ON p.code = v.prog
 LEFT JOIN lab_groups g ON g.group_code = v.grp;
 
--- Claim code for a specific student to demo the "already pre-entered" flow.
--- Replace '202400549' with any student from the seed above.
+
+-- ============================================================
+-- Claim code for demonstration (pre-entered student)
+-- ============================================================
+-- '202400549' is Joseph Chiwuswa in G02.
 -- Raw code to type in the app: TESTCODE123
 INSERT INTO claim_codes (student_id, code_hash, expires_at)
 SELECT student_id, SHA2('TESTCODE123', 256), DATE_ADD(NOW(), INTERVAL 30 DAY)

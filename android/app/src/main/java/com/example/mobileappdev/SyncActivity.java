@@ -77,6 +77,14 @@ public class SyncActivity extends AppCompatActivity {
         }
     }
 
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (isLecturer) {
+            fetchPendingNumberRequests();
+        }
+    }
+
     private void initViews() {
         syncToolbar = findViewById(R.id.syncToolbar);
         tvLastSyncedTime = findViewById(R.id.tvLastSyncedTime);
